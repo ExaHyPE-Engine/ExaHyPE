@@ -2,7 +2,7 @@
 
 @page page_peano4_home Peano 4
 
-@image html documentation/Peano-logo.png
+@image html documentation/logos/ExaHyPE.png
 
 Peano is a framework for generating dynamically adaptive grids for a wide range
 of scientific applications.
@@ -18,13 +18,11 @@ either use Peano's Python API or they use an extension built on top of Peano
 
 - Peano's C++ core
   - \subpage peano_main
-  - \subpage peano_action_sets
-  - \subpage page_peano4_particles
+  - \subpage peano_cell_connectivity
   - \subpage page_peano_space_filling_curves
 - HPC aspects
   - \subpage page_peano_domain_decomposition
   - \subpage page_peano_runtime_analysis
-- \subpage page_peano_localisation
 - \subpage page_peano_performance_optimisation
 - \subpage page_peano_amr
 - \subpage peano_utilities

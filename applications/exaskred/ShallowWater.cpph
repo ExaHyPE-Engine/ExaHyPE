@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD T applications::exahype2::exaskred::shallowwater::regularisedVelocity(
+INLINE_METHOD GPU_CALLABLE_METHOD T
+applications::exahype2::exaskred::shallowwater::regularisedVelocity(
   const T      waterHeight,
   const T      momentum,
   const double minimumWaterHeight
@@ -22,7 +23,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD T applications::exahype2::exaskred::shallowwat
 }
 
 template <class Shortcuts, int NumberOfUnknowns, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::shallowwater::flux(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::shallowwater::flux(
   const T* const NOALIAS                       Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -61,7 +63,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::shallow
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD T applications::exahype2::exaskred::shallowwater::maxEigenvalue(
+INLINE_METHOD GPU_CALLABLE_METHOD T
+applications::exahype2::exaskred::shallowwater::maxEigenvalue(
   const T* const NOALIAS                       Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -93,7 +96,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD T applications::exahype2::exaskred::shallowwat
 }
 
 template <class Shortcuts, int NumberOfUnknowns, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::shallowwater::nonconservativeProduct(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::shallowwater::nonconservativeProduct(
   const T* const NOALIAS                       Q,
   const T* const NOALIAS                       deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>& x,

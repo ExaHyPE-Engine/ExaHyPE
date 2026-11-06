@@ -14,16 +14,16 @@ set(HEADER_EXTENSIONS_TO_GLOB
 
 add_subdirectory(tarch)
 add_subdirectory(peano4)
-add_subdirectory(runner)
 add_subdirectory(exahype2)
-add_subdirectory(unittests)
+if(BUILD_TESTING)
+  add_subdirectory(unittests)
+endif()
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   foreach(dim IN LISTS SUPPORTED_DIMENSIONS)
     add_library(PeanoRuntime${mode}${dim}D INTERFACE)
     target_link_libraries(PeanoRuntime${mode}${dim}D INTERFACE
       ExaHyPE${mode}${dim}D
-      Runner${mode}${dim}D
     )
     install(TARGETS PeanoRuntime${mode}${dim}D
       EXPORT ${PROJECT_NAME}Targets

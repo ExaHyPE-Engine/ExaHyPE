@@ -1,57 +1,84 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import CurvilinearElastic
+
+FAULT_PLANE = (
+    "applications::exahype2::exaseis::FaultPlane{"
+    "parameters.faultNormal, parameters.faultPosition}"
+)
+
+
+def add_runtime_parameters(project):
+    """Registers the runtime parameters faultNormal and faultPosition that the grid initialisation
+    sets."""
+    project.add_runtime_parameter("faultNormal", "int", 0)
+    project.add_runtime_parameter("faultPosition", "double", 0.0)
+
+
 def algebraic_source():
     return """
-  std::fill_n(S, NumberOfAuxiliaryVariables, 0);
-
-  S[Shortcuts::u+0] = Q[Shortcuts::v+0];
-  S[Shortcuts::u+1] = Q[Shortcuts::v+1];
-  S[Shortcuts::u+2] = Q[Shortcuts::v+2];
+  std::fill_n(S, NumberOfUnknowns, 0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    S[Shortcuts::u + axis] = Q[Shortcuts::v + axis];
+  }
 """
 
 
 def riemann_solver():
-    return """
-  applications::exahype2::exaseis::riemannSolverDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, (DGOrder + 1), NumberOfUnknowns, (NumberOfUnknowns+NumberOfAuxiliaryVariables), 1>(
-    FL, FR, QL, QR, t, dt, x, h, direction, isBoundaryFace, faceIndex, faultNormal, faultPosition
-  );
+    return (
+        """
+  const bool isFaultFace = """
+        + fault_face_predicate()
+        + """;
+  return applications::exahype2::exaseis::solveDynamicRuptureRiemannProblem<
+    Shortcuts,
+    {{COMPUTE_PRECISION}},
+    DGOrder + 1,
+    NumberOfUnknowns,
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    1>(QL, QR, t, normal, isBoundaryFace, isFaultFace, faceIndex, FL, FR);
 """
+    )
 
 
 def userIncludes():
     return [
-        "tarch/reader/NetCDFFieldSampler.h",
-        "DynamicRuptureParameters.h",
-        "../riemannSolvers/riemannsolverDynamicRupture.h",
+        "applications/exaseis/riemannSolvers/DynamicRuptureRiemannSolver.h",
         "exahype2/Curvi.h",
-        "exahype2/dg/DGUtils.h",
+        "exahype2/dg/Basis.h",
+        "peano4/sfc/ActiveCurve.h",
+        "tarch/reader/NetCDFFieldSampler.h",
     ]
 
 
-def abstractDeclarations():
-    return """
-protected:
-  // Normal on which the fault lies, i.e. if this axis is x, then
-  // the fault is on a y-z plane.
-  static int faultNormal;
-
-  // In reference space, i.e. this should correspond to the position
-  // as viewed by ExaHyPE of the fault.
-  static double faultPosition;
-
-public:
-  int getFaultNormal(){
-    return faultNormal;
-  }
-
-  double getFaultPosition(){
-    return faultPosition;
-  }
+def init_grid_step_implementation(scenario_perturbations):
+    """Returns the curvilinear grid initialisation, in which scenario_perturbations writes the
+    locals faultNormal and faultPosition. The initialisation copies them into the runtime
+    parameters of the same names.
+    """
+    return CurvilinearElastic.init_grid_step_implementation(
+        """
+  int    faultNormal   = 0;
+  double faultPosition = 0.0;
 """
-
-
-def abstractUserDefinitions():
-    return """
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faultNormal;
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faultPosition;
+        + scenario_perturbations
+        + """
+  parameters.faultNormal   = faultNormal;
+  parameters.faultPosition = faultPosition;
 """
+    )
+
+
+def fault_normal():
+    """Returns the C++ expression of the axis that the fault plane is orthogonal to."""
+    return "parameters.faultNormal"
+
+
+def fault_position():
+    """Returns the C++ expression of the position of the fault plane along its normal."""
+    return "parameters.faultPosition"
+
+
+def fault_face_predicate():
+    """Returns the C++ expression that is true for a face on the fault plane."""
+    return FAULT_PLANE + ".containsFace(x, h, normal)"

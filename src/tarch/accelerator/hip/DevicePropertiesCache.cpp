@@ -7,12 +7,13 @@
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/hip/ErrorCheck.h"
 
-hipDeviceProp_t& tarch::accelerator::hip::DevicePropertiesCache::get() {
+hipDeviceProp_t&
+tarch::accelerator::hip::DevicePropertiesCache::getProperties() {
   static DevicePropertiesCache instance;
 
   int deviceId = -1;
   CHECK_HIP_ERROR(hipGetDevice(&deviceId));
-  assertion(deviceId >= 0);
+  ASSERTION(deviceId >= 0);
 
   std::lock_guard<std::mutex> guard(instance._mtx);
 

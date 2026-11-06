@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "NonCriticalAssertions.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Error.h"
 #include "tarch/mpi/Rank.h"
@@ -11,40 +12,45 @@ namespace {
 } // namespace
 
 /**
- * Records that this rank winds the run down. The first violation wins the exchange and writes the
- * error, every later one writes a debug message.
+ * Records the rank of the first violated non-critical assertion. The first violation writes the
+ * requirement and the values as an error. Every later violation writes a debug message.
  */
-void tarch::triggerNonCriticalAssertion(
-  const std::string& file,
-  const int          line,
-  const std::string& expression,
-  const std::string& parameterValuePairs
-) {
+void
+tarch::triggerNonCriticalAssertion(const std::string& requirement, const std::string& values) {
+  ASSERTION(not requirement.empty());
   int expected = -1;
   if (not rankWhichHasSetNonCriticalAssertion
             .compare_exchange_strong(expected, tarch::mpi::Rank::getInstance().getRank())) {
-    logDebug("A non-critical assertion failed in (" << file << ":" << line << "): " << expression);
-    logDebug("A non-critical assertion has already put this rank into shutdown mode.");
+    LOG_DEBUG(requirement);
+    LOG_DEBUG("The rank stops after an earlier non-critical assertion.");
     return;
   }
 
-  logError("A non-critical assertion failed in (" << file << ":" << line << "): " << expression);
-  logError(parameterValuePairs);
-  logError("The application will dump the solution and shut down.");
+  LOG_ERROR(requirement);
+  LOG_ERROR(values);
+  LOG_ERROR("The rank writes its output and shuts down.");
 }
 
-bool tarch::hasNonCriticalAssertionBeenViolated() { return rankWhichHasSetNonCriticalAssertion.load() >= 0; }
+bool
+tarch::hasNonCriticalAssertionBeenViolated() {
+  return rankWhichHasSetNonCriticalAssertion.load() >= 0;
+}
 
 /**
- * Returns the rank that raised a non-critical assertion, or -1 if no rank raised one.
+ * Returns the rank that raised a non-critical assertion. Without a non-critical assertion, the
+ * result is -1.
  */
-int tarch::getNonCriticalAssertionRank() { return rankWhichHasSetNonCriticalAssertion.load(); }
+int
+tarch::getNonCriticalAssertionRank() {
+  return rankWhichHasSetNonCriticalAssertion.load();
+}
 
 /**
  * Adopts a non-critical assertion that another rank raised. A rank that has raised one of its own
- * keeps its own value, and passing -1 leaves the value untouched.
+ * keeps its own value. The rank -1 leaves the value untouched.
  */
-void tarch::adoptNonCriticalAssertionRank(const int rank) {
+void
+tarch::adoptNonCriticalAssertionRank(const int rank) {
   int expected = -1;
   rankWhichHasSetNonCriticalAssertion.compare_exchange_strong(expected, rank);
 }

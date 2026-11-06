@@ -1,0 +1,177 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
+/**
+ * Removes every term and sets the bound of the next terms. MaximumNumberOfTerms terms of twice the
+ * bound stay below 2^126 units of the grid. A term keeps every bit when its lowest bit lies on the
+ * grid. A smaller bit rounds to the grid.
+ */
+template <std::int64_t MaximumNumberOfTerms>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::FixedPointSum<MaximumNumberOfTerms>::clear(const double bound) {
+  ASSERTION(std::isfinite(bound) and bound >= 0.0, bound);
+  int exponent = 0;
+  static_cast<void>(std::frexp(bound, &exponent));
+  _bound         = bound;
+  _numberOfTerms = 0;
+  _unitExponent  = bound > 0.0 ? exponent + 1 + TermBits - 126 : -1074;
+  _high          = 0;
+  _low           = 0;
+}
+
+/**
+ * Adds the 128-bit integer nearest to term divided by the unit of the grid. The integer comes from
+ * the mantissa bits of term, shifted by its exponent and rounded with ties to even.
+ */
+template <std::int64_t MaximumNumberOfTerms>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::FixedPointSum<MaximumNumberOfTerms>::add(const double term) {
+  ASSERTION(_numberOfTerms < MaximumNumberOfTerms, _numberOfTerms);
+  ASSERTION(std::isfinite(term) and std::abs(term) <= 2.0 * _bound, term, _bound);
+  _numberOfTerms++;
+  const auto    bits           = std::bit_cast<std::uint64_t>(term);
+  const auto    biasedExponent = static_cast<int>((bits >> 52) & 0x7FF);
+  std::uint64_t mantissa       = bits & 0x000FFFFFFFFFFFFFULL;
+  if (biasedExponent != 0) {
+    mantissa |= 0x0010000000000000ULL;
+  }
+  const int     shift = (biasedExponent == 0 ? 1 : biasedExponent) - 1075 - _unitExponent;
+  std::uint64_t high  = 0;
+  std::uint64_t low   = 0;
+  if (shift >= 64) {
+    high = mantissa << (shift - 64);
+  } else if (shift > 0) {
+    high = mantissa >> (64 - shift);
+    low  = mantissa << shift;
+  } else if (shift == 0) {
+    low = mantissa;
+  } else if (shift > -54) {
+    const std::uint64_t quotient  = mantissa >> -shift;
+    const std::uint64_t remainder = mantissa & ((std::uint64_t{1} << -shift) - 1);
+    const std::uint64_t half      = std::uint64_t{1} << (-shift - 1);
+    low = quotient + (remainder > half or (remainder == half and (quotient & 1) != 0) ? 1 : 0);
+  }
+  if ((bits >> 63) != 0) {
+    negate(high, low);
+  }
+  _low += low;
+  _high += high + (_low < low ? 1 : 0);
+}
+
+/**
+ * Adds the integer of other. A caller clears both sums with the same bound.
+ */
+template <std::int64_t MaximumNumberOfTerms>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::FixedPointSum<MaximumNumberOfTerms>::merge(const FixedPointSum& other) {
+  ASSERTION(_unitExponent == other._unitExponent, _unitExponent, other._unitExponent);
+  ASSERTION(_numberOfTerms <= MaximumNumberOfTerms - other._numberOfTerms, _numberOfTerms, other._numberOfTerms);
+  _numberOfTerms += other._numberOfTerms;
+  _low += other._low;
+  _high += other._high + (_low < other._low ? 1 : 0);
+}
+
+/**
+ * Returns the integer times the unit of the grid rounded to the nearest double with ties to even.
+ * Negated terms return the negated sum.
+ */
+template <std::int64_t MaximumNumberOfTerms>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::FixedPointSum<MaximumNumberOfTerms>::round() const {
+  const bool    negative = (_high >> 63) != 0;
+  std::uint64_t high     = _high;
+  std::uint64_t low      = _low;
+  if (negative) {
+    negate(high, low);
+  }
+  const double value = getNearestDoubleOf(high, low, _unitExponent);
+  return negative ? -value : value;
+}
+
+/**
+ * Returns the integer times the unit of the grid divided by Divisor and rounded to the nearest
+ * double with ties to even. The magnitude moves its highest set bit to bit 126 before the division.
+ * The quotient then keeps more than 64 significant bits. A set lowest bit of the quotient stands for
+ * a nonzero remainder.
+ */
+template <std::int64_t MaximumNumberOfTerms>
+template <int Divisor>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::FixedPointSum<MaximumNumberOfTerms>::roundQuotient() const {
+  static_assert(Divisor > 0, "A fixed-point quotient divides by a positive integer.");
+  constexpr std::uint64_t WideDivisor = Divisor;
+  const bool              negative    = (_high >> 63) != 0;
+  std::uint64_t           high        = _high;
+  std::uint64_t           low         = _low;
+  if (negative) {
+    negate(high, low);
+  }
+  const int shift = 127 - (high != 0 ? 64 + getBitWidthOf(high) : getBitWidthOf(low));
+  ASSERTION(shift > 0, shift);
+  if (shift >= 64) {
+    high = low << (shift - 64);
+    low  = 0;
+  } else {
+    high = (high << shift) | (low >> (64 - shift));
+    low <<= shift;
+  }
+  // A remainder below the divisor fits into the upper 32 bits of the next dividend.
+  const std::uint64_t upper        = ((high % WideDivisor) << 32) | (low >> 32);
+  const std::uint64_t lower        = ((upper % WideDivisor) << 32) | (low & 0xFFFFFFFFULL);
+  const std::uint64_t quotientHigh = high / WideDivisor;
+  const std::uint64_t quotientLow =
+    ((upper / WideDivisor) << 32) | (lower / WideDivisor) | (lower % WideDivisor != 0 ? 1 : 0);
+  const double value = getNearestDoubleOf(quotientHigh, quotientLow, _unitExponent - shift);
+  return negative ? -value : value;
+}
+
+template <std::int64_t MaximumNumberOfTerms>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::FixedPointSum<MaximumNumberOfTerms>::negate(std::uint64_t& high, std::uint64_t& low) {
+  low  = ~low + 1;
+  high = ~high + (low == 0 ? 1 : 0);
+}
+
+/**
+ * Returns the number of bits up to the highest set bit of value.
+ */
+template <std::int64_t MaximumNumberOfTerms>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::FixedPointSum<MaximumNumberOfTerms>::getBitWidthOf(const std::uint64_t value) {
+  int           width     = 0;
+  std::uint64_t remaining = value;
+  for (int step = 32; step > 0; step /= 2) {
+    if ((remaining >> step) != 0) {
+      width += step;
+      remaining >>= step;
+    }
+  }
+  return remaining != 0 ? width + 1 : width;
+}
+
+/**
+ * Returns @f$ (high \cdot 2^{64} + low) \cdot 2^{exponent} @f$ rounded to the nearest double with
+ * ties to even. The top 64 bits of the magnitude round once. A set lowest bit stands for the bits
+ * below them.
+ */
+template <std::int64_t MaximumNumberOfTerms>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::FixedPointSum<MaximumNumberOfTerms>::getNearestDoubleOf(
+  const std::uint64_t high,
+  const std::uint64_t low,
+  const int           exponent
+) {
+  ASSERTION((high >> 63) == 0, high);
+  double magnitude = static_cast<double>(low);
+  if (high != 0) {
+    const int           bitsOfHigh = getBitWidthOf(high);
+    const std::uint64_t sticky     = (low << (64 - bitsOfHigh)) != 0 ? 1 : 0;
+    const std::uint64_t top        = (high << (64 - bitsOfHigh)) | (low >> bitsOfHigh) | sticky;
+    magnitude                      = std::ldexp(static_cast<double>(top), bitsOfHigh);
+  }
+  return std::ldexp(magnitude, exponent);
+}
+TARGET_DECLARE_END

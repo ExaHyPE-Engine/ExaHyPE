@@ -7,13 +7,12 @@
 ExaHyPE 2 is a hyperbolic PDE engine. You write down a system of conservation
 laws - sound waves, water waves, compressible flow - in a handful of lines of
 Python, and ExaHyPE generates, compiles and runs an optimised C++ solver for
-you. Cartesian meshes, adaptive mesh refinement, and shared- and
-distributed-memory parallelism all come for free, so you get to concentrate on
-the physics.
+you. Cartesian meshes, adaptive mesh refinement, and parallelism over threads
+and over distributed memory all come for free. You concentrate on the physics.
 
 These five tutorials take you from a blank notebook to five working solvers.
-Each one is a self-contained Jupyter notebook with a small C++ implementation,
-and each builds on the one before, so work through them in order.
+Each one is a self-contained Jupyter notebook with a small C++ implementation.
+Each builds on the one before. Work through them in order.
 
 
 # Quick Start
@@ -37,11 +36,11 @@ then open http://localhost:8888 in your browser and start with the first
 notebook in `01_acoustic/`.
 
 @note **🍎 Apple Silicon (ARM) Macs.** The image is built for `linux/amd64`, but it
-runs on M-series Macs through Docker Desktop's emulation. Just add
+runs on M-series Macs through Docker Desktop's emulation. Add
 `--platform linux/amd64`:
 `docker run --platform linux/amd64 -p 8888:8888 peanoframework/exahype2-tutorials`.
 
-## Option B: Build from Source (No Docker)
+## Option B: Build from Source (Without Docker)
 
 If Docker does not work for you, build ExaHyPE 2 yourself and launch JupyterLab
 locally. You need a C++20 compiler, CMake 3.27+, Python 3.11+ and HDF5 (the
@@ -49,8 +48,8 @@ tutorials' plotter output is HDF5-based); MPI and OpenMP are recommended. The
 full dependency list is on @ref page_installation_home.
 
 On most systems the compiler, CMake, MPI, HDF5 and NetCDF come straight from
-the package manager. ExaHyPE writes its output in parallel, so pick the
-MPI-enabled (parallel) flavours of HDF5 and NetCDF:
+the package manager. ExaHyPE writes its output in parallel. Pick the MPI-enabled
+(parallel) flavours of HDF5 and NetCDF:
 
 \verbatim
 # Ubuntu / Debian
@@ -69,7 +68,7 @@ Then clone, build and launch:
 
 \verbatim
 # GIT_LFS_SKIP_SMUDGE=1 lets the clone succeed even without git-lfs installed
-GIT_LFS_SKIP_SMUDGE=1 git clone -b muc/exahype https://gitlab.lrz.de/hpcsoftware/Peano.git exahype2 --depth 1
+GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/ExaHyPE-Engine/ExaHyPE.git exahype2 --depth 1
 cd exahype2
 
 # 1. Build the ExaHyPE 2 libraries (multithreading, MPI and HDF5 are on by default)
@@ -92,9 +91,9 @@ cd tutorials
 jupyter lab
 \endverbatim
 
-JupyterLab opens in your browser; start with `01_acoustic/AcousticWaves.ipynb`. The
-notebooks add the freshly built Python API to their own path, so they pick up
-the sources you just compiled.
+JupyterLab opens in your browser. Start with `01_acoustic/AcousticWaves.ipynb`. The
+notebooks add the freshly built Python API to their own path. They then pick up
+the sources you compiled.
 
 @note The virtual environment only lives in your shell session. When you come
 back later, re-activate it before launching JupyterLab again:
@@ -114,7 +113,7 @@ back later, re-activate it before launching JupyterLab again:
   switch the limiter off.
 - \subpage page_exahype2_tutorials_elastic - **Part 5** (`05_elastic/`): 3D elastic
   waves with an interactive cube slicer, and a first taste of HPC - measure how the
-  solver scales across MPI ranks.
+  solver scales across OpenMP threads.
 
 Each tutorial closes with suggestions for your own experiments.
 

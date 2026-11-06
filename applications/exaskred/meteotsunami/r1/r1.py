@@ -7,7 +7,7 @@ import exahype2
 
 
 def manning_coefficient(depth, roughness_length=0.003):
-    """Manning coefficient of a channel of the given depth, after Chezy."""
+    """Returns the Manning coefficient of a channel of the given depth, after Chezy."""
     if depth <= 0.0:
         raise ValueError("Water depth must be positive.")
     return depth ** (1.0 / 6.0) / (18.0 * math.log10(0.37 * depth / roughness_length))
@@ -104,6 +104,5 @@ for name, kind, value in (
 project.add_constant("g", 9.81)
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("../../Forcing.cpp")
-project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
+project.output.makefile.add_h_file("ADERDGSolver.cpph")
 project.generate_and_build()

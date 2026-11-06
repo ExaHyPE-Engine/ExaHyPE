@@ -2,18 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * Writes B(Q) deltaQ for the first-order CCZ4 system, with deltaQ along normal.
+ * Writes B(Q) deltaQ for the first-order CCZ4 system, with deltaQ along the axis normal.
  * The conformal metric must be positive definite.
  */
 template <class Shortcuts>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::nonconservativeProduct(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exagrype::nonconservativeProduct(
   const double* const NOALIAS Q,
   const double* const NOALIAS deltaQ,
   const int                   normal,
   double* const NOALIAS       BTimesDeltaQ
 ) {
-  assertion(Q != nullptr and deltaQ != nullptr and BTimesDeltaQ != nullptr);
-  assertion(normal >= 0 and normal < 3, normal);
+  ASSERTION(Q != nullptr and deltaQ != nullptr and BTimesDeltaQ != nullptr);
+  ASSERTION(normal >= 0 and normal < 3, normal);
   constexpr double Advection          = 1.0;
   constexpr double AuxiliaryAdvection = 1.0;
 
@@ -67,7 +68,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::noncons
        * invdet}
   };
 
-  assertion(std::isfinite(invdet) and invdet > 0.0, invdet);
+  ASSERTION(std::isfinite(invdet) and invdet > 0.0, invdet);
   const double phi  = std::fmax(1e-2, Q[Shortcuts::phi]);
   const double phi2 = phi * phi;
 

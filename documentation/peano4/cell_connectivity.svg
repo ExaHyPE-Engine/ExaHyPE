@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="330" viewBox="0 0 960 330" font-family="sans-serif" font-size="12">
+  <style>
+    .cell { fill: none; stroke: #444; stroke-width: 1; }
+    .rank0 { fill: #cfe2f3; }
+    .rank1 { fill: #d9ead3; }
+    .rank2 { fill: #fce5cd; }
+    .curve { fill: none; stroke: #c00; stroke-width: 2; }
+    .local { stroke: #444; stroke-width: 3; }
+    .remote { stroke: #c00; stroke-width: 3; }
+    .jump { stroke: #06c; stroke-width: 3; }
+    .slot { font-size: 11px; fill: #222; }
+    .title { font-size: 13px; font-weight: bold; fill: #222; }
+    .arrow { fill: none; stroke: #222; stroke-width: 1.5; marker-end: url(#head); }
+  </style>
+  <defs>
+    <marker id="head" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#222"/>
+    </marker>
+  </defs>
+
+  <!-- Panel 1: the spacetree cut along the curve into the cells of three ranks -->
+  <text x="20" y="22" class="title">1. Spacetree cut along the curve</text>
+  <g transform="translate(20,40)">
+    <rect x="0" y="0" width="90" height="90" class="cell rank0"/>
+    <rect x="90" y="0" width="90" height="90" class="cell rank0"/>
+    <rect x="180" y="0" width="90" height="90" class="cell rank1"/>
+    <rect x="0" y="90" width="90" height="90" class="cell rank0"/>
+    <rect x="90" y="90" width="90" height="90" class="cell rank1"/>
+    <rect x="180" y="90" width="90" height="90" class="cell rank1"/>
+    <rect x="0" y="180" width="90" height="90" class="cell rank2"/>
+    <rect x="90" y="180" width="90" height="90" class="cell rank2"/>
+    <rect x="180" y="180" width="90" height="90" class="cell rank2"/>
+    <!-- the centre cell is refined into 3 x 3 children -->
+    <rect x="90" y="90" width="30" height="30" class="cell rank1"/>
+    <rect x="120" y="90" width="30" height="30" class="cell rank1"/>
+    <rect x="150" y="90" width="30" height="30" class="cell rank1"/>
+    <rect x="90" y="120" width="30" height="30" class="cell rank1"/>
+    <rect x="120" y="120" width="30" height="30" class="cell rank1"/>
+    <rect x="150" y="120" width="30" height="30" class="cell rank1"/>
+    <rect x="90" y="150" width="30" height="30" class="cell rank1"/>
+    <rect x="120" y="150" width="30" height="30" class="cell rank1"/>
+    <rect x="150" y="150" width="30" height="30" class="cell rank1"/>
+    <!-- Peano curve through the cell centres -->
+    <polyline class="curve" points="45,225 45,135 45,45 135,45 135,105 105,105 105,135 135,135 135,165 105,165 105,175 165,175 165,145 165,105 225,45 225,135 225,225 135,225"/>
+    <text x="8" y="16" class="slot">rank 0</text>
+    <text x="188" y="106" class="slot">rank 1</text>
+    <text x="8" y="196" class="slot">rank 2</text>
+  </g>
+
+  <!-- Panel 2: one cell connectivity with its slots, its remote faces and one level jump -->
+  <text x="340" y="22" class="title">2. The cell connectivity of rank 1</text>
+  <g transform="translate(340,40)">
+    <rect x="0" y="0" width="90" height="90" class="cell rank1"/>
+    <rect x="0" y="90" width="90" height="90" class="cell rank1"/>
+    <rect x="90" y="0" width="30" height="30" class="cell rank1"/>
+    <rect x="120" y="0" width="30" height="30" class="cell rank1"/>
+    <rect x="150" y="0" width="30" height="30" class="cell rank1"/>
+    <rect x="90" y="30" width="30" height="30" class="cell rank1"/>
+    <rect x="120" y="30" width="30" height="30" class="cell rank1"/>
+    <rect x="150" y="30" width="30" height="30" class="cell rank1"/>
+    <rect x="90" y="60" width="30" height="30" class="cell rank1"/>
+    <rect x="120" y="60" width="30" height="30" class="cell rank1"/>
+    <rect x="150" y="60" width="30" height="30" class="cell rank1"/>
+    <text x="36" y="50" class="slot">cell 0</text>
+    <text x="36" y="140" class="slot">cell 1</text>
+    <text x="93" y="20" class="slot">2</text>
+    <text x="123" y="20" class="slot">3</text>
+    <text x="153" y="20" class="slot">4</text>
+    <text x="93" y="50" class="slot">5</text>
+    <text x="123" y="50" class="slot">6</text>
+    <text x="153" y="50" class="slot">7</text>
+    <text x="93" y="80" class="slot">8</text>
+    <text x="123" y="80" class="slot">9</text>
+    <text x="153" y="80" class="slot">10</text>
+    <!-- a local interior face between cell 0 and cell 1 -->
+    <line x1="0" y1="90" x2="90" y2="90" class="local"/>
+    <text x="10" y="104" class="slot">local face</text>
+    <!-- the level jump: coarse face of cell 0 against the fine faces of cells 2, 5 and 8 -->
+    <line x1="90" y1="0" x2="90" y2="90" class="jump"/>
+    <text x="96" y="104" class="slot">level jump</text>
+    <!-- the faces that rank 0 also stores -->
+    <line x1="0" y1="0" x2="90" y2="0" class="remote"/>
+    <line x1="90" y1="0" x2="180" y2="0" class="remote"/>
+    <line x1="0" y1="0" x2="0" y2="180" class="remote"/>
+    <text x="0" y="-6" class="slot">faces rank 0 also stores</text>
+    <!-- the faces that rank 2 also stores -->
+    <line x1="0" y1="180" x2="90" y2="180" class="remote"/>
+    <line x1="90" y1="90" x2="180" y2="90" class="remote"/>
+    <text x="0" y="196" class="slot">faces rank 2 also stores</text>
+  </g>
+
+  <!-- Panel 3: the slot moves of one regrid -->
+  <text x="620" y="22" class="title">3. The slot moves of one regrid</text>
+  <g transform="translate(620,40)">
+    <rect x="0" y="0" width="90" height="90" class="cell rank1"/>
+    <text x="30" y="50" class="slot">old slot 0</text>
+    <line x1="100" y1="45" x2="150" y2="45" class="arrow"/>
+    <text x="102" y="36" class="slot">prolongation</text>
+    <rect x="160" y="0" width="30" height="30" class="cell rank1"/>
+    <rect x="190" y="0" width="30" height="30" class="cell rank1"/>
+    <rect x="220" y="0" width="30" height="30" class="cell rank1"/>
+    <rect x="160" y="30" width="30" height="30" class="cell rank1"/>
+    <rect x="190" y="30" width="30" height="30" class="cell rank1"/>
+    <rect x="220" y="30" width="30" height="30" class="cell rank1"/>
+    <rect x="160" y="60" width="30" height="30" class="cell rank1"/>
+    <rect x="190" y="60" width="30" height="30" class="cell rank1"/>
+    <rect x="220" y="60" width="30" height="30" class="cell rank1"/>
+    <text x="160" y="104" class="slot">new slots 11 to 19</text>
+
+    <rect x="160" y="130" width="30" height="30" class="cell rank1"/>
+    <rect x="190" y="130" width="30" height="30" class="cell rank1"/>
+    <rect x="220" y="130" width="30" height="30" class="cell rank1"/>
+    <rect x="160" y="160" width="30" height="30" class="cell rank1"/>
+    <rect x="190" y="160" width="30" height="30" class="cell rank1"/>
+    <rect x="220" y="160" width="30" height="30" class="cell rank1"/>
+    <rect x="160" y="190" width="30" height="30" class="cell rank1"/>
+    <rect x="190" y="190" width="30" height="30" class="cell rank1"/>
+    <rect x="220" y="190" width="30" height="30" class="cell rank1"/>
+    <line x1="150" y1="175" x2="100" y2="175" class="arrow"/>
+    <text x="102" y="166" class="slot">restriction</text>
+    <rect x="0" y="130" width="90" height="90" class="cell rank1"/>
+    <text x="28" y="180" class="slot">new slot 20</text>
+    <text x="160" y="234" class="slot">old slots 2 to 10 freed</text>
+
+    <rect x="0" y="250" width="90" height="30" class="cell rank1"/>
+    <text x="8" y="270" class="slot">slot 1 kept</text>
+    <rect x="160" y="250" width="90" height="30" class="cell rank2"/>
+    <line x1="100" y1="265" x2="150" y2="265" class="arrow"/>
+    <text x="104" y="258" class="slot">send</text>
+    <text x="164" y="270" class="slot">rank 2 receives</text>
+  </g>
+</svg>

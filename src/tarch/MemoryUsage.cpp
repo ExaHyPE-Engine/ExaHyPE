@@ -7,14 +7,15 @@
 #if defined(COMPILER_HAS_PROC_STAT)
 #include <unistd.h>
 #endif
-#if defined(COMPILER_HAS_SYSINFO) // for Linux OS
+#if defined(COMPILER_HAS_SYSINFO) // Linux
 #include <sys/sysinfo.h>
-#else // for Mac OS support
+#else // macOS
 #include <mach/mach.h>
 #include <sys/sysctl.h>
 #endif
 
-std::string tarch::toString(MemoryUsageFormat format) {
+std::string
+tarch::toString(const MemoryUsageFormat format) {
   switch (format) {
   case MemoryUsageFormat::KiB:
     return "KiB";
@@ -26,7 +27,8 @@ std::string tarch::toString(MemoryUsageFormat format) {
   return "<undef>";
 }
 
-double tarch::convertMemorySize(unsigned long long bytes, MemoryUsageFormat format) {
+double
+tarch::convertMemorySize(const unsigned long long bytes, const MemoryUsageFormat format) {
   switch (format) {
   case MemoryUsageFormat::KiB:
     return static_cast<double>(bytes) / KiB;
@@ -40,23 +42,53 @@ double tarch::convertMemorySize(unsigned long long bytes, MemoryUsageFormat form
 
 #if defined(COMPILER_HAS_SYSINFO)
 
-std::uint64_t tarch::getTotalMemoryInBytes() {
+std::uint64_t
+tarch::getTotalMemoryInBytes() {
   struct sysinfo info;
   sysinfo(&info);
   // The sysinfo fields count multiples of mem_unit bytes.
   return static_cast<std::uint64_t>(info.totalram) * info.mem_unit;
 }
 
-std::uint64_t tarch::getFreeMemoryInBytes() {
+namespace {
+  /**
+   * Returns one field of /proc/meminfo in KiB, or std::nullopt when the kernel omits it.
+   */
+  std::optional<std::uint64_t> readMemoryInformationInKiB(const std::string_view field) {
+    std::ifstream memoryInformation("/proc/meminfo");
+    std::string   line;
+    while (std::getline(memoryInformation, line)) {
+      if (line.size() > field.size() and line.starts_with(field) and line[field.size()] == ':') {
+        std::istringstream value(line.substr(field.size() + 1));
+        std::uint64_t      kibibytes = 0;
+        if (value >> kibibytes) {
+          return kibibytes;
+        }
+      }
+    }
+    return std::nullopt;
+  }
+} // namespace
+
+/**
+ * Returns the kernel's estimate MemAvailable of the bytes a new allocation obtains without swapping,
+ * or the free memory and the buffers on a kernel without that estimate.
+ */
+std::uint64_t
+tarch::getAvailableMemoryInBytes() {
+  if (const auto kibibytes = readMemoryInformationInKiB("MemAvailable")) {
+    return *kibibytes * static_cast<std::uint64_t>(KiB);
+  }
   struct sysinfo info;
   sysinfo(&info);
   // The sysinfo fields count multiples of mem_unit bytes.
-  return static_cast<std::uint64_t>(info.freeram) * info.mem_unit;
+  return (static_cast<std::uint64_t>(info.freeram) + info.bufferram) * info.mem_unit;
 }
 
 #else // defined(COMPILER_HAS_SYSINFO)
 
-std::uint64_t tarch::getTotalMemoryInBytes() {
+std::uint64_t
+tarch::getTotalMemoryInBytes() {
   int     mib[] = {CTL_HW, HW_MEMSIZE};
   int64_t physicalMemory;
   size_t  length;
@@ -66,7 +98,11 @@ std::uint64_t tarch::getTotalMemoryInBytes() {
   return static_cast<std::uint64_t>(physicalMemory);
 }
 
-std::uint64_t tarch::getFreeMemoryInBytes() {
+/**
+ * Returns the bytes of the free and the inactive pages. A new allocation obtains them without swapping.
+ */
+std::uint64_t
+tarch::getAvailableMemoryInBytes() {
   const mach_port_t      host     = mach_host_self();
   vm_size_t              pageSize = 0;
   vm_statistics64_data_t stats;
@@ -78,70 +114,48 @@ std::uint64_t tarch::getFreeMemoryInBytes() {
   if (not ok) {
     return 0;
   }
-  return static_cast<std::uint64_t>(stats.free_count) * pageSize;
+  return (static_cast<std::uint64_t>(stats.free_count) + stats.inactive_count) * pageSize;
 }
 
 #endif // defined(COMPILER_HAS_SYSINFO)
 
-double tarch::getTotalMemory(const MemoryUsageFormat format) {
-  return convertMemorySize(getTotalMemoryInBytes(), format);
-}
-
-double tarch::getFreeMemory(const MemoryUsageFormat format) {
-  return convertMemorySize(getFreeMemoryInBytes(), format);
-}
-
-std::uint64_t tarch::getMemoryUsageInBytes() {
+std::uint64_t
+tarch::getMemoryUsageInBytes() {
 #if defined(COMPILER_HAS_PROC_STAT)
-  char        buffer[4096];
-  const pid_t processId = getpid();
-
-  sprintf(buffer, "/proc/%d/stat", static_cast<int>(processId));
-  FILE* statFile = fopen(buffer, "r");
-
-  if (statFile == nullptr) {
-    logError("Can't open file " << buffer);
+  std::ifstream statFile("/proc/self/stat");
+  std::string   line;
+  if (not std::getline(statFile, line)) {
+    LOG_ERROR("The memory measurement cannot read the file /proc/self/stat.");
     return 0;
   }
-  if (fgets(buffer, sizeof(buffer), statFile) == nullptr) {
-    logError("Error while reading from file");
-  }
-  fclose(statFile);
-
-  // Field 24 of /proc/<pid>/stat is the resident set size in pages. Field 2 is parenthesised and
-  // may contain spaces, so the parsing starts after its closing bracket.
-  char* afterComm = strrchr(buffer, ')');
-  if (afterComm == nullptr) {
-    logError("Unexpected format in " << buffer);
+  // Field 24 of /proc/self/stat is the resident set size in pages. Field 2 may contain spaces and
+  // ends at the last closing bracket.
+  const auto commandEnd = line.rfind(')');
+  if (commandEnd == std::string::npos) {
+    LOG_ERROR("The memory measurement cannot parse the line '" << line << "' of the file /proc/self/stat.");
     return 0;
   }
-  char* field = strtok(afterComm + 1, " ");
-  for (int fieldNumber = 3; fieldNumber < 24 and field != nullptr; fieldNumber++) {
-    field = strtok(nullptr, " ");
+  std::istringstream fields(line.substr(commandEnd + 1));
+  std::string        skippedField;
+  for (int fieldNumber = 3; fieldNumber < 24; fieldNumber++) {
+    fields >> skippedField;
   }
-  if (field == nullptr) {
-    logError("Could not read resident set size from /proc stat");
+  std::uint64_t residentPages = 0;
+  if (not(fields >> residentPages)) {
+    LOG_ERROR("The memory measurement cannot read the resident memory from the file /proc/self/stat.");
     return 0;
   }
-
-  std::size_t residentPages = atol(field);
-  std::size_t rawInput      = residentPages * static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
+  return residentPages * static_cast<std::uint64_t>(sysconf(_SC_PAGESIZE));
 #elif defined(__APPLE__)
   mach_task_basic_info_data_t taskInfo;
-  mach_msg_type_number_t      count    = MACH_TASK_BASIC_INFO_COUNT;
-  std::size_t                 rawInput = 0;
+  mach_msg_type_number_t      count = MACH_TASK_BASIC_INFO_COUNT;
   if (
     task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&taskInfo), &count) == KERN_SUCCESS
   ) {
-    rawInput = taskInfo.resident_size;
+    return static_cast<std::uint64_t>(taskInfo.resident_size);
   }
+  return 0;
 #else
-  std::size_t rawInput = 0;
+  return 0;
 #endif
-
-  return static_cast<std::uint64_t>(rawInput);
-}
-
-double tarch::getMemoryUsage(const MemoryUsageFormat format) {
-  return convertMemorySize(getMemoryUsageInBytes(), format);
 }

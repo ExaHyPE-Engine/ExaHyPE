@@ -5,133 +5,88 @@
 \tableofcontents
 
 Peano uses one tree per MPI rank, a deterministic rank ownership map, and
-task-based subtree traversals within each rank. MPI is optional; the OpenMP
-task backend is always available.
+dispatches over the cell connectivity of each rank. MPI is optional.
 
 # Structural model
 
-Every rank hosts one peano4::topology::TopologyManager whose tree identifier
-equals the rank. The peano4::topology::Tree holds index-linked cell, face, and
-vertex arrays, and its ownership table assigns each cell to one rank. A
-traversal prunes a remote subtree when none of its entities touch the local
-rank.
+Every rank hosts one peano4::Spacetree whose tree identifier equals the rank.
+The spacetree stores the refinement plan, and its ownership table assigns each
+cell to one rank.
 
-A rank materialises the levels above the spawn level in full, because that
-spine carries the ownership decisions every rank needs. Below the spawn level
-it materialises only its own blocks plus one ring of neighbours; a query about
-any other region is answered from the refinement plan by lattice arithmetic
-and never from stored entities. The memory a rank holds therefore grows with
-its own block count, not with the global grid.
+A rank materialises the levels above the spawn level in full. That spine stores
+the ownership decisions every rank needs. Below the spawn level it materialises
+only its own blocks plus one ring of neighbours. The refinement plan answers a
+query about any other region by lattice arithmetic.
+The memory of a rank therefore grows with its own block count, not with the
+global grid.
 
-The plan makes geometry, adjacency, and communication order deterministic.
-Every rank derives them from the same domain, refinement
-plan, and rank count, so the two ranks that hold one boundary agree on the
-entity sequence without exchanging it. Solver data follows the same locality: each
-registered peano4::grid::StackContainer allocates flat pool slots for the
-entities needed by its rank, plus frozen boundary and task-interface copies.
+The plan makes geometry, adjacency and communication order deterministic.
+Every rank derives them from the same domain, refinement plan and rank count.
+The two ranks that store one boundary face then agree on the face sequence
+without exchanging it.
 
 @image html domain-decomposition/domain-decomposition.png
 
 # Inter-rank partition
 
-The spawn level bounds the replicated spine and supplies the initial subtree
-task roots. Rank ownership follows weighted adaptive leaves in Peano-curve
-order. The partition descends recursively through a cell when every child is
-refined; a cell with any leaf child remains indivisible, preserving
+The spawn level bounds the replicated spine and the granularity of the
+ownership plan. Rank ownership follows weighted cells in curve order. The
+partition descends recursively through a cell when every child is refined; a
+cell with any unrefined child remains indivisible, preserving
 resolution-transition faces and coarsening families. Every rank derives the
 same packed ownership table without communication.
 
-Cells have one owning rank. A face or vertex touched by cells from several
-ranks has one local entity slot on each participating rank and one frozen slot
-for every remote partner. Both sides of a rank pair materialise that entity
-because each keeps a ring of neighbour blocks. Pack lists sort the entities the
-two ranks hold by level, normal, and lattice key, so neither tree entity
-indices nor rank-local pool slots have to match.
+One rank owns each cell. A face that cells of two ranks touch exists in the
+cell connectivity of both ranks with the local cell on one side.
+peano4::CellConnectivity lists these faces per neighbour rank in canonical order (level, normal,
+lattice). The two ranks then match their faces by this order alone.
 
-# Intra-rank task decomposition
+# Intra-rank parallelism
 
-A multithreaded standing sweep creates subtree tasks from local spawn-level
-blocks. Heavy refined regions contribute nested roots until the task sizes
-approach the traversal grain. The rank traversal covers the remaining spine.
-Tasks own observer clones and traversal scopes and may run concurrently.
-
-Faces and vertices touched by several tasks receive task-local live and frozen
-slots. A task executes the complete first-touch and last-touch lifecycle on its
-live copy. The post-sweep merge freezes that result, and the following sweep
-merges partner copies before use.
-
-A data container declares whether its records support this replication and
-merge protocol. If any registered container rejects subtree-task replication,
-the rank uses one serial traversal. Particle sets select this serial path.
-
-# Observer lifecycle
-
-The generated step calls `prepareTraversal()` once on each rank. The manager
-clones the observer for the rank traversal, and the traversal clones that
-observer for its subtree tasks. Each clone receives `beginTraversal()`, its
-entity callbacks, and `endTraversal()`. The generated step calls
-`unprepareTraversal()` after all clones finish.
-
-Observer clone identifiers name a rank traversal or subtree task. They do not
-identify independent spacetrees. Output that needs the MPI owner uses the rank;
-output that analyses the thread decomposition records the subtree-task field.
+A phase runs tarch::accelerator::parallelFor and
+tarch::accelerator::parallelReduce over the cell and face spans of the
+cell connectivity; with the host backend these are OpenMP loops, with a GPU
+backend device kernels. The cell connectivity build after a regrid runs one
+task per local
+block through tarch::tasking.
 
 # Boundary exchange
 
-After a sweep, each registered face or vertex container packs its local entity
-slots into one payload per neighbour rank. The non-blocking exchange writes
-received records into frozen slots. Interior subtree tasks of the following
-sweep can start while communication progresses; a boundary task waits before
-it merges those frozen copies.
-
-The generated merge callback distinguishes
-peano4::grid::SendReceiveContext::InterRank from
-peano4::grid::SendReceiveContext::IntraRank. Both contexts carry partner
-state from the preceding sweep. Cell data has neither exchange because each
-cell has one owner.
+peano4::HaloExchange exchanges the halves of the faces two ranks store of one
+pool. Its `post()` gathers the half of the local side of every such face into
+one send buffer per neighbour rank in the pool's memory location and starts the
+non-blocking messages. Its `wait()` scatters the received halves into the other
+side. The local cells of the cell connectivity run between the two calls. The
+messages then travel while the rank computes. Each cell has one owner. Ranks
+exchange face data alone.
 
 @image html domain-decomposition/replicated-boundary-data.png
 
 # Regridding and migration
 
-A changed refinement plan can also change the leaf-weighted rank ownership. A
-stable single-owner transition appends or prunes the structural delta in place.
-Other transitions prepare the required union and target views and inherit pool
-slots for surviving entities. New entities fill available slot gaps, removed
-entities release their slots, and migration pairs move records only when their
-slots or owner ranks change.
-
-When rank ownership moves, the transition first drains traffic that still
-targets the standing pools. It transfers the affected cell, face, and vertex
-slots to their target ranks, adopts the new communication topology, and
-refreshes the new rank-boundary frozen slots before another standing sweep can
-read them.
+A changed refinement plan can also change the cell-weighted rank ownership.
+peano4::Regrid lists the cell slots that move to another rank in canonical
+order, and peano4::MigrationExchange moves their data before the new faces
+are rebuilt.
 
 # Periodic domains
 
-The two opposite entities on a periodic axis hold one tree index between them.
-A periodic wrap inside one rank therefore writes into one storage slot. A wrap
-that crosses rank ownership uses the ordinary inter-rank boundary exchange and
-its standard merge context. The exchange does not transform coordinates stored
-in a container payload, so the container has to establish its periodic
-coordinate representation before merging the record.
+The two opposite cells on a periodic axis meet on one face with two adjacent
+cells, as the tree aliases the periodic entities. A periodic pair inside one
+rank therefore writes one face slot, and a pair that crosses rank ownership
+uses the ordinary halo exchange.
 
-# Rank-wide application state
+# Rank-wide state
 
-Action-set clones are transient and concurrent. Rank-wide state belongs in a
-persistent repository, solver, or service. Each clone accumulates into private
-state and commits from `endTraversal()` through a short protected reduction.
-MPI-wide values require an explicit collective at a point reached by every
-rank in the same program step.
-
-Grid and memory statistics apply this pattern after each step.
-Application-specific values use the MPI wrappers described on
-@ref page_tarch_mpi.
+A dispatch reduces its per-cell results through `parallelReduce`; MPI-wide
+values such as the admissible time step size use one collective per phase,
+issued by every rank in the same phase. Grid and memory statistics apply the
+same pattern after each phase.
 
 # Analysis
 
-The Grid Snapshot reports leaves per rank, the MPI load balance, replicated
-spine cells, subtree-task counts, cells per task and the thread ceiling.
-@ref page_peano_runtime_analysis explains these fields.
+The Grid Snapshot reports the cells, the faces, the levels, the MPI load
+balance and the faces two ranks store. @ref page_peano_runtime_analysis
+explains these fields.
 
 */

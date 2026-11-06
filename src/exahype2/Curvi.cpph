@@ -1,28 +1,36 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+/**
+ * split() pins every interface to a face of the cells of cellSize.
+ */
 INLINE_METHOD
-exahype2::Curvi::Curvi(const Point& domainOffset, const Point& domainSize, const Point& minCellSize) :
+exahype2::Curvi::Curvi(const Point& domainOffset, const Point& domainSize, const Point& cellSize) :
   _domainOffset(domainOffset),
   _domainSize(domainSize),
-  _minCellSize(minCellSize) {}
+  _cellSize(cellSize) {}
 
 /**
  * Pins the interface to the cell boundary closest to position.
  */
-INLINE_METHOD double exahype2::Curvi::split(int normal, double position, Perturbation perturbation) {
-  const int splitIndex = static_cast<int>(std::round((position - _domainOffset[normal]) / _minCellSize[normal]));
+INLINE_METHOD double
+exahype2::Curvi::split(int normal, double position, Perturbation perturbation) {
+  const int splitIndex = static_cast<int>(std::round((position - _domainOffset[normal]) / _cellSize[normal]));
   return split(normal, splitIndex, position, std::move(perturbation));
 }
 
 /**
- * @return The curvilinear position of the cartesian point x.
+ * Returns the curvilinear position of the cartesian point x.
  */
-INLINE_METHOD exahype2::Curvi::Point exahype2::Curvi::operator()(const Point& x) const { return _positionFunction(x); }
+INLINE_METHOD exahype2::Curvi::Point
+exahype2::Curvi::operator()(const Point& x) const {
+  return _positionFunction(x);
+}
 
 /**
- * @return The cartesian point which operator() maps onto the curvilinear point x.
+ * Returns the cartesian point that operator() maps onto the curvilinear point x.
  */
-INLINE_METHOD exahype2::Curvi::Point exahype2::Curvi::invertProjection(const Point& x) const {
+INLINE_METHOD exahype2::Curvi::Point
+exahype2::Curvi::invertProjection(const Point& x) const {
   return _inversePositionFunction(x);
 }

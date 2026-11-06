@@ -8,15 +8,10 @@ tarch::instrumentation::Watch::Watch(
   [[maybe_unused]] const std::string& className,
   const std::string&                  operationName,
   const bool                          plotResultInDestructor,
-  bool                                startToTickImmediately
+  const bool                          startToTickImmediately
 ) :
   _plotResultInDestructor(plotResultInDestructor),
-  _operationName(operationName),
-  _startClockTicks(0),
-  _startTime(),
-  _elapsedClockTicks(0),
-  _elapsedTime(),
-  _isRunning(startToTickImmediately) {
+  _operationName(operationName) {
   if (startToTickImmediately) {
     start();
   }
@@ -28,39 +23,29 @@ tarch::instrumentation::Watch::~Watch() {
   }
 
   if (_plotResultInDestructor) {
-    if (_operationName.empty()) {
-      logInfo(
-        "Total number of clock ticks within block (CPU time, calendar time): " << "(" << getCPUTime() << "s"
-                                                                               << "," << getCalendarTime() << "s"
-                                                                               << ")"
-      );
-    } else {
-      logInfo(
-        "Operation " << _operationName << ": Total number of clock ticks within block (CPU time, calendar time): "
-                     << "(" << getCPUTime() << "s"
-                     << "," << getCalendarTime() << "s"
-                     << ")"
-      );
-    }
+    LOG_INFO(
+      (_operationName.empty() ? std::string("Block") : "Operation " + _operationName)
+      << ": CPU time " << getCPUTime() << " s, calendar time " << getCalendarTime() << " s."
+    );
   }
 }
 
 /**
- * Restarts the timer, so the getters report the time between this call and the
- * next stop().
+ * Restarts the timer. The getters report the time between this call and the next stop().
  */
-void tarch::instrumentation::Watch::start() {
+void
+tarch::instrumentation::Watch::start() {
   _startClockTicks = std::clock();
   _startTime       = std::chrono::steady_clock::now();
   _isRunning       = true;
 }
 
 /**
- * Stops the timer without resetting the start time, so a repeated call
- * measures from the same start. The getters return the elapsed time only after
- * this call.
+ * Stops the timer and keeps the start time. A repeated call measures from the same start. The
+ * getters return the elapsed time only after this call.
  */
-void tarch::instrumentation::Watch::stop() {
+void
+tarch::instrumentation::Watch::stop() {
   _elapsedClockTicks = std::clock() - _startClockTicks;
   _elapsedTime       = std::chrono::steady_clock::now() - _startTime;
   _isRunning         = false;
@@ -70,23 +55,17 @@ void tarch::instrumentation::Watch::stop() {
  * Returns the CPU time in seconds between start() and stop(), summed over the
  * cores the process ran on. The clock tick counter can overflow.
  */
-double tarch::instrumentation::Watch::getCPUTime() const {
-  const double elapsedTicks   = static_cast<double>(_elapsedClockTicks);
-  const double ticksPerSecond = static_cast<double>(CLOCKS_PER_SEC);
+double
+tarch::instrumentation::Watch::getCPUTime() const {
+  const auto elapsedTicks   = static_cast<double>(_elapsedClockTicks);
+  const auto ticksPerSecond = static_cast<double>(CLOCKS_PER_SEC);
   return elapsedTicks / ticksPerSecond;
 }
 
-std::clock_t tarch::instrumentation::Watch::getCPUTicks() const { return _elapsedClockTicks; }
-
 /**
- * Returns the elapsed calendar time between the start and the stop command of
- * the timer, i.e. the wall clock time, in seconds.
+ * Returns the wall clock time in seconds between start() and stop().
  */
-double tarch::instrumentation::Watch::getCalendarTime() const {
+double
+tarch::instrumentation::Watch::getCalendarTime() const {
   return std::chrono::duration<double>(_elapsedTime).count();
 }
-
-/**
- * Returns true between start() and stop(), and false after stop().
- */
-bool tarch::instrumentation::Watch::isOn() const { return _isRunning; }

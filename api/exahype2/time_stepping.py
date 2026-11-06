@@ -11,15 +11,16 @@ def _positive_finite(value, name):
         or value <= 0
     ):
         raise ValueError(
-            "{} must be a finite positive number, got {!r}.".format(name, value)
+            "{} must be a finite positive number (got {!r}).".format(name, value)
         )
     return value
 
 
 class Fixed:
-    """The time step size follows the smallest mesh width, scaled by the given factor."""
+    """The time step size is ``normalised_time_step_size`` on the coarsest admissible mesh and
+    shrinks with the smallest mesh width."""
 
-    cpp = "::exahype2::FixedTimeStepping"
+    rule = "Fixed"
     adaptive = False
 
     def __init__(self, normalised_time_step_size):
@@ -34,7 +35,7 @@ class Fixed:
 class Adaptive:
     """The time step size follows the CFL condition, relaxed by the given factor."""
 
-    cpp = "::exahype2::AdaptiveTimeStepping"
+    rule = "Adaptive"
     adaptive = True
 
     def __init__(self, relaxation):
@@ -54,6 +55,6 @@ def of(value):
     if isinstance(value, (Fixed, Adaptive)):
         return value
     raise TypeError(
-        "time_stepping must be TimeStepping.Fixed(...) or TimeStepping.Adaptive(...), "
-        "got {!r}.".format(value)
+        "The solver expects TimeStepping.Fixed(...) or TimeStepping.Adaptive(...) as "
+        "time_stepping (got {!r}).".format(value)
     )

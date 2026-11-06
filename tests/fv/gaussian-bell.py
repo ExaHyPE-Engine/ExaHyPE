@@ -43,9 +43,8 @@ initial_conditions = """
 """
 
 analytical_solution = """
-  // The initial condition is transported without deformation in a periodic
-  // domain [-.5, +.5], i.e. the value at a given point is the value at the
-  // position x - v*t but accounting for periodicity.
+  // The initial condition moves unchanged with velocity 1 along every axis. The solution at x
+  // is the initial value at x - t, wrapped into the periodic domain.
 #if DIMENSIONS == 2
   tarch::la::Vector<DIMENSIONS, double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
                                                 (x[1] - t) + (int)(t + .5 - x[1]) };
@@ -92,7 +91,6 @@ fv_solver = exahype2.fv.Solver(
 
 fv_solver.set_pde_terms(
     initial_condition=initial_conditions,
-    boundary_conditions=True,
     flux=flux,
     max_eigenvalue=max_eigenvalue,
     analytical_solution=analytical_solution,

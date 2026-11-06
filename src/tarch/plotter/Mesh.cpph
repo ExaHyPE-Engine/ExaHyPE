@@ -1,0 +1,27 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename T>
+template <typename U>
+INLINE_METHOD tarch::plotter::DefaultInitialisingAllocator<T>::DefaultInitialisingAllocator(
+  const DefaultInitialisingAllocator<U>& other
+) noexcept :
+  std::allocator<T>(other) {}
+
+template <typename T>
+template <typename U>
+INLINE_METHOD void
+tarch::plotter::DefaultInitialisingAllocator<T>::construct(
+  U* const pointer
+) noexcept(std::is_nothrow_default_constructible_v<U>) {
+  ASSERTION(pointer != nullptr);
+  ::new (static_cast<void*>(pointer)) U;
+}
+
+template <typename T>
+template <typename U, typename... Arguments>
+INLINE_METHOD void
+tarch::plotter::DefaultInitialisingAllocator<T>::construct(U* const pointer, Arguments&&... arguments) {
+  ASSERTION(pointer != nullptr);
+  ::new (static_cast<void*>(pointer)) U(std::forward<Arguments>(arguments)...);
+}

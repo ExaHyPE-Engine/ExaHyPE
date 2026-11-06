@@ -1,0 +1,100 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+
+INLINE_METHOD bool
+exahype2::containsIntermediateFace(
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const int                       level
+) {
+  ASSERTION(level >= 0 and level <= cellConnectivity.getMaximumLevel(), level, cellConnectivity.getMaximumLevel());
+  const auto intermediateFaces = cellConnectivity.getFaces(adjacency, peano4::FaceKind::Intermediate);
+  return std::any_of(intermediateFaces.begin(), intermediateFaces.end(), [&cellConnectivity, level](const int face) {
+    return cellConnectivity.getFaceLevel(face) == level;
+  });
+}
+
+/**
+ * Runs operation on the level jumps of the given adjacency in one dispatch per run of levels from
+ * the coarsest run down. A level with an intermediate face is the coarsest level of its run. The
+ * level jumps of such a level read the intermediate faces that the level jumps one level coarser
+ * write.
+ */
+template <typename Operation>
+INLINE_METHOD void
+exahype2::interpolateCoarseFaces(
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const Operation&                operation
+) {
+  const int maximumLevel = cellConnectivity.getMaximumLevel();
+  int       firstLevel   = 0;
+  for (int level = 1; level <= maximumLevel + 1; level++) {
+    if (level <= maximumLevel and not exahype2::containsIntermediateFace(cellConnectivity, adjacency, level)) {
+      continue;
+    }
+    ASSERTION(firstLevel < level, firstLevel, level);
+    const auto levelJumps = cellConnectivity.onDevice().getLevelJumps(adjacency, firstLevel, level - 1);
+    if (not levelJumps.isEmpty()) {
+      tarch::accelerator::parallelFor(
+        tarch::accelerator::Range(levelJumps.size),
+        exahype2::ForEachLevelJump<Operation>{levelJumps, operation}
+      );
+    }
+    firstLevel = level;
+  }
+}
+
+/**
+ * Runs operation on the level jumps of the given adjacency in one dispatch per run of levels from
+ * the finest run up. A level with an intermediate face is the coarsest level of its run. The level
+ * jumps one level coarser read the intermediate faces that the level jumps of such a level write.
+ */
+template <typename Operation>
+INLINE_METHOD void
+exahype2::restrictFineFaces(
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const Operation&                operation
+) {
+  int lastLevel = cellConnectivity.getMaximumLevel();
+  for (int level = lastLevel; level >= 0; level--) {
+    if (level > 0 and not exahype2::containsIntermediateFace(cellConnectivity, adjacency, level)) {
+      continue;
+    }
+    ASSERTION(level <= lastLevel, level, lastLevel);
+    const auto levelJumps = cellConnectivity.onDevice().getLevelJumps(adjacency, level, lastLevel);
+    if (not levelJumps.isEmpty()) {
+      tarch::accelerator::parallelFor(
+        tarch::accelerator::Range(levelJumps.size),
+        exahype2::ForEachLevelJump<Operation>{levelJumps, operation}
+      );
+    }
+    lastLevel = level - 1;
+  }
+}
+
+/**
+ * Runs operation on every level jump of cellConnectivity, one adjacency after the other. The faces
+ * that the level jumps of one adjacency read differ from the faces that the level jumps of the
+ * other adjacency write.
+ */
+template <typename Operation>
+INLINE_METHOD void
+exahype2::restrictFineFaces(const peano4::CellConnectivity& cellConnectivity, const Operation& operation) {
+  for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+    exahype2::restrictFineFaces(cellConnectivity, adjacency, operation);
+  }
+}
+
+TARGET_DECLARE
+template <typename Operation>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::ForEachLevelJump<Operation>::operator()(const int entry) const {
+  operation(levelJumps[entry]);
+}
+TARGET_DECLARE_END

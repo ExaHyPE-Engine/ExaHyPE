@@ -28,8 +28,8 @@ velocity \f$\mathbf{v} = (v_1, v_2)\f$, with a source on the pressure equation:
 \end{equation*}
 @f$
 
-The density \f$\rho = 1\f$ and bulk modulus \f$K_0 = \rho c^2 = 1\f$ are constant,
-so the waves travel at the speed of sound \f$c = \sqrt{K_0/\rho} = 1\f$, which is
+The density \f$\rho = 1\f$ and bulk modulus \f$K_0 = \rho c^2 = 1\f$ are constant.
+The waves travel at the speed of sound \f$c = \sqrt{K_0/\rho} = 1\f$. This speed is
 the largest eigenvalue of the flux. The right-hand side \f$s(\mathbf{x}, t)\f$ is
 the **point source**: a Gaussian pulse in time injected at a single point near
 the bottom-left corner of the domain. To implement this PDE we therefore need a
@@ -53,8 +53,9 @@ and discretisation, independent of the PDE:
     )
 
 The domain is a \f$2 \times 2\f$ box centred on the origin with **non-periodic**
-boundaries, so the expanding wave reflects when it reaches the walls. The end
-time, snapshot count and grid resolution are supplied at run time (see below).
+boundaries. The expanding wave reflects when it reaches the walls. The command
+line sets the end time, snapshot count and grid resolution at run time (see
+below).
 
 Next we choose the numerical scheme - an ADER-DG solver of polynomial order 5,
 named `ADERDGSolver`:
@@ -69,13 +70,12 @@ named `ADERDGSolver`:
         point_sources        = 1,
     )
 
-The name determines the generated C++ class *and* the output file prefix, so we
-reuse it when visualising. The unknowns are given as a dictionary so we can
-address them by name in C++ (`v` has multiplicity two for the two velocity
-components). The factor 0.9 of the adaptive time stepping is the usual safety
-factor on the stable time-step size. Because the system is linear, `linear`
-switches on the optimised linear ADER-DG kernels, and `point_sources` counts the
-sources we inject.
+The name determines the generated C++ class *and* the output file prefix. We
+reuse it when visualising. A dictionary lists the unknowns. We then address
+them by name in C++ (`v` has multiplicity two for the two velocity components).
+The factor 0.9 of the adaptive time stepping is the usual safety factor on the
+stable time step size. The system is linear. `linear` switches on the optimised
+linear ADER-DG kernels. `point_sources` counts the sources we inject.
 
 We declare which PDE terms we implement - the flux, the maximum eigenvalue, and
 the initial and boundary conditions - and register the **point source** through
@@ -100,12 +100,12 @@ Finally we register our implementation file and generate and compile the solver:
 
 # The Implementation File
 
-`ADERDGSolver.cpp` provides the PDE terms. The conserved variables are addressed
+`ADERDGSolver.cpp` provides the PDE terms. The code addresses the conserved variables
 through the generated `Shortcuts` enum (`Shortcuts::p`, `Shortcuts::v + 0/1`).
-`maxEigenvalue` returns the sound speed \f$c\f$; `flux` fills the flux for the
-requested `normal` direction; `initialCondition` sets a quiescent state (the waves
-come entirely from the source); `boundaryConditions` prescribes a zero exterior
-state to reflect off; and `pointSource` and `initPointSourceLocations` define
+`maxEigenvalue` returns the sound speed \f$c\f$. `flux` writes every entry of the
+flux for the requested `normal` direction. `initialCondition` sets a quiescent state.
+The waves come from the source alone. `boundaryConditions` prescribes a zero exterior
+state that reflects the waves. `pointSource` and `initPointSourceLocations` define
 the Gaussian point source and place it near the bottom-left corner.
 
 @include tutorials/01_acoustic/ADERDGSolver.cpp
@@ -113,7 +113,7 @@ the Gaussian point source and place it near the bottom-left corner.
 # Running and Visualising
 
 The build produces an executable that is configured entirely through command-line
-flags - no recompilation is needed to change the run:
+flags - a different run needs different flags only:
 
     export OMP_NUM_THREADS=4
     ./Acoustic -et 2.2 -ns 22 -l 3
@@ -138,7 +138,7 @@ Drag the slider to watch the wave expand from the source and reflect off the wal
 # Experiment
 
 - Plot a velocity component: pass `field="v"` to `show_solution`.
-- Refine the mesh: raise `-l` to 4 and re-run (no rebuild needed).
+- Refine the mesh: raise `-l` to 4 and re-run the same executable.
 - Run a little longer: raise `-et` (and `-ns`) to follow the wave reflecting off
   the far walls.
 - Move the source in `ADERDGSolver.cpp` and rebuild.

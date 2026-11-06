@@ -2,154 +2,242 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/AdaptiveTimeStepping.h"
-#include "exahype2/FixedTimeStepping.h"
-#include "exahype2/Solver.h"
-#include "exahype2/dg/LimiterStatus.h"
-#include "exahype2/dg/LimitingSolverState.h"
-#include "peano4/Constants.h"
-#include "peano4/dataview/CellMarker.h"
-#include "peano4/dataview/FaceMarker.h"
-#include "tarch/Assertions.h"
+#include "exahype2/RefinementRequests.h"
+#include "exahype2/dg/Basis.h"
+#include "exahype2/dg/Kernels.h"
+#include "exahype2/dg/Solver.h"
+#include "exahype2/dg/ader/Corrector.h"
+#include "exahype2/dg/ader/Predictor.h"
+#include "exahype2/plotter/PatchPlotter.h"
+#include "exahype2/terms/BoundaryConditions.h"
+#include "exahype2/terms/InitialCondition.h"
+#include "exahype2/terms/RefinementCriterion.h"
+#include "peano4/CellConnectivity.h"
+#include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/NonCriticalAssertions.h"
-#include "tarch/mpi/Collectives.h"
-#include "tarch/mpi/Rank.h"
+#include "tarch/accelerator/Buffer.h"
+#include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/plotter/Format.h"
+
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
 
 namespace exahype2::dg::ader {
-  template <
-    typename Derived,
-    int Order,
-    int Unknowns,
-    int AuxiliaryVariables,
-    typename TimeStepping,
-    bool SubcellLimiter,
-    int  PointSources>
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
   class Solver;
 
-  constexpr double cflFactor(int order);
+  /**
+   * The Limiter argument of a solver without a limiter.
+   */
+  struct NoLimiter final {};
+
+  INLINE_METHOD constexpr double getCFLFactor(int order);
+
+  template <typename SolverType, typename Storage, typename Compute>
+  concept SolverConcept = exahype2::terms::HasInitialCondition<SolverType, Storage>
+    and exahype2::terms::HasBoundaryConditionsWhereNeeded<SolverType, Compute>
+    and exahype2::terms::HasRefinementCriterion<SolverType, Storage> and requires {
+          { SolverType::DGOrder } -> std::convertible_to<int>;
+          { SolverType::NumberOfUnknowns } -> std::convertible_to<int>;
+          { SolverType::NumberOfAuxiliaryVariables } -> std::convertible_to<int>;
+          { SolverType::PeriodicBoundaries[0] } -> std::convertible_to<bool>;
+        };
 } // namespace exahype2::dg::ader
 
 /**
- * Holds the sweep state of an ADER-DG solver, with or without the subcell limiter, and derives
- * its time step size. Derived is the generated solver class, so every solver class holds its own
- * statistics record and point-source locations.
+ * The ADER-DG solver family. Derived also declares NumberOfPointSources. Limiter is void or the
+ * subcell limiter that checks every corrected cell and recomputes the rejected ones.
  */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-class exahype2::dg::ader::Solver : public TimeStepping {
+TARGET_DECLARE
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+class exahype2::dg::ader::Solver : public exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision> {
 public:
-  enum class SolverState {
-    GridConstruction,
-    GridInitialisation,
-    InitialPrediction,
-    PredictionOnHangingCells,
-    TimeStep,
-    Plotting,
-    Suspended
-  };
+  using Base = exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>;
 
-  static_assert(Order >= 0 and Order < 16, "The CFL factors of the ADER-DG scheme cover the orders 0 to 15.");
+  template <typename Precision, typename Generated = Derived>
+  using Quadrature = typename Generated::template Quadrature<Precision>;
+  template <typename Precision, typename Generated = Derived>
+  using DGMatrices = typename Generated::template DGMatrices<Precision>;
 
-  static constexpr int    DGOrder                    = Order;
-  static constexpr int    NumberOfUnknowns           = Unknowns;
-  static constexpr int    NumberOfAuxiliaryVariables = AuxiliaryVariables;
-  static constexpr int    NumberOfPointSources       = PointSources;
-  static constexpr double PNPM                       = cflFactor(Order);
-  /**
-   * The Picard iteration of the predictor stops once the Euclidean distance between two
-   * iterates falls below this value.
-   */
+  using Base::NodesPerAxis;
+  using Base::NodesPerFace;
+  using Base::NumberOfData;
+  using Base::UsesAdaptiveTimeStepping;
+
+  static constexpr double PNPM       = exahype2::dg::ader::getCFLFactor(Derived::DGOrder);
+  static constexpr bool   HasLimiter = not std::is_void_v<Limiter>;
+
+  using LimiterType = std::conditional_t<HasLimiter, Limiter, exahype2::dg::ader::NoLimiter>;
+
   static constexpr double PicardResidualTolerance = 1e-7;
 
-  static constexpr bool UsesAdaptiveTimeStepping = std::is_same_v<TimeStepping, exahype2::AdaptiveTimeStepping>;
-  static constexpr bool UsesSubcellLimiter       = SubcellLimiter;
+  Solver()                               = delete;
+  Solver(const Solver& other)            = delete;
+  Solver(Solver&& other)                 = delete;
+  Solver& operator=(const Solver& other) = delete;
+  Solver& operator=(Solver&& other)      = delete;
+  ~Solver()                              = default;
 
-  static double pointSourceLocation[PointSources == 0 ? 1 : PointSources][DIMENSIONS];
-
-  Solver()                         = delete;
-  Solver(const Solver&)            = delete;
-  Solver(Solver&&)                 = delete;
-  Solver& operator=(const Solver&) = delete;
-  Solver& operator=(Solver&&)      = delete;
-  ~Solver() override               = default;
-
-  explicit Solver(double timeStepFactor);
-
-  static std::string toString(SolverState state);
-
-  void startGridConstructionStep() override;
-  void finishGridConstructionStep() override;
-  void startGridInitialisationStep() override;
-  void finishGridInitialisationStep() override;
-  void suspendSolversForOneGridSweep() override;
-  void startTimeStep() override;
-  void finishTimeStep() override;
-  void startPlottingStep() override;
-  void finishPlottingStep() override;
-
-  [[nodiscard]] double getMaxPatchSize() const override;
-  [[nodiscard]] double getMinPatchSize() const override;
-  [[nodiscard]] int    getNumberOfDoFs() const override;
-  [[nodiscard]] bool   mayPlot() const override;
-
-  INLINE_METHOD void update(
-    double timeStepSize,
-    double timeStamp,
-    double minCellSize,
-    double maxCellSize,
-    bool   hasHangingFaces
+  INLINE_METHOD Solver(
+    double                                           timeStepFactor,
+    const std::string&                               name,
+    const std::vector<exahype2::plotter::DataField>& plottedFields
   );
-  INLINE_METHOD void reduceLocalUpdates();
 
-  [[nodiscard]] SolverState                       getSolverState() const;
-  [[nodiscard]] exahype2::dg::LimitingSolverState getLimitingSolverState() const;
-  [[nodiscard]] bool                              isFirstGridSweepOfTimeStep() const;
-  [[nodiscard]] bool                              isLastGridSweepOfTimeStep() const;
-  [[nodiscard]] bool                              isGridInitialisationSweep() const;
-  [[nodiscard]] bool                              isPlottingSweep() const;
-  [[nodiscard]] bool                              isFinalSubcellSpreadSweep() const;
-  [[nodiscard]] long                              getNumberOfTroubledCells() const;
+  INLINE_METHOD Solver(
+    double                                           timeStepFactor,
+    const std::string&                               name,
+    const std::vector<exahype2::plotter::DataField>& plottedFields,
+    double                                           relaxationParameter,
+    double                                           differencesScaling
+  );
 
-  [[nodiscard]] bool isPredictionOnHangingCellsSweep() const;
-  [[nodiscard]] bool isLimitingSweep(exahype2::dg::LimitingSolverState state) const;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity, const RuntimeParameters& parameters);
 
-  [[nodiscard]] bool storesCellData(const peano4::dataview::CellMarker& marker) const;
-  [[nodiscard]] bool loadsCellData(const peano4::dataview::CellMarker& marker) const;
-  [[nodiscard]] bool storesFaceData(const peano4::dataview::FaceMarker& marker) const;
-  [[nodiscard]] bool loadsFaceData(const peano4::dataview::FaceMarker& marker) const;
-  [[nodiscard]] bool providesCellDataToKernels(const peano4::dataview::CellMarker& marker) const;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void initialise(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
 
-  void markCellAsTroubled();
+  template <typename RuntimeParameters>
+  INLINE_METHOD void performTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
 
-  [[nodiscard]] bool reducesStatisticsThisSweep() const;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void regrid(
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
 
-protected:
-  [[nodiscard]] virtual double maxAdmissibleMeshWidth() const = 0;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void plot(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory,
+    const RuntimeParameters&        parameters
+  );
 
-  static thread_local exahype2::Solver::LocalUpdates _localUpdates;
+  INLINE_METHOD void release();
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
-  SolverState                 _solverState{SolverState::GridConstruction};
-  exahype2::dg::LimitingSweep _limitingSweep{};
-  std::atomic<long>           _numberOfTroubledCellsThisTimeStep{0};
-  const double                _timeStepFactor;
+  [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
+  [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
+  [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;
+  [[nodiscard]] INLINE_METHOD const LimiterType& getLimiter() const;
+  [[nodiscard]] INLINE_METHOD int getNumberOfTroubledCells() const;
+
+  template <typename Partner>
+  INLINE_METHOD void coupleWith(
+    Partner&                   partner,
+    const std::vector<double>& fromPartnerMatrix,
+    const std::vector<double>& toPartnerMatrix
+  );
 
 private:
-  Solver(double timeStepFactor, std::true_type adaptive);
-  Solver(double timeStepFactor, std::false_type fixed);
+  template <typename PartnerDerived, typename PartnerStorage, typename PartnerCompute, typename PartnerLimiter>
+  friend class exahype2::dg::ader::Solver;
 
-  [[nodiscard]] exahype2::dg::LimitingBranchDecision branchDecision() const;
-  [[nodiscard]] SolverState                          successorAfterInterruption() const;
-  [[nodiscard]] SolverState                          successorOfTimeStep() const;
-  [[nodiscard]] bool                                 isCorrectorSweep() const;
-  void                                               advanceLimitingState(bool& resumesFromSuspension);
-  void                                               closeTimeStep();
+  using LimiterSlot = std::conditional_t<HasLimiter, std::optional<Limiter>, exahype2::dg::ader::NoLimiter>;
+
+  using Predictor = exahype2::dg::ader::Predictor<Derived, ComputePrecision>;
+  using Corrector = exahype2::dg::ader::Corrector<Derived, StoragePrecision, ComputePrecision>;
+  template <bool ReportEigenvalues>
+  using CorrectorCells =
+    exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, ComputePrecision>;
+
+  [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision> getBasisTables();
+
+  struct CoupledTimeStep;
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void predict(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
+  );
+
+  template <typename DivergenceMarks, typename RuntimeParameters>
+  [[nodiscard]] INLINE_METHOD exahype2::dg::ader::PredictionCounts predictCells(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const DivergenceMarks&          divergenceMarks,
+    const RuntimeParameters&        parameters
+  );
+
+  INLINE_METHOD void interpolatePredictedHalves(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency
+  );
+
+  template <typename RuntimeParameters>
+  [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics correct(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
+  );
+
+  INLINE_METHOD void setCouplingMatrix(const std::vector<double>& fromPartnerMatrix);
+  INLINE_METHOD void leaveTimeStepsToPartner();
+
+  template <typename Partner>
+  INLINE_METHOD void copyFaceHalvesFromPartner(
+    const peano4::CellConnectivity& cellConnectivity,
+    const Partner&                  partner,
+    peano4::Adjacency               adjacency
+  );
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void rebuildCouplingFaces(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
+  INLINE_METHOD void reservePredictorScratch(const peano4::CellConnectivity& cellConnectivity);
+
+  tarch::accelerator::Buffer<double> _pointSourceLocations{tarch::MemoryLocation::Device};
+
+  tarch::accelerator::Buffer<ComputePrecision> _predictorScratch{tarch::MemoryLocation::Device};
+
+  int _unconvergedPredictions{0};
+  int _unconvergedPredictionsSlot{0};
+
+  LimiterSlot _limiter{};
+
+  std::unique_ptr<CoupledTimeStep> _coupledTimeStep{};
+  bool                             _drivenByPartner{false};
+
+  tarch::accelerator::Buffer<int> _couplingFaces{tarch::MemoryLocation::Device};
+  int                             _numberOfCouplingFaces{0};
+  int                             _numberOfLocalCouplingFaces{0};
+
+  tarch::accelerator::Buffer<ComputePrecision> _couplingMatrix{tarch::MemoryLocation::Device};
 };
+
+/**
+ * Runs one time step of a solver and of its coupling partner. Only the member functions of Solver
+ * instantiate this type. Derived is complete in these functions.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+struct exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::CoupledTimeStep final {
+  std::function<
+    void(const peano4::CellConnectivity&, exahype2::RefinementRequests&, const typename Derived::RuntimeParameters&)
+  >
+    run{};
+};
+TARGET_DECLARE_END
 
 #include "exahype2/dg/ader/Solver.cpph"

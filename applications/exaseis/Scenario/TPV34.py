@@ -26,6 +26,8 @@ class TPV34(DynamicRuptureScenario):
 
     end_time = 20.0
 
+    auxiliary_variables = {"faultShearModulus": 1}
+
     tracer_coordinates = [
         [17.0, 0.0, 10.0],
         [17.0, 2.4, 10.0],
@@ -159,6 +161,19 @@ class TPV34(DynamicRuptureScenario):
           "cs",
           {x[0], x[1], x[2]}
         );
+
+        static tarch::reader::NetCDFFieldSampler<2> faultSampler(
+          {
+            {"stress", "tpv34-mu.nc", "stress"}
+          },
+          {DomainSize[2], DomainSize[1]},
+          {DomainOffset[2], DomainOffset[1]}
+        );
+
+        Q[Shortcuts::faultShearModulus] = faultSampler.samplePiecewiseConstant(
+          "stress",
+          {x[2], x[1]}
+        );
 """
 
     def generate_required_files(self):
@@ -178,17 +193,7 @@ class TPV34(DynamicRuptureScenario):
         return
 
     mu_compute = """
-  static tarch::reader::NetCDFFieldSampler muSampler(
-    {
-      {"stress", "tpv34-mu.nc", "stress"}
-    },
-    {DomainSize[2], DomainSize[1]},
-    {DomainOffset[2], DomainOffset[1]}
-  );
-  double mu = muSampler.samplePiecewiseConstant(
-    "stress",
-    {x[2], x[1]}
-  );
+  const Value mu = Q[Shortcuts::faultShearModulus];
     """
 
     dynamicRuptureDictionary = {

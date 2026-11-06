@@ -1,0 +1,12 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+{%- if SOLVER_INLINE_DEFINITIONS %}
+
+TARGET_DECLARE
+{{SOLVER_INLINE_DEFINITIONS}}
+TARGET_DECLARE_END
+{%- endif %}
+{%- if SOLVER_HOST_INLINE_DEFINITIONS %}
+
+{{SOLVER_HOST_INLINE_DEFINITIONS}}
+{%- endif %}

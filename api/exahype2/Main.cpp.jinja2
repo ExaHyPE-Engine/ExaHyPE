@@ -11,102 +11,55 @@
 #include "{{ MAIN_NAME }}.h"
 
 #include "RuntimeParameters.h"
+#include "SolverRepository.h"
 
-{% for step in MAIN_STEPS | sort(attribute="name") -%}
-#include "observers/{{ step.name }}.h"
-{% endfor -%}
-#include "exahype2/RefinementControlService.h"
-#include "peano4/Constants.h"
-#include "peano4/topology/TopologyManager.h"
-#include "repositories/DataRepository.h"
-#include "repositories/SolverRepository.h"
-#include "repositories/StepRepository.h"
-#include "runner/Engine.h"
-#include "runner/Launch.h"
-#include "runner/RuntimeParameters.h"
+#include "exahype2/runner/Runner.h"
+#include "exahype2/runner/RuntimeParameters.h"
 #include "tarch/la/Vector.h"
 
 namespace {
-  std::vector<::runner::Step> createSteps() {
-    std::vector<::runner::Step> result;
-    result.reserve({{ MAIN_STEPS | length }});
-{% for step in MAIN_STEPS %}
-    result.emplace_back(
-      ::{{ project_namespace }}::repositories::StepRepository::toProgramStep(
-        ::{{ project_namespace }}::repositories::StepRepository::Steps::{{ step.name }}
-      ),
-      "{{ step.name }}",
-      []() {
-{%- if step.start_hooks %}
-        {{ step.start_hooks | join("\n") | indent(8) }}
-{%- endif %}
-        ::{{ project_namespace }}::observers::{{ step.name }}::prepareTraversal();
-        ::{{ project_namespace }}::observers::{{ step.name }} observer;
-        ::peano4::topology::TopologyManager::getInstance().traverse(observer);
-        ::{{ project_namespace }}::observers::{{ step.name }}::unprepareTraversal();
-{%- if step.finish_hooks %}
-        {{ step.finish_hooks | join("\n") | indent(8) }}
-{%- endif %}
-      }
-    );
-{% endfor %}
-    return result;
-  }
+  ::exahype2::runner::SolverRepositoryCallbacks createRepositoryCallbacks() {
+    ::exahype2::runner::SolverRepositoryCallbacks result;
 
-  ::runner::RepositoryCallbacks createRepositoryCallbacks() {
-    ::runner::RepositoryCallbacks result;
-
-    // The grid statistics of a sweep are reduced before this callback refreshes the
-    // repository's memory statistics, so both describe the same sweep.
-    result.afterStep = ::{{ project_namespace }}::repositories::DataRepository::updateMemoryUsage;
-
-    result.shutdownDataRepository = ::{{ project_namespace }}::repositories::DataRepository::shutdown;
-
-    result.getGlobalCellDataMemoryUsageInBytes = []() {
-      return ::{{ project_namespace }}::repositories::DataRepository::getGlobalCellDataMemoryUsageInBytes();
-    };
-    result.getGlobalFaceDataMemoryUsageInBytes = []() {
-      return ::{{ project_namespace }}::repositories::DataRepository::getGlobalFaceDataMemoryUsageInBytes();
-    };
-    result.getGlobalVertexDataMemoryUsageInBytes = []() {
-      return ::{{ project_namespace }}::repositories::DataRepository::getGlobalVertexDataMemoryUsageInBytes();
-    };
+    result.getCopyrightBanner = []() { return std::string("ExaHyPE 2 (C) www.exahype.org"); };
 
     result.printApplicationHelp      = ::{{ project_namespace }}::RuntimeParameters::printUsage;
-    result.loadApplicationParameters = [](tarch::reader::JSONReader* const reader, int& argc, char** const argv) {
-      ::{{ project_namespace }}::RuntimeParameters::load(reader, argc, argv);
-    };
+    result.loadApplicationParameters = ::{{ project_namespace }}::loadRuntimeParameters;
 
-    result.startSimulation       = []() { ::{{ project_namespace }}::repositories::startSimulation(); };
-    result.finishSimulation      = []() { ::{{ project_namespace }}::repositories::finishSimulation(); };
-    result.mayPlot               = []() { return ::{{ project_namespace }}::repositories::mayPlot(); };
-    result.hasPendingMeshUpdates = []() {
-      return ::exahype2::RefinementControlService::getInstance().hasGridControlEvents();
-    };
-    result.hasUndecidedRefinementCriterion = []() {
-      return ::exahype2::RefinementControlService::getInstance().lastCriterionStepWasSuppressed();
-    };
-    result.getMinTimeStamp         = []() { return ::{{ project_namespace }}::repositories::getMinTimeStamp(); };
-    result.getMaxTimeStamp         = []() { return ::{{ project_namespace }}::repositories::getMaxTimeStamp(); };
-    result.getNumberOfDoFs         = []() { return ::{{ project_namespace }}::repositories::getNumberOfDoFs(); };
-    result.getSolverStatistics     = []() { return ::{{ project_namespace }}::repositories::getSolverStatistics(); };
-    result.getConfigurationSummary = []() {
-      return ::{{ project_namespace }}::repositories::getConfigurationSummary();
-    };
-    result.getCopyrightBanner = []() { return std::string("ExaHyPE 2 (C) www.exahype.org"); };
+    result.startSimulation  = ::{{ project_namespace }}::startSimulation;
+    result.finishSimulation = ::{{ project_namespace }}::finishSimulation;
+
+    result.allocate          = ::{{ project_namespace }}::allocate;
+    result.getAllocatedBytes = ::{{ project_namespace }}::getAllocatedBytes;
+
+    result.requestRefinementForGridConstruction = ::{{ project_namespace }}::requestRefinementForGridConstruction;
+    result.initialise                           = ::{{ project_namespace }}::initialise;
+    result.performTimeStep                      = ::{{ project_namespace }}::performTimeStep;
+    result.regrid                               = ::{{ project_namespace }}::regrid;
+    result.plot                                 = ::{{ project_namespace }}::plot;
+    result.recordLastTimeStamp                  = ::{{ project_namespace }}::recordLastTimeStamp;
+    result.addLocalValuesToGlobalReduction      = ::{{ project_namespace }}::addLocalValuesToGlobalReduction;
+    result.readValuesFromGlobalReduction        = ::{{ project_namespace }}::readValuesFromGlobalReduction;
+    result.getRefinementRequests                = ::{{ project_namespace }}::getRefinementRequests;
+
+    result.getMinTimeStamp         = ::{{ project_namespace }}::getMinTimeStamp;
+    result.getMaxTimeStamp         = ::{{ project_namespace }}::getMaxTimeStamp;
+    result.getNumberOfSolverCells  = ::{{ project_namespace }}::getNumberOfSolverCells;
+    result.getNumberOfCellDoFs     = ::{{ project_namespace }}::getNumberOfCellDoFs;
+    result.getSolverStatistics     = ::{{ project_namespace }}::getSolverStatistics;
+    result.getConfigurationSummary = ::{{ project_namespace }}::getConfigurationSummary;
     return result;
   }
 } // namespace
 
 int main(int argc, char** argv) {
-  ::runner::RuntimeParameters::getInstance().setGeneratedDefaults({{ generated_default_arguments | join(", ") }});
+  ::exahype2::runner::RuntimeParameters::getInstance().setGeneratedDefaults({{ generated_default_arguments | join(", ") }});
 
-  return ::runner::launch(
+  return ::exahype2::runner::Runner::launch(
     tarch::la::Vector<DIMENSIONS, double>{ {{ DOMAIN_OFFSET }} },
     tarch::la::Vector<DIMENSIONS, double>{ {{ DOMAIN_SIZE }} },
     std::bitset<DIMENSIONS>{ {{ PERIODIC_BOUNDARIES }}ULL },
     createRepositoryCallbacks(),
-    createSteps(),
     argc,
     argv
   );

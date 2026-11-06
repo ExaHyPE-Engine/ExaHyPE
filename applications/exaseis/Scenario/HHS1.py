@@ -5,12 +5,8 @@ from .Scenario import Scenario
 
 class HHS1(Scenario):
     """
-    Part of a series of benchmarks by the SeISmic MOdeling Web INterfacE (Sismowine)
-
-    Single point-source in a homogeneous medium.
-    Purpose: Assess the precision of modeling a planar free surface
-
-    The description of the scenario can be found at: https://sismowine.org/model/WP1_HHS1.pdf
+    The Sismowine benchmark HHS1: A point source in a homogeneous medium tests the modelling of a
+    planar free surface (https://sismowine.org/model/WP1_HHS1.pdf).
     """
 
     domain_offset = [-2.025, 0.0, -2.025]
@@ -37,20 +33,20 @@ class HHS1(Scenario):
         Q[Shortcuts::cs ] = 3.464;
 """
 
-    def point_source():
+    def point_source(self):
         return """
   std::fill_n(forceVector, 9, 0.);
 
-  auto jacobian = Q[Shortcuts::jacobian];
+  const auto jacobian = Q[Shortcuts::jacobian];
 
-  assertion(n == 0, "Only a single pointSource for HHS1",n);
+  ASSERTION(n == 0, n);
 
   constexpr double t0 = 0.1;
   constexpr double M0 = 1000.0;
 
-  double f = M0*t/(t0*t0)*std::exp(-t/t0);
+  const double sourceTimeFunction = M0*t/(t0*t0)*std::exp(-t/t0);
 
-  forceVector[Shortcuts::sigma + 4] = f;
+  forceVector[Shortcuts::sigma + 4] = sourceTimeFunction;
 
   for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;
@@ -59,9 +55,9 @@ class HHS1(Scenario):
 
     def init_point_source(self):
         return """
-  tarch::la::Vector<DIMENSIONS, double> ps = _curvi->invertProjection({0., 2., 0.});
+  const tarch::la::Vector<DIMENSIONS, double> sourceLocation = _curvi->invertProjection({0., 2., 0.});
 
-  pointSourceLocation[0][0] = ps[0];
-  pointSourceLocation[0][1] = ps[1];
-  pointSourceLocation[0][2] = ps[2];
+  location[0][0] = sourceLocation[0];
+  location[0][1] = sourceLocation[1];
+  location[0][2] = sourceLocation[2];
 """

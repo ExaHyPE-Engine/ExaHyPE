@@ -4,24 +4,21 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
-void tarch::accelerator::cuda::checkError(cudaError_t code, const char* expr, const char* file, int line) {
-  if (code != cudaSuccess) {
-    cudaDeviceSynchronize();
-    cudaDeviceReset();
-    std::stringstream ss;
-    ss << "CUDA assertion in " << expr << " " << file << "(" << line << "): " << cudaGetErrorString(code);
-    throw std::runtime_error(ss.str());
-  }
-}
+#include "tarch/Termination.h"
 
-void tarch::accelerator::cuda::checkLastError(const char* file, int line) {
-  cudaError_t code = cudaGetLastError();
+void
+tarch::accelerator::cuda::checkError(
+  const cudaError_t code,
+  const char* const expr,
+  const char* const file,
+  const int         line
+) {
   if (code != cudaSuccess) {
     cudaDeviceSynchronize();
     cudaDeviceReset();
-    std::stringstream ss;
-    ss << "CUDA assertion in " << file << "(" << line << "):" << cudaGetErrorString(code);
-    throw std::runtime_error(ss.str());
+    std::ostringstream message;
+    message << "The CUDA call " << expr << " in " << file << "(" << line << ") failed: " << cudaGetErrorString(code);
+    tarch::terminateWithError(message.str());
   }
 }
 

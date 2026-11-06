@@ -4,13 +4,11 @@
 
 namespace {
   constexpr double Gamma = 1.4;
-  // The Euler equations describe a gas only while density and pressure are
-  // strictly positive, so a candidate that reaches either floor goes to the
-  // subcell scheme.
+  // isPhysicallyAdmissible() rejects a state with a density or a pressure at or below its floor.
+  // SubcellScheme then recomputes the candidate.
   constexpr double DensityFloor  = 1.0e-12;
   constexpr double PressureFloor = 1.0e-12;
 
-  // Positions in the observable vector the discrete maximum principle bounds.
   constexpr int Density  = 0;
   constexpr int Velocity = 1;
   constexpr int Pressure = 1 + DIMENSIONS;
@@ -25,16 +23,18 @@ namespace {
   }
 } // namespace
 
-bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
+bool
+tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                  Q,
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  // Q holds numberOfStates consecutive states: Every node of a candidate
-  // polynomial, or a single state when one finite-volume value is checked.
+  // Q stores numberOfStates consecutive states: The nodes or the subcells of a candidate, or one
+  // subcell.
   const double* state = Q;
   for (int stateNumber = 0; stateNumber < numberOfStates; ++stateNumber, state += NumberOfData) {
     for (int unknown = 0; unknown < NumberOfData; ++unknown) {
@@ -57,13 +57,15 @@ bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
   return true;
 }
 
-void tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
+void
+tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
-  const double* const NOALIAS Q
+  const double* const NOALIAS Q,
+  const RuntimeParameters&    parameters
 ) {
   static_assert(
-    NumberOfDMPObservables == Pressure + 1,
-    "The mapping fills the density, one velocity component per axis and the pressure."
+    NumberOfObservables == Pressure + 1,
+    "The limiting tutorial expects number_of_dmp_observables = 4 in 2D and 5 in 3D."
   );
 
   const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);

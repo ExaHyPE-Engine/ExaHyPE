@@ -17,7 +17,7 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=None)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=6)
@@ -42,21 +42,21 @@ if args.scenario == "MichelSphericalAccretion":
     size = [6.0, 6.0, 6.0]
     end_time = 0.02
     periodic_bc = False
-    function_name = "initialAccretionDisc3D"
+    function_name = "setMichelAccretionState"
 elif args.scenario == "AlfvenWave":
     dimensions = 2
     offset = [0.0, 0.0]
     size = [2 * pi, 2 * pi]
     end_time = 0.1
     periodic_bc = True
-    function_name = "AlfvenWaveTest"
+    function_name = "setAlfvenWaveState"
 
 if args.end_time is not None:
     end_time = args.end_time
 
 initial = (
     """
-  GRMHD::InitialData::"""
+  tests::exahype2::aderdg::grmhd::"""
     + function_name
     + """(
     x, 0.,
@@ -67,7 +67,7 @@ initial = (
 
 boundary_condition = (
     """
-  GRMHD::InitialData::"""
+  tests::exahype2::aderdg::grmhd::"""
     + function_name
     + """(
     x, t,
@@ -78,7 +78,7 @@ boundary_condition = (
 
 analytical_solution = (
     """
-  GRMHD::InitialData::"""
+  tests::exahype2::aderdg::grmhd::"""
     + function_name
     + """(
     x, t,
@@ -101,10 +101,7 @@ project = exahype2.Project(
 )
 
 if project.dimensions != dimensions:
-    raise ValueError(
-        f"Scenario {args.scenario} is {dimensions}D, but the project was configured "
-        f"for {project.dimensions}D."
-    )
+    raise ValueError(f"The scenario {args.scenario} runs in {dimensions}D only.")
 
 solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",

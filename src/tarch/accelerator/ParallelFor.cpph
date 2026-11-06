@@ -2,17 +2,50 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
+  INLINE_METHOD int getThreadOfTeam([[maybe_unused]] const CpuTeam& team) { return 0; }
+
+  INLINE_METHOD int getNumberOfThreadsPerTeam([[maybe_unused]] const CpuTeam& team) { return 1; }
+
+  INLINE_METHOD unsigned char* getTeamScratch(const CpuTeam& team) { return team.scratch; }
+
+  /**
+   * Returns the threads per team of a launch that asks for requested threads. One host thread
+   * runs a whole team.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    ASSERTION(requested == tarch::accelerator::TeamRange::BackendDefault or requested > 0, requested);
+    return 1;
+  }
+
+  /**
+   * Returns the team scratch bytes of a launch that asks for requested bytes. Every host thread
+   * provides TeamScratchBytes.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    ASSERTION(
+      requested == tarch::accelerator::TeamRange::BackendDefault
+        or (requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes),
+      requested
+    );
+    return tarch::accelerator::TeamScratchBytes;
+  }
+
+  INLINE_METHOD unsigned char* getTeamScratchOfThread() {
+    alignas(PEANO_WITH_ALIGNMENT) thread_local unsigned char teamScratch[TeamScratchBytes];
+    return teamScratch;
+  }
+
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const Range& range, const Functor functor) {
-    assertion(range.n >= 0, range.n);
+  INLINE_METHOD void parallelFor([[maybe_unused]] const CpuTeam& team, const Range& range, const Functor functor) {
+    ASSERTION(range.n >= 0, range.n);
     for (int i = 0; i < range.n; ++i) {
       functor(i);
     }
   }
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<2>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+  INLINE_METHOD void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<2>& range, const Functor functor) {
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
         functor(x, y);
@@ -20,10 +53,10 @@ namespace tarch::accelerator {
     }
   }
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<3>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+  INLINE_METHOD void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<3>& range, const Functor functor) {
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
         for (int z = 0; z < range.n[2]; ++z) {
@@ -33,18 +66,26 @@ namespace tarch::accelerator {
     }
   }
 
-  // A team runs its range serially on the host, so the barrier does nothing.
-  inline void teamBarrier([[maybe_unused]] const CpuTeam& team) {}
+  // A team runs its range serially on the host. The barrier returns at once.
+  INLINE_METHOD void teamBarrier([[maybe_unused]] const CpuTeam& team) {}
+
+  INLINE_METHOD bool isTrueInEveryThreadOfTeam([[maybe_unused]] const CpuTeam& team, const bool condition) {
+    return condition;
+  }
+
+  INLINE_METHOD bool isTrueInAnyThreadOfTeam([[maybe_unused]] const CpuTeam& team, const bool condition) {
+    return condition;
+  }
 
   template <typename Functor>
-  inline void parallelFor(const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     tarch::accelerator::parallelForOnHost(range, functor);
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     tarch::accelerator::runInParallelRegion([&]() {
 #pragma omp for collapse(2) schedule(static)
       for (int x = 0; x < range.n[0]; ++x) {
@@ -56,10 +97,10 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     tarch::accelerator::runInParallelRegion([&]() {
 #pragma omp for collapse(3) schedule(static)
       for (int x = 0; x < range.n[0]; ++x) {
@@ -72,16 +113,13 @@ namespace tarch::accelerator {
     });
   }
 
-  // The host threads run across the teams only: The CpuTeam overloads above run a team's
-  // range serially.
+  // The host threads run across the teams only. The CpuTeam overloads above run the range of a
+  // team serially.
   template <typename Functor>
-  inline void parallelFor(const TeamRange& range, const Functor functor) {
-    assertion(range.n >= 0, range.n);
-    tarch::accelerator::runInParallelRegion([&]() {
-#pragma omp for schedule(static)
-      for (int i = 0; i < range.n; ++i) {
-        functor(i, tarch::accelerator::CpuTeam{});
-      }
+  INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
+    ASSERTION(range.n >= 0, range.n);
+    tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(range.n), [&functor](const int team) {
+      functor(team, tarch::accelerator::CpuTeam{tarch::accelerator::getTeamScratchOfThread()});
     });
   }
 } // namespace tarch::accelerator

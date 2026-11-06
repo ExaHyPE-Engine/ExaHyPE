@@ -31,7 +31,7 @@ set. Unsetting the environment variable reverts to the automatic search.
   Intel, switching from -fast to -O3 does work in some cases.
 
 - ***My C++ version is too old***
-  Peano requires C++20, which CMake enforces automatically. If your compiler
+  Peano requires C++20. CMake enforces this standard. If your compiler
   defaults to an older standard, you can force the flag through
   ~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_EXTRA_CXX_FLAGS="-std=c++20"
@@ -40,7 +40,7 @@ cmake .. -DPEANO_EXTRA_CXX_FLAGS="-std=c++20"
   ~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_EXTRA_CXX_FLAGS="--std=c++20"
   ~~~~~~~~~~~~~~~~~~~
-  Some compilers want you to use two hyphens, others expect one. Most
+  Some compilers expect two hyphens, others expect one. Most
   Clang-based compiler installations do not bring their own C++ standard
   library to the table. They use the pre-existing GCC STL. Now, if your
   Clang-based compiler - that includes NVIDIA and Intel - is built against a
@@ -95,12 +95,12 @@ error: name followed by "::" must be a class or namespace name
   Use a compiler with OpenMP 5.0 support, such as GCC 9.x.
 
 - ***I configured Peano with HDF5, but my application (experiment or benchmark) will not compile***
-  HDF5 support is enabled through the CMake option `PEANO_WITH_HDF5` (on by
-  default). Peano links only the HDF5 C component (`find_package(HDF5 COMPONENTS C)`);
-  there is no dependency on the HDF5 C++ binding. The resulting include and link
-  flags are attached to the `PeanoOptions` interface target and written into
-  `PeanoConfig.cmake`, which the Python API reads to generate the makefile for
-  your application. If HDF5 is not picked up, reconfigure your build with
+  The CMake option `PEANO_WITH_HDF5` (on by default) enables HDF5 support. Peano
+  links only the HDF5 C component (`find_package(HDF5 COMPONENTS C)`). CMake
+  attaches the resulting include and link flags to the `PeanoOptions` interface
+  target and writes them into `PeanoConfig.cmake`. The Python API reads this file
+  to generate the makefile for your application. If CMake misses HDF5,
+  reconfigure your build with
   ~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_WITH_HDF5=ON
   ~~~~~~~~~~~~~~~~~~~
@@ -136,7 +136,6 @@ cmake .. -DCMAKE_CXX_COMPILER=$NVCPP -DCMAKE_C_COMPILER=$NVCPP ...
 
   We have seen this with Intel compiler when you use the Clang LLVM OpenMP
   runtime, i.e. use -fopenmp. Switch to -fiopenmp instead.
-
 
 # Linking
 
@@ -185,16 +184,7 @@ undefined reference to for_write_seq_list
 
 # Runtime
 
-  - ***My unit tests fail in the StackTopologyTest***. We have found that GCC's
-    STL is buggy (confirmed in version 9.3.0), although we do not know if this bug
-    is found within the unordered_set, the bitset or the
-    pair implementation. Anyway, a newer version of GCC (12 for example)
-    seem to fix this issue. If you use Intel's toolchain or literally any LLVM,
-    you might have to manually load a newer GNU version after you've loaded your
-    core compiler.
-
-  - ***sycl-ls shows OpenCL devices and no Level Zero device (Intel PVC)*** This can happen if the following environment variable was set ZET_ENABLE_PROGRAM_DEBUGGING=1. Unset it to fix the issue.
-
+  - ***sycl-ls lists OpenCL devices only (Intel PVC)*** This can happen if the following environment variable was set ZET_ENABLE_PROGRAM_DEBUGGING=1. Unset it to fix the issue.
 
 # Python API
 
@@ -212,9 +202,9 @@ undefined reference to for_write_seq_list
 
              pip3 install --user numpy
 
-    Similar arguments hold for jinja2. Peano's API and all extensions can work without
+    The same arguments apply to jinja2. Peano's API and all extensions can work without
     numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
-    might be available if you have no numpy.
+    might be available without numpy.
 
 - ***A formatting script reports that a tool is not installed***. Install the tools
   with ``pip install -r requirements.txt``; the scripts find them on the ``PATH``.
@@ -231,7 +221,6 @@ undefined reference to for_write_seq_list
   \ref page_compiler_specific_settings_home "vendor-specific toolchain" fitting to your system/compiler. After that,
   amend your log filter. See \ref tarch_logging for more info.
 
-
 # Debugging
 
 - ***I can't see my log/trace statements.*** There's a whole set of
@@ -241,7 +230,6 @@ undefined reference to for_write_seq_list
       `-DPEANO_DEBUG=1`.
   -   Link to libraries which are built with a reasonable
       diagnostic switch.
-
 
 # MPI troubleshooting
 
@@ -255,30 +243,28 @@ undefined reference to for_write_seq_list
   built-in deadlock detector with a default threshold of 600 seconds inside one
   wait. Use `--deadlockTimeout` to raise the threshold or disable it.
 
-
 C++ core
 --------
 
 -   **Where is the information whether a point or face is at the
-    boundary or not?** Peano does not provide any such feature. Many codes for
-    example use the grid to represent complicated domains, and thus
-    would need such a feature anyway. So what you have to do is to add a
-    bool to each vertex/face and set this boolean yourself.
-
+    boundary or not?** `peano4::CellConnectivity::getFaceKind()` returns
+    `peano4::FaceKind::Boundary` for a face on a non-periodic domain
+    boundary. A solver supplies its own geometry predicate for an embedded
+    boundary inside the Cartesian domain.
 
 Parallelisation
 ---------------
 
--   **Why does adaptive refinement need several sweeps?** A refinement
-    request names a cell that already exists and can expose one additional
+-   **Why does adaptive refinement need several regrids?** A refinement
+    request selects a cell that already exists and can expose one additional
     level. The next criterion evaluation can then request cells on that new
-    level. A regrid also uses a transition sweep to create and destroy entities
-    while it migrates persistent data into the target rank ownership.
+    level. Each regrid rebuilds the tree and the cell connectivity, then transfers
+    the solution through `peano4::Regrid` into the target rank ownership.
 
 -   **Why can the rank partition remain imbalanced?** Peano assigns complete
-    spawn-level blocks, or the children of a heavy block, using leaf-cell
+    spawn-level blocks, or the children of a heavy block, using cell
     weights. An indivisible heavy unit limits the attainable balance, and
-    equal leaf weights do not represent solver-specific work such as limiters
+    equal cell weights do not represent solver-specific work such as limiters
     or particle interactions.
 
 -   **Where is the load-balancer configuration?** Rank partitioning is part of
@@ -305,8 +291,8 @@ Parallelisation
     for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++)
       Q[i] = 0.0;
 
-    as a first step within `initialCondition()`. This leaves no garbage
-    in the data. Further to that,
+    as a first step within `initialCondition()`. This initialises every
+    entry of the data. Further to that,
     also set proper boundary data for any auxiliary value. You might not
     need these data, as you do not use the auxiliary variables to
     exchange information between patches, but you have to set proper
@@ -325,7 +311,7 @@ Parallelisation
     maximum function:
 
     // Naive code leading into problems:
-    assertion(tarch::la::greaterEquals(p,0.0), p);
+    ASSERTION(tarch::la::greaterEquals(p,0.0), p);
     const double c = std::sqrt( gamma * p * irho );
 
     // working code:

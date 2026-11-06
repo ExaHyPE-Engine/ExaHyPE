@@ -7,24 +7,22 @@ macro(peano_find_gpu_backend)
   _peano_resolve_gpu_backend(_peano_fgb_backend)
 
   if(_peano_fgb_backend STREQUAL "cuda")
-    find_package(CUDA REQUIRED)
+    find_package(PeanoCUDA REQUIRED)
   elseif(_peano_fgb_backend STREQUAL "hip")
-    find_package(HIP REQUIRED)
+    find_package(PeanoHIP REQUIRED)
   elseif(_peano_fgb_backend STREQUAL "sycl")
-    # The "sycl" backend is served either by AdaptiveCpp (PEANO_WITH_GPU_BACKEND=acpp) or by
-    # Intel oneAPI (PEANO_WITH_GPU_BACKEND=native + spir64). In the core build the user
-    # selection PEANO_WITH_GPU_BACKEND disambiguates; in an application PEANO_ACPP_TARGETS
-    # (exported only for AdaptiveCpp builds) does.
+    # In an application, PEANO_WITH_GPU_BACKEND is sycl for AdaptiveCpp and Intel oneAPI alike. A
+    # non-empty PEANO_ACPP_TARGETS marks AdaptiveCpp.
     if((DEFINED PEANO_WITH_GPU_BACKEND AND PEANO_WITH_GPU_BACKEND STREQUAL "acpp")
        OR (DEFINED PEANO_ACPP_TARGETS AND NOT PEANO_ACPP_TARGETS STREQUAL ""))
-      find_package(AdaptiveCpp REQUIRED)
+      find_package(PeanoAdaptiveCpp REQUIRED)
     else()
-      find_package(SYCL REQUIRED)
+      find_package(PeanoSYCL REQUIRED)
     endif()
   elseif(_peano_fgb_backend STREQUAL "kokkos")
-    find_package(Kokkos REQUIRED)
+    find_package(PeanoKokkos REQUIRED)
   elseif(_peano_fgb_backend STREQUAL "ompt")
-    find_package(OMPT REQUIRED)
+    find_package(PeanoOMPT REQUIRED)
   endif()
 endmacro()
 
@@ -72,6 +70,9 @@ function(peano_add_target)
     add_library(${target} STATIC)
     set(install_as_library TRUE)
     set(variant_scope PUBLIC)
+  elseif(target_type STREQUAL "OBJECT_LIBRARY")
+    add_library(${target} OBJECT)
+    set(variant_scope PRIVATE)
   elseif(target_type STREQUAL "EXECUTABLE")
     add_executable(${target})
     set(install_as_executable TRUE)
@@ -101,6 +102,7 @@ function(peano_add_target)
     target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
     target_compile_options(${target} PRIVATE
       "$<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:SHELL:-include tarch/StdAfx.h>"
+      "$<$<COMPILE_LANGUAGE:HIP>:SHELL:-include tarch/StdAfx.h>"
     )
   else()
     target_compile_options(${target} PRIVATE
@@ -118,8 +120,8 @@ function(peano_add_target)
 
   target_link_libraries(${target} PRIVATE
     ${ARG_LINK_LIBRARIES}
-    # PeanoOptions follows linked libraries so its diagnostic flags take precedence
-    # over build-mode defaults.
+    # PeanoOptions follows the linked libraries. Its diagnostic flags then override the build-mode
+    # defaults.
     ${peano_options_target}
   )
 
@@ -152,23 +154,15 @@ function(peano_add_target)
     )
   endif()
 
-  # PEANO_<MODE>_DEFINITIONS, PEANO_C_FLAGS_<MODE>, PEANO_CXX_FLAGS_<MODE> and
-  # PEANO_Fortran_FLAGS_<MODE> are core-build cache variables. In a generated application
-  # they are undefined and expand to nothing here; the application instead inherits the mode
-  # definitions and flags transitively from the linked Peano::PeanoRuntime<MODE><DIM>D
-  # target (a STATIC library, hence PUBLIC scope). These calls are therefore only
-  # effective in the core build.
+  # The PEANO_<MODE>_DEFINITIONS and PEANO_<LANGUAGE>_FLAGS_<MODE> cache variables exist in the core
+  # build only. An application inherits them through the PUBLIC scope of the static libraries that
+  # Peano::PeanoRuntime<MODE><DIM>D links.
   target_compile_definitions(${target} ${variant_scope}
     ${PEANO_${mode_upper}_DEFINITIONS}
   )
 
-  # Build-mode flags must reach every language so Fortran kernels and GPU kernels are
-  # optimised/debugged like host code. Fortran uses its own -O/-g-only flag set (the C++
-  # flags contain switches not all Fortran front-ends accept). HIP takes the host flags
-  # verbatim (clang optimises host and device from a single -O). nvcc is split: The host
-  # flags are forwarded via -Xcompiler, and the optimisation level is additionally forwarded
-  # to the device compiler via -Xptxas, making the device optimisation level explicit.
-  # Debug uses -G, which forces device -O0 plus debug info.
+  # Fortran front-ends reject some C++ switches. Fortran gets its own build-mode flags. The CUDA
+  # compiler passes -Xcompiler flags to the host compiler and -Xptxas flags to the device assembler.
   set(_peano_cuda_mode_flags "")
   foreach(_peano_flag ${PEANO_CXX_FLAGS_${mode_upper}})
     list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${_peano_flag}>")
@@ -177,7 +171,8 @@ function(peano_add_target)
     endif()
   endforeach()
   if(mode_upper STREQUAL "DEBUG")
-    list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-G>")
+    #list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-G>")
+    list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>")
   endif()
   target_compile_options(${target} ${variant_scope}
     $<$<COMPILE_LANGUAGE:C>:${PEANO_C_FLAGS_${mode_upper}}>
@@ -198,8 +193,6 @@ function(peano_add_target)
     )
   endif()
 
-  # GPU language setup sets one architecture in CMAKE_CUDA_ARCHITECTURES or
-  # CMAKE_HIP_ARCHITECTURES; target properties must consume that single selection.
   if(gpu_backend STREQUAL "cuda" AND CMAKE_CUDA_COMPILER)
     set_target_properties(${target} PROPERTIES
       CUDA_SEPARABLE_COMPILATION OFF
@@ -212,9 +205,8 @@ function(peano_add_target)
     )
   endif()
 
-  # AdaptiveCpp is located up front by peano_find_gpu_backend() (core build and,
-  # for the SYCL/AdaptiveCpp backend, the application package), so the toolchain
-  # and add_sycl_to_target() are already available here.
+  # The macro peano_find_gpu_backend() loads AdaptiveCpp and its add_sycl_to_target() before any
+  # target exists.
   if(DEFINED AdaptiveCpp_FOUND AND AdaptiveCpp_FOUND)
     add_sycl_to_target(TARGET ${target} SOURCES "$<TARGET_PROPERTY:${target},SOURCES>")
   endif()

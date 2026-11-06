@@ -3,11 +3,8 @@
 
 include_guard(GLOBAL)
 
-# Reports an OpenMP construct as supported only when the compiler accepts it in
-# silence. A compiler that accepts a construct and then names it in a warning
-# ignores the construct, so Peano takes the fallback. The probe runs on every
-# configuration and caches no verdict, so a change of compiler leaves no stale
-# answer behind.
+# Reports an OpenMP construct as unsupported when a warning or remark mentions it. A compiler
+# that warns about a construct ignores it. The probe runs at every configuration.
 function(_peano_check_openmp_construct construct_name construct_keyword probe_source out_var)
   string(MAKE_C_IDENTIFIER "${construct_name}" _peano_probe_identifier)
   set(_peano_probe_file "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/PeanoOpenMPProbe_${_peano_probe_identifier}.cpp")
@@ -37,8 +34,8 @@ function(_peano_check_openmp_construct construct_name construct_keyword probe_so
   set(${out_var} ${_peano_probe_supported} PARENT_SCOPE)
 endfunction()
 
-# Probes the OpenMP tasking constructs the task graph uses. Each one has a
-# fallback, so a compiler that lacks it builds a correct but slower Peano.
+# Probes the OpenMP tasking constructs that the task graph uses. A compiler without one
+# of them builds Peano with its fallback. This fallback is correct but slower.
 function(peano_check_openmp_features)
   _peano_check_openmp_construct(
     "task depend(iterator)"
@@ -70,21 +67,22 @@ function(peano_check_openmp_features)
   endif()
 
   _peano_check_openmp_construct(
-    "taskwait depend"
+    "taskwait depend(iterator)"
     "taskwait"
     "
     #include <omp.h>
 
     int main() {
-      char token{};
-      char* const tokenPointer = &token;
+      char tokenStorage[2]{};
+      char* tokens[2] = {&tokenStorage[0], &tokenStorage[1]};
+      const int numberOfTokens = 2;
 
       #pragma omp parallel
       #pragma omp single
       {
-        #pragma omp task depend(out: tokenPointer[0])
+        #pragma omp task depend(out: tokens[0][0])
         {}
-        #pragma omp taskwait depend(in: tokenPointer[0])
+        #pragma omp taskwait depend(iterator(i = 0 : numberOfTokens), in: tokens[i][0])
       }
 
       return 0;

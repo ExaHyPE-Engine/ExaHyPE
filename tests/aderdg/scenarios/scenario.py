@@ -16,7 +16,7 @@ class Scenario:
         return True
 
     def boundary_conditions(self):
-        return "assertion(false);" if self._periodic_bc else True
+        return None if self._periodic_bc else True
 
     def refinement_criterion(self):
         return None

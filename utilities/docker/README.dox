@@ -9,25 +9,39 @@ They reuse the Spack environments stored under `utilities/spack`.
 
 <div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid green;">
 \par 🍎 Running on Apple Silicon (ARM) Macs
-Our images are built for `linux/amd64`, but they run on M-series Macs through Docker
-Desktop's built-in emulation. Just add `--platform linux/amd64` to your `docker run`
-command, for example:
+Our images target `linux/amd64`.
+Docker Desktop runs them on M-series Macs through its built-in emulation.
+Add `--platform linux/amd64` to the `docker run` command:
 ```shell
 docker run --platform linux/amd64 -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler>
 ```
 </div>
 
-For users, it is recommended to pull the available Docker images from [Dockerhub](https://hub.docker.com/u/peanoframework).
-All Docker images that have the extension `gcc`, `intel`, `nvidia`, `llvm`, or `amd`
-provide all commonly the same dependencies that are needed to build, run and visualise Peano applications.
-All dependencies within the images are installed via Spack.
-Each image additional provides one of the compilers with MPI that are also configured for GPU offloading.
-You may choose any image to pull from Dockerhub that fits your needs in a compiler and your hardware configuration.
+We recommend that users pull the prebuilt images from [Dockerhub](https://hub.docker.com/u/peanoframework).
+The images `gcc`, `intel`, `nvidia`, `llvm` and `amd` contain the same dependencies to build, run and visualise Peano applications.
+Spack installs every dependency of the images.
+Each image adds one compiler and one MPI library.
+Both support GPU offloading.
+Pull the image whose compiler fits your hardware.
 
-You may ignore images that have the extension `base`, or `spack`. These are only used for development.
+Only the image builds use the images `base` and `spack`.
 
-To use the prebuilt images, we do recommended that you first clone Peano, then navigate into the Peano checkout
-and run the Docker container interactively by mapping the Peano directory into the container (here, we use `work` as our mapping point):
+The `gcc` and `llvm` images also contain Kokkos for `sm_75`.
+`sm_75` is the oldest architecture that CUDA 13 supports.
+The Peano build links this Kokkos.
+On a newer GPU, the driver compiles the embedded PTX at startup.
+Kokkos then prints a warning.
+The `intel` image contains Kokkos for SYCL.
+The `amd` image contains Kokkos for `gfx90a`.
+The `llvm`, `intel` and `amd` images also contain AdaptiveCpp for CUDA, Level Zero and HIP respectively.
+AdaptiveCpp compiles device code with its own LLVM 19.
+In the `llvm` image, AdaptiveCpp also uses its own CUDA 12.
+AdaptiveCpp 25.10 supports LLVM up to version 20 and CUDA up to version 12.
+AdaptiveCpp selects the GPU architecture when you build Peano.
+In the `intel` image, Peano builds with AdaptiveCpp only when `/opt/views/acpp/bin/clang` and
+`/opt/views/acpp/bin/clang++` are the C and C++ compilers.
+
+To use a prebuilt image, clone Peano, change into the checkout and start the container with the checkout mounted at `/work`:
 
 ```shell
 docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler>
@@ -45,7 +59,7 @@ docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<comp
 docker run -it -v ${PWD}:/work -p 8888:8888 --rm --privileged peanoframework/<compiler>
 ```
 
-and then you can run
+Then start JupyterLab inside the container:
 
 ```shell
 jupyter lab --allow-root --port=8888 --no-browser --ip=0.0.0.0
@@ -53,10 +67,10 @@ jupyter lab --allow-root --port=8888 --no-browser --ip=0.0.0.0
 
 ## Build (for Developers)
 
-The next part is mostly relevant for developers of the project or if you want to change or add some additionally dependencies
-to the Docker images yourself. Keep in mind, that building the image takes a significant amount of time and requires root access.
+This section addresses developers who change or add dependencies of the Docker images.
+An image build takes hours and requires root access.
 
-To build the Docker images, make sure to execute the following commands in the Peano root directory.
+Run the following commands in the Peano root directory to build the Docker images.
 
 ### Building Base Images
 

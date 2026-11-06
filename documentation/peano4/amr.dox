@@ -4,26 +4,24 @@
 
 \tableofcontents
 
-Peano expresses dynamic adaptivity as cell requests and realises structural
-changes through ordinary observer sweeps. A request names one cell whose
-neighbourhood should refine or whose parent may erase. Refinement wins over
-erasure wherever the requests conflict, and each drain can expose one
-additional level on which a criterion can make a new decision.
+Peano expresses dynamic adaptivity as cell requests and realises a structural
+change as one rebuild of the tree and the cell connectivity followed by one data
+transfer. A request selects one cell whose neighbourhood refines or whose parent
+may erase. Refinement wins over erasure wherever the requests conflict, and
+each regrid exposes one additional level on which a criterion can decide again.
 
-# Grid control events
+# Refinement requests
 
-peano4::grid::GridControlEvent identifies the cell that raises a request by
-three fields:
+peano4::RefinementRequest identifies the cell that raises a request by three
+fields:
 
 - `refinementControl` selects `Refine` or `Erase`.
 - `level` is the cell level counted from the root.
-- `latticeIndex` is the cell position on that level's lattice, which holds
-  peano4::sfc::ActiveCurve::SubdivisionFactor cells per parent cell along each axis.
+- `latticeIndex` is the cell position on the lattice of that level. The lattice
+  contains peano4::SubdivisionFactor cells per parent cell along each axis.
 
-peano4::grid::GridControlEvent::forCell() converts a cell centre and width into
-this exact lattice identity. Events are trivially copyable and can therefore
-be exchanged between ranks as byte records. Their sequence order has no
-precedence.
+A request is trivially copyable and travels between ranks as a byte record.
+The result is independent of the order of the requests.
 
 # Refinement-plan evaluation
 
@@ -36,81 +34,61 @@ containing the two ends of that band. Existing cells in these regions flag
 their unrefined corner vertices. Levels finer than the requesting cell do not
 participate.
 
-An erase request names the parent cell whose children may disappear. A flagged
-vertex is removed only when every existing adjacent cell asks to erase and no
-refine request protects that region. Finer flagged vertices veto removal of a
-coarse flag that they still require. All removals are evaluated against one
-snapshot, so request order does not affect the result.
+An erase request selects the parent cell whose children may disappear. The regrid
+removes a flagged vertex only when every existing adjacent cell asks to erase and
+every refine request lies outside that region. Finer flagged vertices veto the removal
+of a coarse flag that they still require. The regrid evaluates all removals
+against one snapshot. Every order of the requests then gives the same result.
 
 The resulting flag sets are sorted by lattice key. Every rank that receives
 the same request set therefore derives the same refinement and ownership
-plans. These plans determine consistent rank-local tree views, boundary pack
-orders, and pool migrations without another structural exchange.
+plans and the same rank-boundary order without a structural exchange.
 
-# Sweep lifecycle
+# The regrid
 
-The active observer returns its requests through `getGridControlEvents()`.
-The topology manager compares a canonical request set with the last settled set
-and skips repeated evaluations that leave the plan unchanged.
+1. Every solver's refinement dispatch writes one command per cell; the
+   commands become refinement requests, and exahype2::RefinementRequests
+   gives every rank the same request set.
+2. The tree adopts the plan and derives the balanced ownership.
+3. peano4::Spacetree::regrid() keeps the slot of every surviving cell and
+   returns the peano4::Regrid of section @ref peano_cell_connectivity "the cell connectivity":
+   prolongations, restrictions, the slots that move to another rank and the
+   freed slots.
+4. Every solver's `regrid()` restricts and prolongates its cell pools in
+   place with the operators of its family, moves the slots that change rank
+   through peano4::MigrationExchange, resizes its face pools to the new face
+   count and rebuilds them.
 
-During grid construction, solver data is not persistent. A changed plan
-rebuilds the structure directly, resizes the pools, and runs a creational
-sweep. Further requests can extend the plan on subsequent construction
-sweeps.
-
-After grid initialisation, pool data must survive. A changed plan follows this
-sequence:
-
-1. Before traversal, the topology manager prepares the target plan, rank
-   ownership, transition classes, and pool-slot mappings.
-2. A stable single-owner delta appends to or retains the standing structure;
-   other changes migrate the pools to the required union view.
-3. The traversal emits create and destroy events and presents the standing and
-   target refinement states to the generated storage guards.
-4. An in-place transition prunes any erased region after the sweep. A rebuilding
-   transition adopts its target view and transfers repartitioned pool slots.
-
-The phase driver continues sweeping until the global grid reports the required
-stationary sweeps.
+Grid construction runs before the solvers allocate their data. A changed plan rebuilds the
+tree and the cell connectivity directly, and the criterion runs again on the coarser
+cells while requests arrive.
 
 # Producing requests
 
-An action set normally accumulates requests while it visits cells and commits
-them from `endTraversal()`. Observer clones keep private containers and merge
-their results at the rank boundary of the step.
-
-The application converts solver decisions into cell events. Its refinement
-service sorts, deduplicates, and exchanges committed events so every rank
-consumes the same vector before Peano evaluates them.
-
-Erase decisions require two levels of agreement. Application-side control
-promotes a leaf request to its parent only after all children and participating
-criteria vote to erase. The spacetree then removes a parent flag only when the
-complete adjacent cell ring agrees.
+A criterion can request only a cell that exists. A feature that needs several
+additional levels produces another request after each newly exposed level, so
+the time loop drains the regrids one level at a time. Erase decisions need two
+levels of agreement: the solver promotes a cell request to its parent only
+after every child votes to erase, and the tree removes a parent flag only when
+the complete adjacent cell ring agrees.
 
 # Parallel behaviour
 
-The refinement and ownership plans are replicated, while each rank materialises
-only its spine, owned regions, and neighbour ring. Each rank observes requests
-raised by its local cells, so a collective event exchange is required for a
-distributed run. Local face and vertex propagation keeps boundary data
-consistent, but it does not replace this global request set.
+The refinement and ownership plans are replicated, while each rank
+materialises only the levels above the spawn level, its own blocks and one
+ring of neighbours. Each rank observes the requests of its local cells, so
+the collective request exchange is required for a distributed run.
 
-Repartitioning is part of the regrid transition. The target plan supplies leaf
-weights for the deterministic rank partition, and the migration transfers
-cell, face, and vertex pools whose ownership changes.
+Repartitioning is part of the regrid. The target plan supplies the cell
+weights of the deterministic rank partition, and the migration exchange moves
+the cell slots whose ownership changes.
 
 # Performance considerations
 
 Plan evaluation scales with the request count and performs lattice lookups
-without scanning the rank-local entity arrays. Regrid cost depends on the delta:
-An in-place path updates affected topology, while a fallback builds the required
-views and migrates their pools.
-
-A criterion can request only a cell that exists. A feature that needs several
-additional levels therefore produces another request after each newly exposed
-level and requires several AMR drains. Stable criteria should stop emitting
-requests once the standing plan satisfies them, and erase criteria should
-avoid alternating with protective refine requests.
+without scanning the rank-local entity arrays. A regrid costs the rebuild of
+the tree and the cell connectivity of the rank plus the transfer of the changed cells.
+Stable criteria stop emitting requests once the standing plan satisfies them,
+and erase criteria avoid alternating with protective refine requests.
 
 */

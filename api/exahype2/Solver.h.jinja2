@@ -2,21 +2,39 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Abstract{{CLASSNAME}}.h"
+#include "{{CLASSNAME}}Base.h"
+{%- if HOST_DEFINED_DEVICE_TERMS %}
+
+#if defined(PEANO_WITH_GPU_BACKEND)
+#error "A GPU build needs the definitions of {{HOST_DEFINED_DEVICE_TERMS | join(', ')}} in {{CLASSNAME}}.cpph. {{CLASSNAME}}.cpp defines them for the host only."
+#endif
+{%- endif %}
 
 namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};
 } // namespace {{NAMESPACE | join("::")}}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public {{NAMESPACE | join("::")}}::Abstract{{CLASSNAME}} {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public {{NAMESPACE | join("::")}}::{{CLASSNAME}}Base {
 public:
   TARGET_DECLARE
 {%- if SOLVER_PDE_TERM_DECLARATIONS %}
   {{SOLVER_PDE_TERM_DECLARATIONS | indent(2)}}
+{%- endif %}
+{%- if SOLVER_HOOK_DECLARATIONS %}
+
+  {{SOLVER_HOOK_DECLARATIONS | indent(2)}}
 {%- endif %}
 {%- if SOLVER_USER_DECLARATIONS.strip() %}
 
   {{SOLVER_USER_DECLARATIONS.strip()}}
 {%- endif %}
   TARGET_DECLARE_END
+{%- if SOLVER_HOST_PDE_TERM_DECLARATIONS %}
+
+  {{SOLVER_HOST_PDE_TERM_DECLARATIONS | indent(2)}}
+{%- endif %}
 };
+{%- if SOLVER_INLINE_DEFINITIONS or SOLVER_HOST_INLINE_DEFINITIONS or USER_TERMS_INLINE %}
+
+#include "{{CLASSNAME}}.cpph"
+{%- endif %}

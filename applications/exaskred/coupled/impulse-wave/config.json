@@ -4,6 +4,5 @@
   "firstPlotTimeStamp": 0.0,
   "numberOfSnapshots": 10,
   "outputPath": "solutions",
-  "timeStepLogInterval": 10.0,
-  "targetDevice": 0
+  "timeStepLogInterval": 10.0
 }

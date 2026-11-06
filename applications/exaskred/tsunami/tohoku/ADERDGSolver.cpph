@@ -1,0 +1,322 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "applications/exaskred/AugmentedState.h"
+#include "applications/exaskred/Limiting.h"
+#include "applications/exaskred/ShallowWater.h"
+#include "applications/exaskred/WellBalancedRusanov.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
+
+TARGET_DECLARE
+INLINE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::initialCondition(
+  double* const NOALIAS                                         Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  const auto&                                       bathymetrySize   = parameters.bathymetrySize;
+  const auto&                                       bathymetryOffset = parameters.bathymetryOffset;
+  static const tarch::reader::NetCDFFieldSampler<2> bathymetrySampler(
+    {{"bathymetry", std::string(parameters.bathymetryFile)}},
+    {bathymetrySize(0), bathymetrySize(1)},
+    {bathymetryOffset(0), bathymetryOffset(1)}
+  );
+
+  const auto&                                       displacementSize   = parameters.displacementSize;
+  const auto&                                       displacementOffset = parameters.displacementOffset;
+  static const tarch::reader::NetCDFFieldSampler<2> displacementSampler(
+    {{"displacement", std::string(parameters.displacementFile)}},
+    {displacementSize(0), displacementSize(1)},
+    {displacementOffset(0), displacementOffset(1)}
+  );
+
+  const auto& displacementPosition = parameters.displacementPosition;
+  const auto  sampleDisplacement   = [&](const double sampleX, const double sampleY) {
+    const double fileX      = sampleX - displacementPosition(0);
+    const double fileY      = sampleY - displacementPosition(1);
+    const bool   insideFile = fileX >= displacementOffset(0) and fileX <= displacementOffset(0) + displacementSize(0)
+      and fileY >= displacementOffset(1) and fileY <= displacementOffset(1) + displacementSize(1);
+    return insideFile ? displacementSampler.sampleBilinear("displacement", {fileX, fileY}) : 0.0;
+  };
+
+  // Pointwise samples of the fine displacement raster alias into the polynomial basis. A nine-point
+  // low-pass over the source radius minus the cell footprint gives every resolution the same
+  // integrated source.
+  const double filterCellH0               = std::max(h(0), sourceFilterMinimumCellH);
+  const double filterCellH1               = std::max(h(1), sourceFilterMinimumCellH);
+  const double cellFootprintRadiusSquared = filterCellH0 * filterCellH0 + filterCellH1 * filterCellH1;
+  const double sourceRadius =
+    std::sqrt(std::max(sourceLowPassEffectiveRadius * sourceLowPassEffectiveRadius - cellFootprintRadiusSquared, 0.0));
+  const double displacement =
+    (4.0 * sampleDisplacement(x(0), x(1)) + 2.0 * sampleDisplacement(x(0) - sourceRadius, x(1))
+     + 2.0 * sampleDisplacement(x(0) + sourceRadius, x(1)) + 2.0 * sampleDisplacement(x(0), x(1) - sourceRadius)
+     + 2.0 * sampleDisplacement(x(0), x(1) + sourceRadius)
+     + sampleDisplacement(x(0) - sourceRadius, x(1) - sourceRadius)
+     + sampleDisplacement(x(0) + sourceRadius, x(1) - sourceRadius)
+     + sampleDisplacement(x(0) - sourceRadius, x(1) + sourceRadius)
+     + sampleDisplacement(x(0) + sourceRadius, x(1) + sourceRadius))
+    / 16.0;
+
+  const auto bathymetryBeforeEarthquake = bathymetrySampler.sampleBilinear("bathymetry", {x(0), x(1)});
+  const auto bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
+
+  Q[Shortcuts::h]      = -std::min(bathymetryBeforeEarthquake, 0.0);
+  Q[Shortcuts::hu]     = 0.0;
+  Q[Shortcuts::hu + 1] = 0.0;
+  Q[Shortcuts::b]      = bathymetryAfterEarthquake;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
+  const double* const NOALIAS                                   Qinside,
+  double* const NOALIAS                                         Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i] = Qinside[i];
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
+  [[maybe_unused]] const double* const NOALIAS                  Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  return ::exahype2::RefinementCommand::Keep;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::flux(
+  const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const NOALIAS                        F,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
+    Q,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    hThreshold,
+    F
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
+  const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+    Q,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    g,
+    hThreshold
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
+  const double* const NOALIAS                  Q,
+  const double* const NOALIAS                  deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const NOALIAS                        BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+    Q,
+    deltaQ,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    g,
+    hThreshold,
+    BTimesDeltaQ
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
+  const double* const NOALIAS                  QL,
+  const double* const NOALIAS                  QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
+  double* const NOALIAS                        FL,
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+    QL,
+    QR,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    g,
+    hThreshold,
+    FL,
+    FR
+  );
+}
+
+/**
+ * Returns false for a cell at the physical boundary, in dry or coastal water, or with a free
+ * surface that varies more than the scale-aware thresholds allow. Inside the displacement region a
+ * bound on the absolute surface amplitude applies as well. The earthquake source thus starts on the
+ * subcell scheme.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
+  const double* const NOALIAS                  Q,
+  const int                                    numberOfStates,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                     parameters
+) {
+  if (numberOfStates == 1) {
+    return applications::exahype2::exaskred::limiting::isAdmissibleState<
+      Shortcuts,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables
+    >(Q, 0.0);
+  }
+  const bool touchesPhysicalBoundary = x(0) - 0.5 * h(0) <= DomainOffset[0]
+    or x(0) + 0.5 * h(0) >= DomainOffset[0] + DomainSize[0] or x(1) - 0.5 * h(1) <= DomainOffset[1]
+    or x(1) + 0.5 * h(1) >= DomainOffset[1] + DomainSize[1];
+  if (touchesPhysicalBoundary) {
+    return false;
+  }
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q, numberOfStates);
+  if (
+    not statistics.finite or statistics.minHeight <= hThreshold
+    or statistics.maxBathymetry > -limiterBathymetryThreshold
+  ) {
+    return false;
+  }
+  const double freeSurfaceSpan = statistics.maxFreeSurface - statistics.minFreeSurface;
+  const double localDepthScale = std::max(statistics.maxHeight, hThreshold);
+  const double referencePatchH = std::min(DomainSize[0], DomainSize[1]) / 81.0;
+  const double patchSizeScale  = std::max(h(0), h(1)) / referencePatchH;
+  if (freeSurfaceSpan > limiterRelativeFreeSurfaceVariation * localDepthScale * patchSizeScale) {
+    return false;
+  }
+  if (statistics.minFreeSurface < -limiterRelativeNegativeFreeSurfaceVariation * localDepthScale) {
+    return false;
+  }
+  const auto& displacementSize     = parameters.displacementSize;
+  const auto& displacementOffset   = parameters.displacementOffset;
+  const auto& displacementPosition = parameters.displacementPosition;
+  const bool  overlapsDisplacement = x(0) + 0.5 * h(0) >= displacementPosition(0) + displacementOffset(0)
+    and x(0) - 0.5 * h(0) <= displacementPosition(0) + displacementOffset(0) + displacementSize(0)
+    and x(1) + 0.5 * h(1) >= displacementPosition(1) + displacementOffset(1)
+    and x(1) - 0.5 * h(1) <= displacementPosition(1) + displacementOffset(1) + displacementSize(1);
+  if (
+    overlapsDisplacement
+    and std::max(std::abs(statistics.minFreeSurface), std::abs(statistics.maxFreeSurface))
+      > limiterRelativeSourceFreeSurfaceAmplitude * localDepthScale
+  ) {
+    return false;
+  }
+  return true;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
+  double* const NOALIAS                     observables,
+  const double* const NOALIAS               Q,
+  [[maybe_unused]] const RuntimeParameters& parameters
+) {
+  static_assert(
+    NumberOfObservables <= NumberOfUnknowns,
+    "ExaSkred supports a number_of_dmp_observables up to the number of unknowns only."
+  );
+  for (int observable = 0; observable < NumberOfObservables; observable++) {
+    observables[observable] = Q[observable];
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
+  const double* const NOALIAS                  QL,
+  const double* const NOALIAS                  QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
+  double* const NOALIAS                        FL,
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  const auto maxEigenvalue = [](
+                               const double* const NOALIAS                  Q,
+                               const tarch::la::Vector<DIMENSIONS, double>& facePosition,
+                               const tarch::la::Vector<DIMENSIONS, double>& faceSize,
+                               const double                                 time,
+                               const double                                 timeStepSize,
+                               const int                                    normal
+                             ) {
+    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+      Q,
+      facePosition,
+      faceSize,
+      time,
+      timeStepSize,
+      normal,
+      g,
+      hThreshold
+    );
+  };
+  const auto interfaceGravity =
+    []([[maybe_unused]] const double* const NOALIAS QLeft, [[maybe_unused]] const double* const NOALIAS QRight) {
+      return g;
+    };
+  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+    Shortcuts,
+    Shortcuts::b,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    DGOrder
+  >(QL, QR, x, h, t, dt, normal, maxEigenvalue, interfaceGravity, FL, FR);
+}
+TARGET_DECLARE_END

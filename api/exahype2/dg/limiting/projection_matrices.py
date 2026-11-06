@@ -4,25 +4,13 @@ from exahype2.dg.basis import GaussLobattoBasis
 from exahype2.dg.matrices import dg_to_fv as average_onto_subcells
 from exahype2.dg.matrices import fv_to_dg as project_from_subcells
 from exahype2.dg.matrices import quadrature_conversion
-from exahype2.dg.matrices import render_vector
-
-
-def render_matrix_table(name, matrix, precision):
-    """Returns the definition of one constant projection table of the given ``precision``.
-
-    The table is flattened row by input degree of freedom, the layout
-    ``exahype2::dg::projectTensorProduct`` reads.
-    """
-    values = [value for row in matrix for value in row]
-    return "  constexpr {} {}[] = {};\n".format(precision, name, render_vector(values))
 
 
 def create_subcell_projection_matrices(basis):
-    """Returns ``(dg_to_fv, fv_to_dg)`` for one axis of the given DG ``basis``.
+    """Returns ``(dg_to_fv, fv_to_dg)`` for one axis of the DG ``basis``.
 
-    ``dg_to_fv`` averages the discontinuous Galerkin polynomial onto each subcell,
-    and ``fv_to_dg`` projects the subcell averages back while conserving the cell
-    mean.
+    ``dg_to_fv`` averages the polynomial over each subcell. ``fv_to_dg`` projects the subcell
+    averages back and conserves the cell mean.
     """
     nodes = basis.quadrature_points
     weights = basis.quadrature_weights
@@ -36,10 +24,10 @@ def create_subcell_projection_matrices(basis):
 
 
 def create_dmp_sampling_matrices(basis):
-    """Returns the sampling matrices of the discrete maximum principle.
+    """Returns ``(dg_to_lobatto, dg_to_subcells)`` for the discrete maximum principle.
 
-    Sampling the polynomial on the Lobatto grid and through its subcell averages
-    exposes boundary and subcell-scale extrema to the admissibility test.
+    ``dg_to_lobatto`` samples the polynomial at the Gauss-Lobatto nodes, which include the cell
+    boundary. ``dg_to_subcells`` averages it over each subcell.
     """
     nodes = basis.quadrature_points
     weights = basis.quadrature_weights
@@ -56,10 +44,10 @@ def create_dmp_sampling_matrices(basis):
 
 
 def _symmetrise_mirror_pairs(matrix):
-    """Overwrites each entry and its point mirror with their common average.
+    """Overwrites each entry and its point mirror with their average.
 
-    Averaging each mirror pair makes the stored doubles identical under reflection, so the
-    operators add no mirror bias to the projections and admissibility samplings they drive.
+    The rounded entries then are equal under reflection, so the matrix maps a mirror-symmetric
+    solution to a mirror-symmetric result.
     """
     number_of_rows = len(matrix)
     number_of_columns = len(matrix[0])

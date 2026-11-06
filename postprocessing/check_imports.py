@@ -44,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def attribute_chains(tree: ast.AST) -> set[str]:
-    """Returns the dotted names a module reads, each at its full length."""
+    """Returns the dotted names that a module reads, each at its full length."""
     inner = {
         id(node.value) for node in ast.walk(tree) if isinstance(node, ast.Attribute)
     }
@@ -65,8 +65,8 @@ def attribute_chains(tree: ast.AST) -> set[str]:
 def stale_submodule_imports(path: str, text: str) -> list[Finding]:
     """Returns every ``import a.b`` whose module ``a.b`` the file never reads.
 
-    Other modules import the package ``a`` as well, so a checker that tracks only ``a`` does
-    not see such an import.
+    Other modules import the package ``a`` as well. A checker that tracks only ``a`` misses
+    such an import.
     """
     try:
         tree = ast.parse(text, path)
@@ -91,7 +91,7 @@ def stale_submodule_imports(path: str, text: str) -> list[Finding]:
 
 
 def top_level_packages(root: str, files: list[str]) -> list[str]:
-    """Returns the sorted package directories whose parent directory is no package."""
+    """Returns the sorted package directories whose parent directory is not a package."""
     packages = {
         os.path.dirname(path)
         for path in files
@@ -108,8 +108,8 @@ def top_level_packages(root: str, files: list[str]) -> list[str]:
 def package_modules(package: str, files: list[str]) -> list[tuple[str, str]]:
     """Returns the dotted module names and the files of a package, the package itself first.
 
-    A file counts only when every directory from the package down to the file holds an
-    ``__init__.py``, so no script of a plain subdirectory runs.
+    A file counts only when every directory from the package down to the file contains an
+    ``__init__.py``. The check then skips the scripts of a plain subdirectory.
     """
     initialised = {
         os.path.dirname(path)
@@ -158,7 +158,7 @@ def fresh_interpreter_findings(root: str, files: list[str], jobs: int) -> list[F
     repository_modules = {os.path.basename(package) for package in packages}
     findings = []
     for package in packages:
-        # The own package comes first, so a package of the same name elsewhere does not hide it.
+        # The own package comes first. A package of the same name elsewhere then cannot hide it.
         search_path = [os.path.dirname(package)] + [
             os.path.dirname(other)
             for other in packages

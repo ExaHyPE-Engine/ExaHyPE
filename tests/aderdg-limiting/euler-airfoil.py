@@ -108,12 +108,12 @@ max_eigenvalue = euler.max_eigenvalue(gamma)
 limiter_riemann_solver = """
   const double maximumWaveSpeed =
     std::max(
-      maxEigenvalue(QL, x, h, t, dt, normal),
-      maxEigenvalue(QR, x, h, t, dt, normal)
+      maxEigenvalue(QL, x, h, t, dt, normal, parameters),
+      maxEigenvalue(QR, x, h, t, dt, normal, parameters)
     );
 
-  flux(QL, x, h, t, dt, normal, FL);
-  flux(QR, x, h, t, dt, normal, FR);
+  flux(QL, x, h, t, dt, normal, FL, parameters);
+  flux(QR, x, h, t, dt, normal, FR, parameters);
   const auto normalMomentumFluxLeft = FL[Shortcuts::j + normal];
   const auto normalMomentumFluxRight = FR[Shortcuts::j + normal];
 
@@ -121,6 +121,8 @@ limiter_riemann_solver = """
   const double volumeFractionRight = QR[Shortcuts::volumeFraction];
   // The opposing cell's fluid fraction transmits the Rusanov flux. Its solid
   // remainder acts as a wall and reflects the interior normal-momentum flux.
+  // Both products of a wall flux round on their own. The fluxes of mirrored
+  // faces then add the same rounded products with and without fused multiply-adds.
   for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
     const double rusanovFlux =
       0.5
@@ -128,13 +130,15 @@ limiter_riemann_solver = """
         FL[unknown] + FR[unknown]
         + maximumWaveSpeed * (QL[unknown] - QR[unknown])
       );
-    FL[unknown] = volumeFractionRight * rusanovFlux;
-    FR[unknown] = volumeFractionLeft * rusanovFlux;
+    FL[unknown] = tarch::la::productRoundedOnce(volumeFractionRight, rusanovFlux);
+    FR[unknown] = tarch::la::productRoundedOnce(volumeFractionLeft, rusanovFlux);
   }
-  FL[Shortcuts::j + normal] +=
-    (1.0 - volumeFractionRight) * normalMomentumFluxLeft;
-  FR[Shortcuts::j + normal] +=
-    (1.0 - volumeFractionLeft) * normalMomentumFluxRight;
+  FL[Shortcuts::j + normal] += tarch::la::productRoundedOnce(
+    1.0 - volumeFractionRight, normalMomentumFluxLeft
+  );
+  FR[Shortcuts::j + normal] += tarch::la::productRoundedOnce(
+    1.0 - volumeFractionLeft, normalMomentumFluxRight
+  );
   return maximumWaveSpeed;
 """
 

@@ -19,8 +19,8 @@ class TemplatedFile:
     ``subdirectory/class_name`` with the template's own suffix.
 
     The dictionary receives ``CLASSNAME``, ``NAMESPACE`` and ``FULL_QUALIFIED_NAMESPACE``;
-    ``apply_iteratively`` renders the result again until no Jinja2 tag remains or a result
-    repeats.
+    ``apply_iteratively`` renders the result again while it contains a Jinja2 tag and differs from
+    the previous result.
     """
 
     def __init__(

@@ -1,23 +1,20 @@
 // This file is part of the ExaHyPE 2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 //
-// This is the *exercise* implementation of the shallow-water solver. The bodies
-// below are intentionally left as stubs: The project compiles and runs as is,
-// but the simulation does nothing physical until you fill in the TODOs. Work
-// through the steps in ShallowWater.ipynb. Worked solutions are given in the
-// documentation (pages "Part 2 - Solution to Exercise 1" and
-// "Part 2 - Solution to Exercise 2").
+// The function bodies are compilable stubs of the exercises in ShallowWater.ipynb. With the stubs,
+// Q keeps its initial state. The documentation pages "Part 2 - Solution to Exercise 1" and
+// "Part 2 - Solution to Exercise 2" contain the solutions.
 //
-// The conserved variables are addressed through the generated Shortcuts enum:
-//   Shortcuts::h        water height          (1 component)
-//   Shortcuts::hu       momentum h*u          (2 components: +0 is x, +1 is y)
-//   Shortcuts::b        bathymetry            (1 component)
+// Q stores the water height at Shortcuts::h, the momentum h*u at Shortcuts::hu + 0 and
+// Shortcuts::hu + 1, and the bathymetry at Shortcuts::b.
 #include "ADERDGSolver.h"
 
-void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
+void
+tutorials::exahype2::swe::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 1: Set up the dam-break initial state.
   // For now we start from flat water at rest so the code runs.
@@ -27,13 +24,15 @@ void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
   Q[Shortcuts::b]      = 0.0;
 }
 
-void tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
+void
+tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
   const double* const NOALIAS                  Qinside,
   double* const NOALIAS                        Qoutside,
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 1: Prescribe the outside state. As a safe default we mirror
   // the inside state (a crude outflow condition).
@@ -43,23 +42,27 @@ void tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
   Qoutside[Shortcuts::b]      = Qinside[Shortcuts::b];
 }
 
-::exahype2::RefinementCommand tutorials::exahype2::swe::ADERDGSolver::refinementCriterion(
+::exahype2::RefinementCommand
+tutorials::exahype2::swe::ADERDGSolver::refinementCriterion(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time
+  const double                                 time,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 2: Refine near the moving front. Keep the mesh as is for now.
   return ::exahype2::RefinementCommand::Keep;
 }
 
-double tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
+double
+tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
   const double                                 timeStepSize,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 1: Return max(|u_n + sqrt(g h)|, |u_n - sqrt(g h)|),
   // where u_n = hu[normal] / h and g = 9.81. A positive placeholder keeps the
@@ -67,14 +70,16 @@ double tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
   return 1.0;
 }
 
-void tutorials::exahype2::swe::ADERDGSolver::flux(
+void
+tutorials::exahype2::swe::ADERDGSolver::flux(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
   const double                                 timeStepSize,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 1: Implement the shallow-water flux in direction `normal`.
   F[Shortcuts::h]      = 0.0;
@@ -83,7 +88,8 @@ void tutorials::exahype2::swe::ADERDGSolver::flux(
   F[Shortcuts::b]      = 0.0;
 }
 
-void tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
+void
+tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
   const double* const NOALIAS                  Q,
   const double* const NOALIAS                  deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -91,7 +97,8 @@ void tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
   const double                                 time,
   const double                                 timeStepSize,
   const int                                    normal,
-  double* const NOALIAS                        BTimesDeltaQ
+  double* const NOALIAS                        BTimesDeltaQ,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 2: Implement the bathymetry term B(Q)·∇Q. Zero for now.
   BTimesDeltaQ[Shortcuts::h]      = 0.0;

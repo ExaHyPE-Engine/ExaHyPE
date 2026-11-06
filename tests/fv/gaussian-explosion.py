@@ -28,18 +28,15 @@ def parse_arguments():
 args = parse_arguments()
 
 initial_conditions = """
-  /**
-   * We scale the Gaussian's diameter with the maximum cell width, so it does not
-   * look like a discontinuous initial condition on a coarse mesh.
-   */
-
 #if DIMENSIONS == 2
-  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.3};
+  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.0, -0.2};
 #else
-  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.18, 0.3, 0.6};
+  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {-0.32, -0.2, 0.1};
 #endif
 
-  const double peakDeviation = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  // The standard deviation of the Gaussian is the largest admissible patch size. The coarsest grid
+  // then resolves the Gaussian smoothly.
+  const double peakDeviation = parameters.maxAdmissiblePatchSize;
   const double distance = tarch::la::norm2(x - circleCentre);
   const double exponent = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
 
@@ -53,7 +50,6 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
@@ -68,7 +64,7 @@ project = exahype2.Project(
     project_name="GaussianExplosion",
     dimensions=2,
     size=[1.0, 1.0, 1.0],
-    offset=[0.0, 0.0, 0.0],
+    offset=[-0.5, -0.5, -0.5],
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,

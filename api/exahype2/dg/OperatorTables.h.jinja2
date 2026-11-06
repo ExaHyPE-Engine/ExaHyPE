@@ -1,23 +1,33 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
+{% if TABLES | selectattr("expression", "defined") | list %}
+#include "exahype2/dg/Basis.h"
+#include "peano4/sfc/ActiveCurve.h"
+{%- endif %}
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 
 namespace {{ NAMESPACE | join("::") }} {
   template <typename Precision>
-  class {{ TABLE_CLASS }};
+  class {{ CLASSNAME }};
 } // namespace {{ NAMESPACE | join("::") }}
 
 /**
-{{ TABLE_CLASS_DOCUMENTATION }} *
- * The solver's startSimulation() calls initialise() before the first grid traversal.
+{%- for line in TABLE_CLASS_DOCUMENTATION %}
+ * {{ line }}
+{%- endfor %}
+ * Each table T has an accessor getT() for the host and the device, and a pointer T to the device
+ * copy that initialise() allocates.
  */
 template <typename Precision>
-class {{ FULL_QUALIFIED_NAMESPACE }}::{{ TABLE_CLASS }} final {
+class {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }} final {
 public:
   static void initialise();
   static void deallocate();
 {% for table in TABLES %}
-  /**
-{{ table.documentation }}   */
-  inline static Precision* {{ table.name }} = nullptr;
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD constexpr std::array<Precision, {{ table.length }}> get{{ table.name }}();
+  inline static Precision* {{ table.name }}{nullptr};
 {% endfor %}};
+
+#include "{{ CLASSNAME }}.cpph"

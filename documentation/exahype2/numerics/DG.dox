@@ -4,12 +4,12 @@
 
 \tableofcontents
 
-In the Finite Volume method, we assume a constant value in each computational cell. In Discontinuous Galerkin
-(DG) method, we use a higher-order polynomial to represent the solution. The polynomial solution is defined
-everywhere inside the cell, including boundaries. Therefore, values at the faces can be obtained by projection. However,
-since the polynomials are independent in each cell, this results in two different
-values at each interface (therefore called "Discontinuous" Galerkin). The DG method resolves this ambiguity by using numerical flux (usually by solving a Riemann problem)
-to compute a single, consistent flux value.
+In the Finite Volume method, we assume a constant value in each computational cell. In the Discontinuous Galerkin
+(DG) method, a higher-order polynomial represents the solution. The polynomial covers the whole cell, its boundaries
+included. A projection returns its values at the faces. The polynomials of two neighbouring cells are independent.
+They return two different values at each interface. These jumps give the method its name "Discontinuous" Galerkin.
+The DG method resolves the ambiguity with a numerical flux. A Riemann solver usually computes this single, consistent
+flux value.
 
 The following is the overall procedure of the DG method:
 
@@ -40,17 +40,17 @@ Applying integration by parts, we get
         \int_K (\frac{\partial u_h}{\partial t})v_h dx + \oint_{\partial K} (f(u_h) \cdot n)v_h dS - \int_K f(u_h)\cdot \nabla v_h dx = 0
 \f]
 4. Introduce a numerical flux:
-Since the solution \f$ u_h \f$ is discontinuous across element boundaries, it has two different values at any shared
-interface, \f$ u_h^{-} \f$ and \f$ u_h^{+} \f$ from the left and the right element. To solve the ambiguity,
+The solution \f$ u_h \f$ jumps across element boundaries. It takes the two values \f$ u_h^{-} \f$ and
+\f$ u_h^{+} \f$ of the left and the right element at every interface between two elements. To solve the ambiguity,
 we replace the physical flux \f$ f(u_h)\cdot n \f$ with a numerical flux, denoted by \f$ \hat{f} \f$. The weak formulation
 for the element \f$ K \f$ now becomes
 \f[
         \int_K (\frac{\partial u_h}{\partial t})v_h dx + \oint_{\partial K} \hat{f} (u_h^-, u_h^+, n)v_h dS - \int_K f(u_h)\cdot \nabla v_h dx = 0
 \f]
 5. Assemble and solve the system
-The equation from step 4 holds for any choice of test function \f$ v_h \f$. By choosing
+The equation of step 4 is valid for every test function \f$ v_h \f$. By choosing
 a set of basis functions for \f$ v_h \f$, we obtain a system of ODE for the unknown coefficients \f$ c_j(t) \f$
-within each element. Note that in the Galerkin method, we use the same basis function set as the work space and the test space. Namely,
+within each element. The Galerkin method uses the same basis functions for the solution space and the test space. Namely,
 we choose \f$ v_h  = \phi_j \f$ for each \f$ j \f$. By this, we obtain several terms that can be precomputed. For example, the first term becomes
 \f[
         \sum_{i} c_i \int_K (\frac{\partial \phi_i}{\partial t}) \phi_j dx

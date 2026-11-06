@@ -9,14 +9,105 @@ import jinja2
 from .codegen.helper import render_jinja2_template
 
 COORDINATES = "const tarch::la::Vector<DIMENSIONS, double>&"
+RUNTIME_PARAMETERS = "const RuntimeParameters& parameters"
+
+
+def _concept_header(concept):
+    """Returns the header of a concept, ``exahype2/terms/Flux.h`` for ``HasFlux``."""
+    return "exahype2/terms/" + concept[len("Has") :] + ".h"
+
+
+def _substitute(text, precision, dictionary):
+    substituted = (
+        text.replace("{P}", precision)
+        .replace("{S}", dictionary["FULL_QUALIFIED_SOLVER_NAME"])
+        .replace("{N}", str(dictionary["NUMBER_OF_UNKNOWNS"]))
+        .replace("{A}", str(dictionary["NUMBER_OF_AUXILIARY_VARIABLES"]))
+    )
+    if "{{" not in substituted:
+        return substituted
+    return render_jinja2_template(substituted, dictionary, jinja2.DebugUndefined)
+
+
+def _declared_parameter(declarator):
+    """Returns the declarator without the ``const`` of a by-value parameter. A declaration omits
+    that ``const``."""
+    if "&" in declarator or "[" in declarator:
+        return declarator
+    if "*" in declarator:
+        pointee, star, name = declarator.rpartition("*")
+        return pointee + star + name.replace(" const ", " ", 1)
+    return declarator.removeprefix("const ")
+
+
+def _parameter_lines(term, precision, dictionary, declaration):
+    """Returns one line per parameter of a term. The runtime parameters are the last parameter of
+    every term."""
+    parameters = term.parameters + (RUNTIME_PARAMETERS,)
+    lines = []
+    for position, parameter in enumerate(parameters):
+        declarator, separator, comment = _substitute(
+            parameter, precision, dictionary
+        ).partition(" //")
+        if declaration:
+            declarator = _declared_parameter(declarator)
+        else:
+            declarator = "[[maybe_unused]] " + declarator
+        comma = "," if position + 1 < len(parameters) else ""
+        lines.append("  " + declarator + comma + separator + comment)
+    return "\n".join(lines)
+
+
+def get_inline_attributes(gpu):
+    """Returns the attributes of a term that ``<Name>.cpph`` defines."""
+    return "INLINE_METHOD GPU_CALLABLE_METHOD" if gpu else "INLINE_METHOD"
+
+
+def render_declaration(term, precision, dictionary, attributes):
+    """Returns the declaration of a term in the solver class, with ``attributes`` before the
+    return type."""
+    return "static {}{} {}(\n{}\n);".format(
+        attributes + " " if attributes else "",
+        _substitute(term.returns, precision, dictionary),
+        term.cpp,
+        _parameter_lines(term, precision, dictionary, True),
+    )
+
+
+def render_definition(term, precision, dictionary, attributes, body):
+    """Returns the definition of a term with ``body`` and with ``attributes`` before the return
+    type."""
+    return "{}{} {}::{}(\n{}\n) {{\n{}\n}}".format(
+        attributes + " " if attributes else "",
+        _substitute(term.returns, precision, dictionary),
+        dictionary["FULL_QUALIFIED_SOLVER_NAME"],
+        term.cpp,
+        _parameter_lines(term, precision, dictionary, False),
+        textwrap.indent(textwrap.dedent(body.strip("\n")), "  "),
+    )
+
+
+def render_stub_definition(term, precision, dictionary):
+    """Returns the definition of a user-defined term for ``<Name>.cpp`` that terminates the
+    application."""
+    return render_definition(
+        term,
+        precision,
+        dictionary,
+        "",
+        'tarch::terminateWithError("The solver {} must define the PDE term {}.");'.format(
+            dictionary["SOLVER_NAME"], term.cpp
+        ),
+    )
 
 
 @dataclass(frozen=True)
 class PDETerm:
-    """One row of a family's PDE term table.
+    """Stores one row of the PDE term table of a solver family.
 
-    ``parameters`` lists the C++ parameters with ``{P}`` for the term's precision and ``{N}``
-    and ``{A}`` for the unknown and auxiliary counts in the comments.
+    ``parameters`` lists the C++ parameters. ``_substitute()`` replaces ``{P}`` with the
+    precision of the term, ``{S}`` with the solver name and ``{N}`` and ``{A}`` with the
+    numbers of unknowns and auxiliary variables.
     """
 
     cpp: str
@@ -180,44 +271,43 @@ def diffusive_source():
     )
 
 
-def finite_volume_riemann_solver(flag="USE_RIEMANN_SOLVER"):
-    return PDETerm(
-        cpp="solveRiemannProblem",
-        concept="HasFiniteVolumeRiemannSolver",
-        parameters=(
-            "const {P}* const NOALIAS QL // [{N} + {A}]",
-            "const {P}* const NOALIAS QR // [{N} + {A}]",
-            COORDINATES + " x",
-            COORDINATES + " h",
-            "const double t",
-            "const double dt",
-            "const int normal",
-            "{P}* const NOALIAS FL // [{N}]",
-            "{P}* const NOALIAS FR // [{N}]",
-        ),
-        returns="double",
-        flag=flag,
+def _riemann_solver_parameters(points):
+    states = "[{N} + {A}]" if not points else "[" + points + " * ({N} + {A})]"
+    fluxes = "[{N}]" if not points else "[" + points + " * {N}]"
+    return (
+        "const {P}* const NOALIAS QL // " + states,
+        "const {P}* const NOALIAS QR // " + states,
+        COORDINATES + " x",
+        COORDINATES + " h",
+        "const double t",
+        "const double dt",
+        "const int normal",
+        "const bool isBoundaryFace",
+        "const int faceIndex",
+        "{P}* const NOALIAS FL // " + fluxes,
+        "{P}* const NOALIAS FR // " + fluxes,
     )
 
 
-def galerkin_riemann_solver():
+def riemann_solver(points=""):
+    """Returns the Riemann solver term of every solver family. ``points`` is the number of face
+    nodes a DG solver passes in one call."""
     return PDETerm(
-        cpp="riemannSolver",
-        concept="HasGalerkinRiemannSolver",
-        parameters=(
-            "{P}* const NOALIAS FL // [{N}]",
-            "{P}* const NOALIAS FR // [{N}]",
-            "const {P}* const NOALIAS QL // [{N} + {A}]",
-            "const {P}* const NOALIAS QR // [{N} + {A}]",
-            "const double t",
-            "const double dt",
-            COORDINATES + " x",
-            COORDINATES + " h",
-            "const int direction",
-            "const bool isBoundaryFace",
-            "const int faceIndex",
-        ),
+        cpp="solveRiemannProblem",
+        concept="HasRiemannSolver",
+        parameters=_riemann_solver_parameters(points),
+        returns="double",
         flag="USE_RIEMANN_SOLVER",
+    )
+
+
+def subcell_riemann_solver():
+    return PDETerm(
+        cpp="solveSubcellRiemannProblem",
+        concept="HasSubcellRiemannSolver",
+        parameters=_riemann_solver_parameters(""),
+        returns="double",
+        flag="USE_SUBCELL_RIEMANN_SOLVER",
     )
 
 
@@ -295,7 +385,6 @@ def physical_admissibility():
         ),
         returns="bool",
         precision="storage",
-        gpu=False,
         flag="USE_PHYSICAL_ADMISSIBILITY",
     )
 
@@ -305,11 +394,10 @@ def dmp_observables():
         cpp="mapDmpObservables",
         concept="HasDmpObservables",
         parameters=(
-            "{P}* const NOALIAS observables // [NumberOfDMPObservables]",
+            "{P}* const NOALIAS observables // [NumberOfObservables]",
             "const {P}* const NOALIAS Q // [{N} + {A}]",
         ),
         precision="storage",
-        gpu=False,
         flag="USE_DMP_OBSERVABLES",
     )
 
@@ -324,7 +412,6 @@ def dmp_relaxation_parameter():
         ),
         returns="{P}",
         precision="storage",
-        gpu=False,
         flag="USE_DMP_RELAXATION_PARAMETER",
     )
 
@@ -341,44 +428,82 @@ def analytical_solution():
             "double* const solution // [{N}]",
         ),
         precision="storage",
-        gpu=False,
         flag="USE_ANALYTICAL_SOLUTION",
         concept_arguments=(),
     )
 
 
 def particle_analytical_solution():
-    """The particle type is the tracer the solver measures; the dictionary names it."""
+    """Returns the analytical solution term of a tracer set. The solution buffer stores the
+    exact position followed by the measured data entries."""
     return PDETerm(
         cpp="analyticalSolution",
         concept="HasParticleAnalyticalSolution",
         parameters=(
-            "globaldata::{{PARTICLE}}* const particle",
+            "const ::exahype2::particles::Particle* const particle",
             "const double t",
             "const double dt",
-            "double* const solution // [{{NUMBER_OF_UNKNOWNS_PARTICLE}} + DIMENSIONS]",
+            "double* const solution // [DIMENSIONS + {{NUMBER_OF_UNKNOWNS_PARTICLE}}]",
         ),
         precision="storage",
         gpu=False,
         flag="USE_PARTICLE_ANALYTICAL_SOLUTION",
-        concept_arguments=("{{FULL_QUALIFIED_NAMESPACE}}::globaldata::{{PARTICLE}}",),
+        concept_arguments=("::exahype2::particles::Particle",),
+    )
+
+
+def cell_predicate():
+    return PDETerm(
+        cpp="ownsCell",
+        concept="HasCellPredicate",
+        parameters=(COORDINATES + " x", COORDINATES + " h"),
+        returns="bool",
+        precision="storage",
+        gpu=False,
+    )
+
+
+def face_predicate():
+    return PDETerm(
+        cpp="plotsFace",
+        concept="HasFacePredicate",
+        parameters=(COORDINATES + " x", COORDINATES + " h", "const int normal"),
+        returns="bool",
+        precision="storage",
+        gpu=False,
+    )
+
+
+def postprocess_updated_patch():
+    return PDETerm(
+        cpp="postprocessUpdatedPatch",
+        concept="HasPostprocessUpdatedPatch",
+        parameters=(
+            "{P}* const NOALIAS Q // [PointsPerCell * ({N} + {A})]",
+            COORDINATES + " x",
+            COORDINATES + " h",
+            "const double t",
+            "const double dt",
+        ),
+        precision="storage",
     )
 
 
 class PDETerms:
-    """The PDE terms a script set on one solver, checked against the family's table."""
+    """Stores the PDE terms that a script sets on one solver. ``set()`` checks every term
+    against the table of the solver family."""
 
     def __init__(self, table):
         self._table = dict(table)
         self._values = {}
 
     def set(self, **pde_terms):
-        """Stores every named PDE term; ``None`` and ``False`` remove a PDE term."""
+        """Stores every named PDE term. ``None`` and ``False`` remove a PDE term."""
         for name, value in pde_terms.items():
             if name not in self._table:
                 raise ValueError(
-                    "Unknown PDE term '{}'. This solver family supports {}.".format(
-                        name, ", ".join(sorted(self._table))
+                    "The solver family supports the PDE terms {} only (got '{}').".format(
+                        ", ".join(sorted(self._table)), name
                     )
                 )
             if value is None or value is False:
@@ -387,8 +512,8 @@ class PDETerms:
                 self._values[name] = value
             else:
                 raise TypeError(
-                    "A PDE term is True, a C++ body or absent, got {!r} for '{}'.".format(
-                        value, name
+                    "The PDE term '{}' expects True, False, None or a C++ body (got {!r}).".format(
+                        name, value
                     )
                 )
 
@@ -402,18 +527,30 @@ class PDETerms:
         return self._values.get(name) is True
 
     def body(self, name):
-        """Returns the inline body of a term, or the table's default when nothing is set."""
+        """Returns the inline body that the script sets for a term. Without one, it returns the
+        default of the table."""
         value = self._values.get(name)
         if isinstance(value, str):
             return value
         return self._table[name].default
 
     def is_declared(self, name):
-        """Whether the generated solver declares the term: Set by the script or defaulted."""
+        """Returns whether the generated solver declares the term. The solver declares a term if
+        the script sets it or if the table defines a default for it."""
         return name in self._values or self._table[name].default is not None
 
+    def get_host_defined_device_terms(self, user_terms_inline):
+        """Returns the C++ names of the user-defined device terms that ``<Name>.cpp`` defines on
+        the host. The list is empty when ``user_terms_inline`` is true."""
+        return [
+            term.cpp
+            for name, term in self._table.items()
+            if term.gpu and self.is_user_defined(name) and not user_terms_inline
+        ]
+
     def flags(self):
-        """Returns the kernel flags of the table, true for every set term."""
+        """Returns the kernel flags of the table. A flag is true if the script sets one of its
+        terms."""
         result = {}
         for name, term in self._table.items():
             if term.flag is None:
@@ -422,97 +559,87 @@ class PDETerms:
                 result[flag] = result.get(flag, False) or self.is_set(name)
         return result
 
-    def _substitute(self, text, precision, dictionary):
-        substituted = (
-            text.replace("{P}", precision)
-            .replace("{S}", dictionary["FULL_QUALIFIED_SOLVER_NAME"])
-            .replace("{N}", str(dictionary["NUMBER_OF_UNKNOWNS"]))
-            .replace("{A}", str(dictionary["NUMBER_OF_AUXILIARY_VARIABLES"]))
-        )
-        if "{{" not in substituted:
-            return substituted
-        return render_jinja2_template(substituted, dictionary, jinja2.DebugUndefined)
-
     def _rendered_body(self, name, precision, dictionary):
-        """Renders the inline body with the dictionary, so a body may name the precision it is
-        instantiated for through ``COMPUTE_PRECISION``."""
+        """Renders the inline body with the dictionary. A body reads the precision of its
+        instantiation as ``COMPUTE_PRECISION``."""
         context = dict(dictionary)
         context["COMPUTE_PRECISION"] = precision
-        body = render_jinja2_template(self.body(name), context, jinja2.DebugUndefined)
-        return textwrap.indent(textwrap.dedent(body.strip("\n")), "    ")
+        return render_jinja2_template(self.body(name), context, jinja2.DebugUndefined)
 
     def _precisions_of(self, term, dictionary):
         if term.precision == "storage":
             return [dictionary["STORAGE_PRECISION"]]
         return list(dictionary["COMPUTATION_PRECISIONS"])
 
-    def _parameter_lines(self, term, precision, dictionary, prefix, indent):
-        lines = []
-        for position, parameter in enumerate(term.parameters):
-            declarator, separator, comment = self._substitute(
-                parameter, precision, dictionary
-            ).partition(" //")
-            comma = "," if position + 1 < len(term.parameters) else ""
-            lines.append(indent + prefix + declarator + comma + separator + comment)
-        return "\n".join(lines)
+    def names_with_inline_bodies(self):
+        """Returns the declared terms whose body comes from the script or the table's default."""
+        return [
+            name
+            for name in self._table
+            if self.is_declared(name) and not self.is_user_defined(name)
+        ]
 
-    def render_declarations(self, dictionary):
-        """Returns the inline definitions and the user-defined declarations of ``<Name>.h``."""
+    def render_declarations(self, dictionary, user_terms_inline, on_device):
+        """Returns the declarations in ``<Name>.h`` of the declared terms that run on the device
+        for ``on_device`` and of the host-only terms otherwise. With ``user_terms_inline``, the
+        user-defined terms get the inline attributes. The application's ``<Name>.cpph`` defines
+        them."""
         blocks = []
         for name, term in self._table.items():
-            if not self.is_declared(name):
+            if not self.is_declared(name) or term.gpu != on_device:
                 continue
+            attributes = (
+                ""
+                if self.is_user_defined(name) and not user_terms_inline
+                else get_inline_attributes(term.gpu)
+            )
             for precision in self._precisions_of(term, dictionary):
-                returns = self._substitute(term.returns, precision, dictionary)
-                if self.is_user_defined(name):
-                    blocks.append(
-                        "  static {} {}(\n{}\n  );".format(
-                            returns,
-                            term.cpp,
-                            self._parameter_lines(
-                                term, precision, dictionary, "", "    "
-                            ),
-                        )
-                    )
-                else:
-                    blocks.append(
-                        "  static INLINE_METHOD{} {} {}(\n{}\n  ) {{\n{}\n  }}".format(
-                            " GPU_CALLABLE_METHOD" if term.gpu else "",
-                            returns,
-                            term.cpp,
-                            self._parameter_lines(
-                                term,
-                                precision,
-                                dictionary,
-                                "[[maybe_unused]] ",
-                                "    ",
-                            ),
-                            self._rendered_body(name, precision, dictionary),
-                        )
-                    )
+                blocks.append(
+                    render_declaration(term, precision, dictionary, attributes)
+                )
         return "\n\n".join(blocks)
 
-    def render_definitions(self, dictionary):
-        """Returns the stubs of ``<Name>.cpp`` for every user-defined term."""
+    def render_definitions(self, dictionary, on_device):
+        """Returns the definitions in ``<Name>.cpph`` of the terms with an inline body that run on
+        the device for ``on_device`` and of the host-only ones otherwise."""
         blocks = []
         for name, term in self._table.items():
-            if not self.is_user_defined(name):
+            if (
+                not self.is_declared(name)
+                or self.is_user_defined(name)
+                or term.gpu != on_device
+            ):
                 continue
             for precision in self._precisions_of(term, dictionary):
                 blocks.append(
-                    '{} {}::{}::{}(\n{}\n) {{\n  tarch::terminateWithError("{}::{} is not implemented.");\n}}'.format(
-                        self._substitute(term.returns, precision, dictionary),
-                        dictionary["FULL_QUALIFIED_NAMESPACE"],
-                        dictionary["SOLVER_NAME"],
-                        term.cpp,
-                        self._parameter_lines(
-                            term, precision, dictionary, "[[maybe_unused]] ", "  "
-                        ),
-                        dictionary["SOLVER_NAME"],
-                        term.cpp,
+                    render_definition(
+                        term,
+                        precision,
+                        dictionary,
+                        get_inline_attributes(term.gpu),
+                        self._rendered_body(name, precision, dictionary),
                     )
                 )
         return "\n\n".join(blocks)
+
+    def render_stub_definitions(self, dictionary):
+        """Returns the terminating definitions of the user-defined terms, one per precision."""
+        return [
+            render_stub_definition(term, precision, dictionary)
+            for name, term in self._table.items()
+            if self.is_user_defined(name)
+            for precision in self._precisions_of(term, dictionary)
+        ]
+
+    def concept_headers(self):
+        """Returns the sorted headers of the concepts of the declared terms."""
+        return sorted(
+            {
+                _concept_header(term.concept)
+                for name, term in self._table.items()
+                if self.is_declared(name)
+            }
+        )
 
     def render_assertions(self, dictionary):
         """Returns one ``static_assert`` per declared term and precision."""
@@ -523,11 +650,11 @@ class PDETerms:
                 continue
             for precision in self._precisions_of(term, dictionary):
                 arguments = "".join(
-                    ", " + self._substitute(argument, precision, dictionary)
+                    ", " + _substitute(argument, precision, dictionary)
                     for argument in term.concept_arguments
                 )
                 blocks.append(
-                    'static_assert(\n  ::exahype2::{}<{}{}>,\n  "{}::{} is missing, is not static or has a wrong signature; see exahype2/SolverConcepts.h"\n);'.format(
+                    'static_assert(\n  ::exahype2::terms::{}<{}{}>,\n  "The solver {} must define the PDE term {} as a static function with the expected signature."\n);'.format(
                         term.concept,
                         solver,
                         arguments,

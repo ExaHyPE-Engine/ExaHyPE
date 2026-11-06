@@ -1,0 +1,14 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns the index of the scratch chunk of the caller inside a dispatch. The index is the work item
+ * on a device and the thread number on the host. A host thread runs its work items one after the
+ * other.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::accelerator::getScratchChunk([[maybe_unused]] const int workItem) {
+  int chunk = workItem;
+  COMPILE_IF_ON_HOST(chunk = omp_get_thread_num();)
+  return chunk;
+}

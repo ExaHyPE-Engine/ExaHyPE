@@ -1,0 +1,39 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns the entry valueIndex, counted from zero, of row as the fundamental type T. The last entry
+ * of row may end without a trailing separator. A missing or unparsable entry throws std::runtime_error.
+ */
+template <class T>
+INLINE_METHOD T
+tarch::reader::CSVReader::extractFundamentalTypeFromRow(
+  const char         separator,
+  const int          valueIndex,
+  const std::string& row
+) {
+  static_assert(std::is_fundamental_v<T>, "The CSV reader reads fundamental types only.");
+
+  std::size_t entryBegin = 0;
+  for (int entry = 0; entry < valueIndex; entry++) {
+    const std::size_t separatorPosition = row.find(separator, entryBegin);
+    if (separatorPosition == std::string::npos) {
+      throw std::runtime_error(
+        "The CSV reader cannot find value " + std::to_string(valueIndex) + " with the separator \"" + separator
+        + "\" in the row \"" + row + "\"."
+      );
+    }
+    entryBegin = separatorPosition + 1;
+  }
+
+  const std::size_t  entryEnd = row.find(separator, entryBegin);
+  const std::size_t  length   = entryEnd == std::string::npos ? std::string::npos : entryEnd - entryBegin;
+  std::istringstream entryStream(row.substr(entryBegin, length));
+  T                  extractedValue{};
+  if (not(entryStream >> extractedValue)) {
+    throw std::runtime_error(
+      "The CSV reader cannot parse value " + std::to_string(valueIndex) + " of the row \"" + row + "\"."
+    );
+  }
+  return extractedValue;
+}

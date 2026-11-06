@@ -2,15 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/accelerator/CompileTarget.h"
+
 namespace {{NAMESPACE | join("::")}} {
-  class VariableShortcuts{{SOLVER_NAME}};
+  class {{CLASSNAME}};
 } // namespace {{NAMESPACE | join("::")}}
 
 TARGET_DECLARE
 /**
  * Positions of fields in the vector of unknowns.
  */
-class {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}} final {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final {
 public:
   static constexpr int NumberOfDistinctVariables = {{VARIABLE_NAMES | length}};
 

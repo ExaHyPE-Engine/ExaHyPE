@@ -2,17 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * Solves the nodal Riemann problems of one Galerkin face with a well-balanced
- * Rusanov flux for a depth-averaged layer over variable terrain.
- *
- * The dissipation of the mass equation acts on the free-surface jump, and the
- * antisymmetric hydrostatic term pairs with the depth-squared pressure flux,
- * so a resting layer with a flat free surface stays at rest over any terrain.
- * One shared maximal wave speed serves every node of the face. The terrain
- * unknown at BathymetryIndex receives no flux. The caller supplies the wave
- * speed of one state through maxEigenvalue(Q, x, h, t, dt, normal) and the
- * gravity acting between two states through interfaceGravity(QL, QR), so the
- * solver stays independent of the layer's material model.
+ * Replaces the physical fluxes FL and FR of the nodes of one Galerkin face by a well-balanced
+ * Rusanov flux and returns the largest wave speed of the nodes. The dissipation acts on the
+ * free-surface jump. A resting layer with a flat free surface then stays at rest over any terrain. The
+ * callable maxEigenvalue(Q, x, h, t, dt, normal) returns the wave speed of one state and
+ * interfaceGravity(QL, QR) the gravity between two states.
  */
 template <
   class Shortcuts,
@@ -22,8 +16,10 @@ template <
   int Order,
   typename T,
   typename MaxEigenvalue,
-  typename InterfaceGravity>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::riemann::wellBalancedRusanov(
+  typename InterfaceGravity
+>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::riemann::wellBalancedRusanov(
   const T* const NOALIAS                       QL,
   const T* const NOALIAS                       QR,
   const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -86,4 +82,5 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::riemann
     leftFlux[Shortcuts::hu + normal] += static_cast<T>(0.5) * gravity * averageHeight * hydrostaticJump;
     rightFlux[Shortcuts::hu + normal] -= static_cast<T>(0.5) * gravity * averageHeight * hydrostaticJump;
   }
+  return maximumEigenvalue;
 }

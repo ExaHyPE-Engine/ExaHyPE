@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaskred::limiting::CellStatistics<T> applications::exahype2::
-  exaskred::limiting::collectCellStatistics(const T* const Q, const int numberOfStates) {
+INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaskred::limiting::CellStatistics<T>
+applications::exahype2::exaskred::limiting::collectCellStatistics(const T* const Q, const int numberOfStates) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   applications::exahype2::exaskred::limiting::CellStatistics<T> result;
   for (int state = 0; state < numberOfStates; state++) {
@@ -32,35 +32,41 @@ INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaskred::limiting::Ce
 }
 
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::limiting::isWetCell(
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::limiting::isWetCell(
   const T* const Q,
   const int      numberOfStates,
   const double   minimumWaterHeight
 ) {
-  const auto statistics = applications::exahype2::exaskred::limiting::
-    collectCellStatistics<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(Q, numberOfStates);
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q, numberOfStates);
   return statistics.finite and statistics.minHeight > static_cast<T>(minimumWaterHeight);
 }
 
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::limiting::hasBoundedDepthVariation(
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::limiting::hasBoundedDepthVariation(
   const T* const Q,
   const int      numberOfStates,
   const double   minimumWaterHeight,
   const double   maximumRelativeDepthVariation
 ) {
-  const auto statistics = applications::exahype2::exaskred::limiting::
-    collectCellStatistics<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(Q, numberOfStates);
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q, numberOfStates);
   return statistics.finite and statistics.minHeight > static_cast<T>(minimumWaterHeight) and statistics.maxHeight > T{}
   and statistics.maxHeight - statistics.minHeight
     <= static_cast<T>(maximumRelativeDepthVariation) * statistics.maxHeight;
 }
 
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::limiting::isAdmissibleState(
-  const T* const Q,
-  const double   minimumWaterHeight
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::limiting::isAdmissibleState(const T* const Q, const double minimumWaterHeight) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   for (int entry = 0; entry < NumberOfData; entry++) {
     if (not std::isfinite(Q[entry])) {

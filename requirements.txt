@@ -1,6 +1,7 @@
-black
-clang-format>=20
+black==26.5.1
+clang-format==23.1.1
 clang-tidy>=20
+ast-comments
 h5py
 imageio
 imageio-ffmpeg
@@ -16,6 +17,7 @@ nest-asyncio
 netCDF4
 numpy
 pandas
+pytest
 pyvista
 ruff
 scipy

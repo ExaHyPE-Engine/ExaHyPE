@@ -1,43 +1,37 @@
 /**
 
-@page page_exahype_multicore Tasking
+@page page_exahype_multicore Parallelism within a rank
 
 \tableofcontents
 
-ExaHyPE uses two complementary task graphs. Peano decomposes each rank's mesh
-traversal into subtree tasks, while task-enabled solvers can submit numerical
-work independently through tarch::tasking.
+A solver family advances its solution with tarch::accelerator::parallelFor
+and tarch::accelerator::parallelReduce over the cell and face spans of the
+cell connectivity. With the host backend these dispatches are OpenMP loops; with a GPU
+backend they are device kernels over the pools in device memory.
 
-# Traversal tasks
+# Dispatches
 
-Peano derives subtree tasks from the local spawn-level blocks and heavy refined
-subtrees. Every task owns an observer clone and private interface copies. The
-Grid Snapshot reports their count, the cells per task and the thread ceiling.
+A time step is a fixed sequence of dispatches: the finite-volume family runs
+the boundary faces, the local level jumps, the local cells, the remote level
+jumps, the remote cells, the face projection and the restriction of the level
+jumps; the DG families run the predictor or the stages, the level-jump
+interpolation, the Riemann problems, the level-jump restriction and the
+corrector. The boundary faces, the local level jumps and the local cells and
+faces run between `post()` and `wait()` of the halo exchange, so the messages
+travel while the rank computes; a regrid prolongs and restricts on the rank
+while the migrated cells travel.
 
-Generated data containers participate only when they support subtree-task
-replication. Particle sets make the corresponding rank traversal serial, while
-ordinary cell, face, and vertex patch data uses the parallel copy-and-merge
-protocol.
+# Tasks
 
-# Solver tasks
+peano4::topology::runChunkedTasks spawns tarch::tasking tasks for the host
+work of the tree and cell connectivity build after a regrid, one task per chunk of
+spawn-level blocks. @ref page_tarch_tasking describes the interfaces.
 
-Task-enabled ExaHyPE solvers submit patch or kernel work through the interfaces
-described on @ref page_tarch_tasking. A solver task can carry incoming and
-outgoing dependency tokens so later mesh events wait for the produced data.
+# Choosing the layout
 
-Solver tasks complement the traversal graph when a small number of expensive
-patches or kernels would otherwise dominate one subtree task. Their lifetime
-and dependencies must preserve the data ownership of the action set that
-creates them.
-
-# Choosing granularity
-
-Small tasks spend a large fraction of time in scheduling and dependency
-management. Large tasks reduce the ready work available to other threads.
-Profiles, `Cells per Task`, and the phase report line `Utilisation` distinguish
-these cases.
-
-@ref page_exahype_performance_optimisation provides solver-specific guidance,
-and @ref page_peano_performance_optimisation covers the traversal graph.
+A rank needs enough cells to fill its threads and to hide its halo exchange
+behind its local cells. The MPI decomposition rows of the grid report give the
+cells per rank and the rank-boundary faces;
+@ref page_exahype_performance_optimisation provides solver-specific guidance.
 
 */

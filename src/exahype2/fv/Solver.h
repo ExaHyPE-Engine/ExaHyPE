@@ -2,95 +2,176 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/AdaptiveTimeStepping.h"
-#include "exahype2/FixedTimeStepping.h"
-#include "exahype2/Solver.h"
-#include "peano4/Constants.h"
-#include "peano4/dataview/CellMarker.h"
-#include "peano4/dataview/FaceMarker.h"
-#include "tarch/Assertions.h"
+#include "exahype2/ErrorMeasurement.h"
+#include "exahype2/Limits.h"
+#include "exahype2/RefinementRequests.h"
+#include "exahype2/RefinementVotes.h"
+#include "exahype2/TimeStepping.h"
+#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/plotter/PatchPlotter.h"
+#include "exahype2/terms/BoundaryConditions.h"
+#include "exahype2/terms/InitialCondition.h"
+#include "exahype2/terms/RefinementCriterion.h"
+#include "peano4/CellConnectivity.h"
+#include "peano4/HaloExchange.h"
+#include "peano4/MigrationExchange.h"
+#include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/NonCriticalAssertions.h"
+#include "tarch/accelerator/ChunkedMemoryPool.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/plotter/Format.h"
+
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
 
 namespace exahype2::fv {
-  template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   class Solver;
+
+  template <typename SolverType, typename Storage>
+  concept SolverConcept = exahype2::terms::HasInitialCondition<SolverType, Storage>
+    and exahype2::terms::HasBoundaryConditionsWhereNeeded<SolverType, Storage>
+    and exahype2::terms::HasRefinementCriterion<SolverType, Storage> and requires {
+          { SolverType::PatchSize } -> std::convertible_to<int>;
+          { SolverType::NumberOfUnknowns } -> std::convertible_to<int>;
+          { SolverType::NumberOfAuxiliaryVariables } -> std::convertible_to<int>;
+          { SolverType::PeriodicBoundaries[0] } -> std::convertible_to<bool>;
+        };
 } // namespace exahype2::fv
 
 /**
- * Holds the sweep state of a finite-volume solver and derives its time step size. Derived is the
- * generated solver class, so every solver class holds its own statistics record.
+ * Finite-volume solver on the cells of one rank, with the patch layout, the schemes and the PDE terms as
+ * static members of Derived. StoragePrecision is the type of the patches and faces and
+ * ComputePrecision the type the kernels compute in. Patches exchange data only through the face
+ * pool and every patch writes its own half of each face.
  */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-class exahype2::fv::Solver : public TimeStepping {
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+class exahype2::fv::Solver {
 public:
-  enum class SolverState { GridConstruction, GridInitialisation, TimeStep, Plotting, Suspended };
+  using FiniteVolumeScheme = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using Patches            = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+  using Faces              = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  static constexpr int NumberOfFiniteVolumesPerAxisPerPatch = PatchSize;
-  static constexpr int NumberOfUnknowns                     = Unknowns;
-  static constexpr int NumberOfAuxiliaryVariables           = AuxiliaryVariables;
-
-  static constexpr bool UsesAdaptiveTimeStepping = std::is_same_v<TimeStepping, exahype2::AdaptiveTimeStepping>;
+  static constexpr int PointsPerCell = FiniteVolumeScheme::VolumesPerPatch;
 
   Solver()                         = delete;
   Solver(const Solver&)            = delete;
   Solver(Solver&&)                 = delete;
   Solver& operator=(const Solver&) = delete;
   Solver& operator=(Solver&&)      = delete;
-  ~Solver() override               = default;
+  ~Solver()                        = default;
 
-  explicit Solver(double timeStepFactor);
+  INLINE_METHOD Solver(
+    double                                    timeStepFactor,
+    std::string                               name,
+    std::vector<exahype2::plotter::DataField> plottedFields
+  );
 
-  static std::string toString(SolverState state);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void requestRefinementForGridConstruction(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
 
-  void startGridConstructionStep() override;
-  void finishGridConstructionStep() override;
-  void startGridInitialisationStep() override;
-  void finishGridInitialisationStep() override;
-  void suspendSolversForOneGridSweep() override;
-  void startTimeStep() override;
-  void finishTimeStep() override;
-  void startPlottingStep() override;
-  void finishPlottingStep() override;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity, const RuntimeParameters& parameters);
 
-  [[nodiscard]] double getMaxPatchSize() const override;
-  [[nodiscard]] double getMinPatchSize() const override;
-  [[nodiscard]] int    getNumberOfDoFs() const override;
-  [[nodiscard]] bool   mayPlot() const override;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void initialise(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
 
-  INLINE_METHOD void update(double timeStepSize, double timeStamp, double minPatchSize, double maxPatchSize);
-  INLINE_METHOD void updateTimeStampAndPatchSize(double timeStamp, double minPatchSize, double maxPatchSize);
-  INLINE_METHOD void reduceLocalUpdates();
+  template <typename RuntimeParameters>
+  INLINE_METHOD void performTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
 
-  [[nodiscard]] INLINE_METHOD SolverState getSolverState() const;
-  [[nodiscard]] INLINE_METHOD bool        isFirstGridSweepOfTimeStep() const;
-  [[nodiscard]] INLINE_METHOD bool        isLastGridSweepOfTimeStep() const;
-  [[nodiscard]] INLINE_METHOD bool        isGridInitialisationSweep() const;
-  [[nodiscard]] INLINE_METHOD bool        isTimeStepSweep() const;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void regrid(
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
 
-  [[nodiscard]] INLINE_METHOD bool storesCellData(const peano4::dataview::CellMarker& marker) const;
-  [[nodiscard]] INLINE_METHOD bool loadsCellData(const peano4::dataview::CellMarker& marker) const;
-  [[nodiscard]] INLINE_METHOD bool storesFaceData(const peano4::dataview::FaceMarker& marker) const;
-  [[nodiscard]] INLINE_METHOD bool loadsFaceData(const peano4::dataview::FaceMarker& marker) const;
-  [[nodiscard]] INLINE_METHOD bool providesCellDataToKernels(const peano4::dataview::CellMarker& marker) const;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void plot(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory,
+    const RuntimeParameters&        parameters
+  );
 
-protected:
-  /**
-   * Returns the largest mesh width the runtime configuration admits for one finite volume. A
-   * fixed time step scales with the ratio of the smallest mesh width to it.
-   */
-  [[nodiscard]] virtual double maxAdmissibleMeshWidth() const = 0;
+  template <typename RuntimeParameters>
+  INLINE_METHOD void recordLastTimeStamp(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
 
-  static thread_local exahype2::Solver::LocalUpdates _localUpdates;
+  INLINE_METHOD void release();
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
-  SolverState  _solverState{SolverState::GridConstruction};
-  const double _timeStepFactor;
+  INLINE_METHOD void setLimits(const exahype2::Limits& limits);
+  INLINE_METHOD void openErrorMeasurement(const std::string& fileName, double timeDeltaBetweenSnapshots);
+  [[nodiscard]] INLINE_METHOD const exahype2::TimeStepping& getTimeStepping() const;
+  [[nodiscard]] INLINE_METHOD const Patches& getSolution() const;
+  [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
+  [[nodiscard]] INLINE_METHOD int getNumberOfDoFs() const;
 
 private:
-  Solver(double timeStepFactor, std::true_type adaptive);
-  Solver(double timeStepFactor, std::false_type fixed);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void applyBoundaryConditions(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
 
-  void closeTimeStep();
+  INLINE_METHOD void projectOntoFaces(const peano4::CellConnectivity& cellConnectivity);
+
+  template <typename RuntimeParameters>
+  [[nodiscard]] INLINE_METHOD double updatePatches(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
+  );
+
+  template <typename RuntimeParameters>
+  [[nodiscard]] INLINE_METHOD double measureMaxEigenvalue(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void measureError(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
+  INLINE_METHOD void measureMeshWidths(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void proposeTimeStepSize(double maxEigenvalue);
+  [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
+  [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;
+
+  Patches _solution{FiniteVolumeScheme::ValuesPerPatch};
+  Faces   _halo{FiniteVolumeScheme::ValuesPerFace};
+
+  peano4::HaloExchange<StoragePrecision>      _haloExchange{_halo};
+  peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
+
+  exahype2::TimeStepping    _timeStepping;
+  exahype2::RefinementVotes _votes{};
+  bool                      _meshChangedSinceLastTimeStep{false};
+
+  exahype2::ErrorMeasurement      _errorMeasurement{};
+  exahype2::plotter::PatchPlotter _plotter;
+  Patches                         _solutionOnHost{FiniteVolumeScheme::ValuesPerPatch, tarch::MemoryLocation::Heap};
 };
 
 #include "exahype2/fv/Solver.cpph"

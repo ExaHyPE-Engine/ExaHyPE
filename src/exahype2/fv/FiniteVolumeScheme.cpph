@@ -1,0 +1,1339 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/ErrorMeasurement.h"
+#include "exahype2/terms/BoundaryConditions.h"
+#include "exahype2/terms/DiffusiveSourceTerm.h"
+#include "exahype2/terms/Flux.h"
+#include "exahype2/terms/MaxEigenvalue.h"
+#include "exahype2/terms/NonconservativeProduct.h"
+#include "exahype2/terms/PostprocessUpdatedPatch.h"
+#include "exahype2/terms/RiemannSolver.h"
+#include "exahype2/terms/SourceTerm.h"
+#include "peano4/Loop.h"
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/ScalarOperations.h"
+
+template <typename Entry, int LookaheadOfRing>
+INLINE_METHOD Entry&
+exahype2::fv::TermRing<Entry, LookaheadOfRing>::at(const int state) {
+  ASSERTION(state >= 0, state);
+  return _entries[state & (RingSize - 1)];
+}
+
+template <typename Entry, int LookaheadOfRing>
+INLINE_METHOD const Entry&
+exahype2::fv::TermRing<Entry, LookaheadOfRing>::at(const int state) const {
+  ASSERTION(state >= 0, state);
+  return _entries[state & (RingSize - 1)];
+}
+
+/**
+ * Returns the threads per team of an update that asks for one thread per volume of the patch.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD int
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getTeamThreads() {
+  return tarch::accelerator::getTeamThreads(VolumesPerPatch);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD int
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getTeamScratchBytes() {
+  return TeamStorage<StoragePrecision>::ScratchBytes;
+}
+
+TARGET_DECLARE
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision&
+exahype2::fv::WaveSpeedsOfTeam<ComputePrecision>::at(const int volume, const int normal) const {
+  ASSERTION(volume >= 0 and volume < volumes, volume, volumes);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  return waveSpeeds[normal * volumes + volume];
+}
+
+template <int Dimensions>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Dimensions, double>
+exahype2::fv::getVolumeSize(const tarch::la::Vector<Dimensions, double>& cellSize, const int volumesPerAxis) {
+  ASSERTION(volumesPerAxis >= 1, cellSize, volumesPerAxis);
+  tarch::la::Vector<Dimensions, double> volumeSize;
+  for (int axis = 0; axis < Dimensions; axis++) {
+    volumeSize(axis) = cellSize(axis) / volumesPerAxis;
+  }
+  return volumeSize;
+}
+
+/**
+ * Returns the centre of volume in the patch of the cell. A negative index or an index of
+ * volumesPerAxis and above addresses a halo volume. The offset from the cell centre is a multiple of
+ * half the volume size. Two volumes that mirror at the cell centre therefore get exactly negated
+ * offsets from it.
+ */
+template <int Dimensions>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Dimensions, double>
+exahype2::fv::getVolumeCentre(
+  const tarch::la::Vector<Dimensions, double>& cellCentre,
+  const tarch::la::Vector<Dimensions, double>& cellSize,
+  const int                                    volumesPerAxis,
+  const tarch::la::Vector<Dimensions, int>&    volume
+) {
+  const tarch::la::Vector<Dimensions, double> volumeSize = exahype2::fv::getVolumeSize(cellSize, volumesPerAxis);
+  tarch::la::Vector<Dimensions, double>       volumeCentre;
+  for (int axis = 0; axis < Dimensions; axis++) {
+    const double offsetInVolumes = static_cast<double>(volume(axis)) + 0.5 - 0.5 * volumesPerAxis;
+    volumeCentre(axis)           = std::fma(offsetInVolumes, volumeSize(axis), cellCentre(axis));
+  }
+  return volumeCentre;
+}
+
+template <int VolumesPerAxis, int HaloSize>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::fv::getFaceVolumeIndex(
+  [[maybe_unused]] const int normal,
+  const int                  layer,
+  const int                  firstTangential,
+  const int                  secondTangential
+) {
+  ASSERTION(layer >= 0 and layer < 2 * HaloSize, layer, normal);
+  ASSERTION(firstTangential >= 0 and firstTangential < VolumesPerAxis, firstTangential, normal);
+  ASSERTION(secondTangential >= 0 and (DIMENSIONS == 2 or secondTangential < VolumesPerAxis), secondTangential, normal);
+  constexpr int VolumesPerLayer = peano4::power(VolumesPerAxis, DIMENSIONS - 1);
+  const int     tangential      = firstTangential + (DIMENSIONS == 3 ? VolumesPerAxis * secondTangential : 0);
+  return layer * VolumesPerLayer + tangential;
+}
+
+/**
+ * Returns the index of a volume in a face. volume(normal) is the layer along the normal.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::fv::getFaceVolumeIndex(
+  const tarch::la::Vector<DIMENSIONS, int>& volume,
+  const int                                 volumesPerAxis,
+  [[maybe_unused]] const int                haloSize,
+  const int                                 normal
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, volume, volumesPerAxis, haloSize, normal);
+  ASSERTION(volume(normal) >= 0 and volume(normal) < 2 * haloSize, volume, volumesPerAxis, haloSize, normal);
+  int volumesPerLayer = 1;
+  for (int axis = 0; axis < DIMENSIONS - 1; axis++) {
+    volumesPerLayer *= volumesPerAxis;
+  }
+  return volume(normal) * volumesPerLayer + peano4::dLinearisedExclusive(volume, volumesPerAxis, normal);
+}
+
+/**
+ * Solves the Riemann problem on the lower (side 0) or upper (side 1) face of volume along normal
+ * and returns the largest wave speed. Bit f of boundaryFaces marks patch face f as a domain
+ * boundary face.
+ */
+template <typename SolverType, int VolumesPerAxis, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::solveRiemannProblemOnVolumeFace(
+  const ComputePrecision* const                 QL,
+  const ComputePrecision* const                 QR,
+  const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  const int                                     normal,
+  const tarch::la::Vector<DIMENSIONS, int>&     volume,
+  const int                                     side,
+  const int                                     boundaryFaces,
+  ComputePrecision* const                       FL,
+  ComputePrecision* const                       FR,
+  const typename SolverType::RuntimeParameters& parameters
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(side == 0 or side == 1, side);
+  ASSERTION(volume(normal) >= 0 and volume(normal) < VolumesPerAxis, volume, normal);
+  const int  patchFace        = side == 0 ? normal : normal + DIMENSIONS;
+  const int  volumeOnThatFace = side == 0 ? 0 : VolumesPerAxis - 1;
+  const bool isBoundaryFace   = volume(normal) == volumeOnThatFace and (boundaryFaces & (1 << patchFace)) != 0;
+  const int  faceIndex        = isBoundaryFace ? patchFace : normal;
+  static_assert(
+    exahype2::terms::HasRiemannSolver<SolverType, ComputePrecision>,
+    "The finite-volume solver expects a Riemann solver."
+  );
+  return SolverType::solveRiemannProblem(
+    QL,
+    QR,
+    faceCentre,
+    volumeSize,
+    timeStamp,
+    timeStepSize,
+    normal,
+    isBoundaryFace,
+    faceIndex,
+    FL,
+    FR,
+    parameters
+  );
+}
+
+template <typename Maximum, typename Eigenvalue>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::accumulateMaxEigenvalue(Maximum& maximum, const Eigenvalue eigenvalue) {
+  const auto candidate = static_cast<Maximum>(eigenvalue);
+  ASSERTION(std::isfinite(maximum) and maximum >= Maximum{0}, maximum, candidate);
+  ASSERTION(std::isfinite(candidate) and candidate >= Maximum{0}, maximum, candidate);
+  maximum = exahype2::MaxEigenvalueReduction::combine(maximum, candidate);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::initialise(
+  StoragePrecision* NOALIAS const              patch,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
+) {
+  forEachVolume(
+    cellCentre,
+    cellSize,
+    patch,
+    [&parameters](
+      StoragePrecision* const                      value,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                weight
+    ) { Derived::initialCondition(value, x, h, parameters); }
+  );
+}
+
+/**
+ * Fills the outer volumes of the boundary face faceNumber at the tangential position
+ * tangentialVolume of every layer from the inner volumes there through the boundary conditions of
+ * Derived. Face i and face i+DIMENSIONS are the lower and the upper face along axis i.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::applyBoundaryConditions(
+  StoragePrecision* NOALIAS const              face,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const int                                    faceNumber,
+  const int                                    tangentialVolume,
+  const RuntimeParameters&                     parameters
+) {
+  ASSERTION(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber);
+  ASSERTION(tangentialVolume >= 0 and tangentialVolume < VolumesPerLayer, tangentialVolume, faceNumber);
+  if constexpr (not exahype2::terms::HasBoundaryConditions<Derived, StoragePrecision>) {
+    ASSERTION(false, "A solver without boundary conditions needs a domain periodic along every axis.", faceNumber);
+  } else {
+    const int  normal     = faceNumber % DIMENSIONS;
+    const auto volumeSize = exahype2::fv::getVolumeSize(cellSize, PatchSize);
+    const auto faceVolume = peano4::dDelinearisedExclusive(tangentialVolume, PatchSize, normal);
+    auto       position   = exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, faceVolume);
+    position(normal)      = std::fma(faceNumber < DIMENSIONS ? -0.5 : 0.5, cellSize(normal), cellCentre(normal));
+
+    tarch::la::Vector<DIMENSIONS, int> insideVolume  = faceVolume;
+    tarch::la::Vector<DIMENSIONS, int> outsideVolume = faceVolume;
+    for (int layer = 0; layer < HaloSize; layer++) {
+      insideVolume(normal)  = (faceNumber < DIMENSIONS) ? (HaloSize + layer) : (HaloSize - 1 - layer);
+      outsideVolume(normal) = (faceNumber < DIMENSIONS) ? (HaloSize - 1 - layer) : (layer + HaloSize);
+      const int inside      = exahype2::fv::getFaceVolumeIndex(insideVolume, PatchSize, HaloSize, normal);
+      const int outside     = exahype2::fv::getFaceVolumeIndex(outsideVolume, PatchSize, HaloSize, normal);
+      Derived::boundaryConditions(
+        face + static_cast<std::ptrdiff_t>(inside) * NumberOfData,
+        face + static_cast<std::ptrdiff_t>(outside) * NumberOfData,
+        position,
+        volumeSize,
+        timeStamp,
+        normal,
+        parameters
+      );
+    }
+  }
+}
+
+/**
+ * Copies the HaloSize outermost layers of patch into the cell's own half of each face. The
+ * neighbours' halves stay unchanged.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::projectOntoFaces(
+  const StoragePrecision* NOALIAS const patch,
+  StoragePrecision* NOALIAS const       faces[peano4::FacesPerCell]
+) {
+  static_assert(HaloSize > 0 and HaloSize <= PatchSize);
+  ASSERTION(patch != nullptr);
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    ASSERTION(faces[faceNumber] != nullptr, faceNumber);
+    StoragePrecision* NOALIAS const ownHalf = faces[faceNumber] + (faceNumber < DIMENSIONS ? ValuesPerHalfFace : 0);
+    for (int halfFaceVolume = 0; halfFaceVolume < HaloSize * VolumesPerLayer; halfFaceVolume++) {
+      const int patchIndex = getPatchVolumeOfHalfFaceVolume(faceNumber, halfFaceVolume) * NumberOfData;
+      SIMD()
+      for (int value = 0; value < NumberOfData; value++) {
+        ownHalf[halfFaceVolume * NumberOfData + value] = patch[patchIndex + value];
+      }
+    }
+  }
+}
+
+/**
+ * Runs projectOntoFaces() on a host thread and projectOntoFacesWithThreadsOfTeam() on a device.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::projectOntoFacesInTeam(
+  [[maybe_unused]] const tarch::accelerator::TeamHandle team,
+  const StoragePrecision* NOALIAS const                 patch,
+  StoragePrecision* NOALIAS const                       faces[peano4::FacesPerCell]
+) {
+  COMPILE_IF_ON_HOST(projectOntoFaces(patch, faces);)
+  COMPILE_IF_ON_DEVICE(projectOntoFacesWithThreadsOfTeam(team, patch, faces);)
+}
+
+/**
+ * Runs projectOntoFaces() with the threads of team. The threads divide the values of the cell's own
+ * half of each face among themselves. Neighbouring threads write neighbouring values of a face.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::projectOntoFacesWithThreadsOfTeam(
+  const tarch::accelerator::TeamHandle  team,
+  const StoragePrecision* NOALIAS const patch,
+  StoragePrecision* NOALIAS const       faces[peano4::FacesPerCell]
+) {
+  const int thread  = tarch::accelerator::getThreadOfTeam(team);
+  const int threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+  UNROLL(peano4::FacesPerCell)
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    StoragePrecision* NOALIAS const ownHalf = faces[faceNumber] + (faceNumber < DIMENSIONS ? ValuesPerHalfFace : 0);
+    for (int value = thread; value < ValuesPerHalfFace; value += threads) {
+      const int patchVolume = getPatchVolumeOfHalfFaceVolume(faceNumber, value / NumberOfData);
+      ownHalf[value]        = patch[patchVolume * NumberOfData + value % NumberOfData];
+    }
+  }
+}
+
+/**
+ * Returns the volume of the patch that volume halfFaceVolume of the cell's own half of face
+ * faceNumber receives. halfFaceVolume runs over the layers of the half, then over the volumes of a
+ * layer with the first tangential axis fastest.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getPatchVolumeOfHalfFaceVolume(
+  const int faceNumber,
+  const int halfFaceVolume
+) {
+  ASSERTION(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber);
+  ASSERTION(halfFaceVolume >= 0 and halfFaceVolume < HaloSize * VolumesPerLayer, halfFaceVolume, faceNumber);
+  const int                          normal = faceNumber % DIMENSIONS;
+  const int                          layer  = halfFaceVolume / VolumesPerLayer;
+  tarch::la::Vector<DIMENSIONS, int> volume =
+    peano4::dDelinearisedExclusive(halfFaceVolume % VolumesPerLayer, PatchSize, normal);
+  volume(normal) = faceNumber >= DIMENSIONS ? layer + PatchSize - HaloSize : layer;
+  return peano4::dLinearised(volume, PatchSize);
+}
+
+/**
+ * Fills one half of a fine face from the same half of the coarse face. Every fine volume takes the
+ * covering coarse volume plus a tangential slope correction, with one-sided slopes at the face
+ * edges. A constant coarse face gives the bitwise identical fine face.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::interpolateHalo(
+  const StoragePrecision* NOALIAS const coarseFace,
+  StoragePrecision* NOALIAS const       fineFace,
+  const int                             side,
+  const int                             normal,
+  const int                             subface
+) {
+  static_assert(
+    std::is_floating_point_v<StoragePrecision>,
+    "The finite-volume solver supports floating-point values only."
+  );
+  ASSERTION(side == 0 or side == 1, side);
+  ASSERTION(subface >= 0 and subface < peano4::SubfacesPerFace, subface);
+
+  constexpr int  SubdivisionFactor = peano4::SubdivisionFactor;
+  constexpr auto SubVolumeCentre   = static_cast<StoragePrecision>(0.5 * (SubdivisionFactor - 1));
+
+  const int firstSubface  = subface % SubdivisionFactor;
+  const int secondSubface = subface / SubdivisionFactor;
+
+  const auto slopeAlongFirstAxis =
+    [&](const int layer, const int coarseI, const int coarseJ, const int unknown) -> StoragePrecision {
+    const int left  = coarseI - 1 >= 0 ? coarseI - 1 : coarseI;
+    const int right = coarseI + 1 < PatchSize ? coarseI + 1 : coarseI;
+    if (left == right) {
+      return static_cast<StoragePrecision>(0.0);
+    }
+    return (coarseFace[getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, right, coarseJ) * NumberOfData + unknown]
+            - coarseFace
+              [getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, left, coarseJ) * NumberOfData + unknown])
+      / static_cast<StoragePrecision>(SubdivisionFactor * (right - left));
+  };
+  const auto slopeAlongSecondAxis =
+    [&](const int layer, const int coarseI, const int coarseJ, const int unknown) -> StoragePrecision {
+    const int left  = coarseJ - 1 >= 0 ? coarseJ - 1 : coarseJ;
+    const int right = coarseJ + 1 < PatchSize ? coarseJ + 1 : coarseJ;
+    if (left == right) {
+      return static_cast<StoragePrecision>(0.0);
+    }
+    return (coarseFace[getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, coarseI, right) * NumberOfData + unknown]
+            - coarseFace
+              [getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, coarseI, left) * NumberOfData + unknown])
+      / static_cast<StoragePrecision>(SubdivisionFactor * (right - left));
+  };
+
+  constexpr int SecondExtent = DIMENSIONS == 3 ? PatchSize : 1;
+  for (int layerInHalf = 0; layerInHalf < HaloSize; layerInHalf++) {
+    const int layer = side * HaloSize + layerInHalf;
+    for (int j = 0; j < SecondExtent; j++) {
+      const int jGlobal = j + PatchSize * secondSubface;
+      const int jCell   = DIMENSIONS == 3 ? jGlobal / SubdivisionFactor : 0;
+      for (int i = 0; i < PatchSize; i++) {
+        const int iGlobal      = i + PatchSize * firstSubface;
+        const int iCell        = iGlobal / SubdivisionFactor;
+        const int iSubPosition = iGlobal % SubdivisionFactor;
+        const int fineIndex    = getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, i, j) * NumberOfData;
+        const int coarseIndex  = getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, iCell, jCell) * NumberOfData;
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          const StoragePrecision iTerm = (static_cast<StoragePrecision>(iSubPosition) - SubVolumeCentre)
+            * slopeAlongFirstAxis(layer, iCell, jCell, unknown);
+          StoragePrecision correction = iTerm;
+          if constexpr (DIMENSIONS == 3) {
+            // Each axis term rounds on its own before the commutative sum. A diagonal axis
+            // swap of the face then commutes bitwise with the correction.
+            const int              jSubPosition = jGlobal % SubdivisionFactor;
+            const StoragePrecision jTerm        = (static_cast<StoragePrecision>(jSubPosition) - SubVolumeCentre)
+              * slopeAlongSecondAxis(layer, iCell, jCell, unknown);
+            correction = iTerm + jTerm;
+          }
+          fineFace[fineIndex + unknown] = coarseFace[coarseIndex + unknown] + correction;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Fills one half of a fine face from the same half of the coarse face above it. Every fine
+ * volume copies the coarse volume that covers it. Every layer of the half maps onto the same
+ * layer.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::injectHalo(
+  const StoragePrecision* NOALIAS const coarseFace,
+  StoragePrecision* NOALIAS const       fineFace,
+  const int                             side,
+  const int                             normal,
+  const int                             subface
+) {
+  ASSERTION(side == 0 or side == 1, side);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(subface >= 0 and subface < peano4::SubfacesPerFace, subface);
+
+  constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
+  constexpr int SecondExtent      = DIMENSIONS == 3 ? PatchSize : 1;
+
+  const int firstSubface  = subface % SubdivisionFactor;
+  const int secondSubface = subface / SubdivisionFactor;
+  for (int layerInHalf = 0; layerInHalf < HaloSize; layerInHalf++) {
+    const int layer = side * HaloSize + layerInHalf;
+    for (int j = 0; j < SecondExtent; j++) {
+      const int jCell = DIMENSIONS == 3 ? (j + PatchSize * secondSubface) / SubdivisionFactor : 0;
+      for (int i = 0; i < PatchSize; i++) {
+        const int iCell       = (i + PatchSize * firstSubface) / SubdivisionFactor;
+        const int fineIndex   = getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, i, j) * NumberOfData;
+        const int coarseIndex = getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, iCell, jCell) * NumberOfData;
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          fineFace[fineIndex + unknown] = coarseFace[coarseIndex + unknown];
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Fills one half of a coarse face from the same half of the fine faces below it, layer by layer.
+ * Every coarse volume takes the tarch::la::meanInFixedPoint() of the fine volumes that cover it.
+ * The result does not depend on the order of the fine faces and constant fine faces return their
+ * value bitwise.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::restrictHalo(
+  const StoragePrecision* const NOALIAS fineFaces[peano4::SubfacesPerFace],
+  StoragePrecision* NOALIAS const       coarseFace,
+  const int                             side,
+  const int                             normal
+) {
+  static_assert(
+    std::is_floating_point_v<StoragePrecision>,
+    "The finite-volume solver supports floating-point values only."
+  );
+  ASSERTION(side == 0 or side == 1, side);
+
+  constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
+  constexpr int SecondExtent      = DIMENSIONS == 3 ? PatchSize : 1;
+  constexpr int SecondSubdivision = DIMENSIONS == 3 ? SubdivisionFactor : 1;
+
+  for (int layerInHalf = 0; layerInHalf < HaloSize; layerInHalf++) {
+    const int layer = side * HaloSize + layerInHalf;
+    for (int coarseJ = 0; coarseJ < SecondExtent; coarseJ++) {
+      for (int coarseI = 0; coarseI < PatchSize; coarseI++) {
+        const int coarseIndex = getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, coarseI, coarseJ) * NumberOfData;
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          double fineValues[peano4::SubfacesPerFace];
+          for (int offsetJ = 0; offsetJ < SecondSubdivision; offsetJ++) {
+            for (int offsetI = 0; offsetI < SubdivisionFactor; offsetI++) {
+              const int globalJ                                 = SubdivisionFactor * coarseJ + offsetJ;
+              const int subfaceJ                                = DIMENSIONS == 3 ? globalJ / PatchSize : 0;
+              const int fineJ                                   = DIMENSIONS == 3 ? globalJ % PatchSize : 0;
+              const int globalI                                 = SubdivisionFactor * coarseI + offsetI;
+              const int subfaceI                                = globalI / PatchSize;
+              const int fineI                                   = globalI % PatchSize;
+              fineValues[offsetJ * SubdivisionFactor + offsetI] = static_cast<double>(
+                fineFaces[subfaceJ * SubdivisionFactor + subfaceI]
+                         [getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, fineI, fineJ) * NumberOfData + unknown]
+              );
+            }
+          }
+          coarseFace[coarseIndex + unknown] = static_cast<StoragePrecision>(tarch::la::meanInFixedPoint(fineValues));
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Fills the volume fineVolume of a child patch from its parent. The fine volume copies the
+ * covering coarse volume. childPosition is the linearised position of the child in the parent.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::interpolateVolume(
+  const StoragePrecision* NOALIAS const parent,
+  StoragePrecision* NOALIAS const       child,
+  const int                             childPosition,
+  const int                             fineVolume
+) {
+  constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
+  ASSERTION(childPosition >= 0 and childPosition < peano4::ChildrenPerCell, childPosition);
+  ASSERTION(fineVolume >= 0 and fineVolume < VolumesPerPatch, fineVolume);
+
+  const auto                         subcell      = peano4::dDelinearised(childPosition, SubdivisionFactor);
+  const auto                         finePosition = peano4::dDelinearised(fineVolume, PatchSize);
+  tarch::la::Vector<DIMENSIONS, int> coarsePosition;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    coarsePosition(axis) = (finePosition(axis) + PatchSize * subcell(axis)) / SubdivisionFactor;
+  }
+  const int fineIndex   = fineVolume * NumberOfData;
+  const int coarseIndex = peano4::dLinearised(coarsePosition, PatchSize) * NumberOfData;
+  for (int unknown = 0; unknown < NumberOfData; unknown++) {
+    child[fineIndex + unknown] = parent[coarseIndex + unknown];
+  }
+}
+
+/**
+ * Fills the volume coarseVolume of a parent patch from its children. The coarse volume takes the
+ * tarch::la::meanInFixedPoint() of the fine volumes that cover it.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::restrictVolume(
+  const StoragePrecision* const NOALIAS children[peano4::ChildrenPerCell],
+  StoragePrecision* NOALIAS const       parent,
+  const int                             coarseVolume
+) {
+  static_assert(
+    std::is_floating_point_v<StoragePrecision>,
+    "The finite-volume solver supports floating-point values only."
+  );
+  constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
+  constexpr int ChildrenPerCell   = peano4::ChildrenPerCell;
+  ASSERTION(coarseVolume >= 0 and coarseVolume < VolumesPerPatch, coarseVolume);
+
+  const auto coarsePosition = peano4::dDelinearised(coarseVolume, PatchSize);
+  const int  coarseIndex    = coarseVolume * NumberOfData;
+  for (int unknown = 0; unknown < NumberOfData; unknown++) {
+    double fineValues[ChildrenPerCell];
+    peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& fineOffset) {
+      tarch::la::Vector<DIMENSIONS, int> childPosition;
+      tarch::la::Vector<DIMENSIONS, int> finePosition;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        const int globalFinePosition = SubdivisionFactor * coarsePosition(axis) + fineOffset(axis);
+        childPosition(axis)          = globalFinePosition / PatchSize;
+        finePosition(axis)           = globalFinePosition % PatchSize;
+      }
+      const StoragePrecision* const child = children[peano4::dLinearised(childPosition, SubdivisionFactor)];
+      fineValues[peano4::dLinearised(fineOffset, SubdivisionFactor)] =
+        static_cast<double>(child[peano4::dLinearised(finePosition, PatchSize) * NumberOfData + unknown]);
+    });
+    parent[coarseIndex + unknown] = static_cast<StoragePrecision>(tarch::la::meanInFixedPoint(fineValues));
+  }
+}
+
+/**
+ * Advances patch by one time step into updated and calls the postprocessing of Derived on the
+ * result. Returns the largest wave speed of the update and of the updated volumes, or zero for a
+ * fixed time-stepping rule. On the host one thread sweeps the patch with the ring of the
+ * reconstruction and updated may be patch, while a device thread updates the volumes one by one
+ * into an updated outside patch.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::update(
+  const StoragePrecision* const                patch,
+  StoragePrecision* const                      updated,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
+) {
+  double maxEigenvalue = 0.0;
+  COMPILE_IF_ON_HOST(
+    maxEigenvalue =
+      sweep(patch, updated, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces, parameters);
+  )
+  COMPILE_IF_ON_DEVICE(
+    maxEigenvalue = updateEveryVolume(
+      patch,
+      updated,
+      faces,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      parameters
+    );
+  )
+  return maxEigenvalue;
+}
+
+/**
+ * Advances patch in place and returns the largest wave speed of the update that the calling thread
+ * saw. A host thread runs update() with the postprocessing of Derived. A device runs
+ * updateWithThreadsOfTeam(). On a device the caller runs the postprocessing.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::updateInTeam(
+  [[maybe_unused]] const tarch::accelerator::TeamHandle team,
+  StoragePrecision* const                               patch,
+  const StoragePrecision* const                         faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>&          cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&          cellSize,
+  const double                                          timeStamp,
+  const double                                          timeStepSize,
+  const int                                             boundaryFaces,
+  const RuntimeParameters&                              parameters
+) {
+  double maxEigenvalue = 0.0;
+  COMPILE_IF_ON_HOST(
+    maxEigenvalue =
+      update(patch, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces, parameters);
+  )
+  COMPILE_IF_ON_DEVICE(
+    maxEigenvalue = updateWithThreadsOfTeam(
+      team,
+      patch,
+      faces,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      parameters
+    );
+  )
+  return maxEigenvalue;
+}
+
+/**
+ * Advances patch in place with the threads of team and returns the largest wave speed of the
+ * update that the calling thread saw. A team copies a patch that fits into the team scratch first.
+ * The team writes the wave speeds of all volumes behind the copy if the reconstruction reads them.
+ * Every thread then writes its updates straight into patch. A team advances a larger patch in
+ * rounds of one volume per thread that write their updates Delay rounds late, after every round
+ * that reads those volumes.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::updateWithThreadsOfTeam(
+  const tarch::accelerator::TeamHandle         team,
+  StoragePrecision* const                      patch,
+  const StoragePrecision* const                faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
+) {
+  using Storage                              = TeamStorage<StoragePrecision>;
+  constexpr bool          PostprocessesPatch = exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>;
+  const int               thread             = tarch::accelerator::getThreadOfTeam(team);
+  const int               threads            = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+  double                  partial            = 0.0;
+  typename Storage::Terms terms{};
+  if constexpr (Storage::StagesPatch) {
+    unsigned char* const    scratch = tarch::accelerator::getTeamScratch(team);
+    StoragePrecision* const staged  = reinterpret_cast<StoragePrecision*>(scratch);
+    for (int value = thread; value < ValuesPerPatch; value += threads) {
+      staged[value] = patch[value];
+    }
+    if constexpr (Storage::ReadsWaveSpeeds) {
+      terms.waveSpeeds = reinterpret_cast<ComputePrecision*>(scratch + Storage::WaveSpeedsOffset);
+      terms.volumes    = VolumesPerPatch;
+      for (int volume = thread; volume < VolumesPerPatch; volume += threads) {
+        const auto waveSpeeds =
+          getWaveSpeedsOfVolume(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
+        for (int normal = 0; normal < DIMENSIONS; normal++) {
+          terms.at(volume, normal) = waveSpeeds(normal);
+        }
+      }
+    }
+    tarch::accelerator::teamBarrier(team);
+    for (int volume = thread; volume < VolumesPerPatch; volume += threads) {
+      StoragePrecision* const updatedState = patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
+      partial                              = exahype2::MaxEigenvalueReduction::combine(
+        partial,
+        computeVolumeUpdate(
+          volume,
+          staged,
+          faces,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          boundaryFaces,
+          terms,
+          updatedState,
+          parameters
+        )
+      );
+      if constexpr (not PostprocessesPatch) {
+        partial = exahype2::MaxEigenvalueReduction::combine(
+          partial,
+          getMaxEigenvalueOfVolume(
+            volume,
+            patch,
+            cellCentre,
+            cellSize,
+            timeStamp + timeStepSize,
+            timeStepSize,
+            parameters
+          )
+        );
+      }
+    }
+    // The caller may reduce over the team through the team scratch.
+    tarch::accelerator::teamBarrier(team);
+  } else {
+    // An update reads the states up to Reach volumes before and behind its volume. A team runs at
+    // least Threads threads.
+    constexpr int Reach   = HaloSize * VolumesPerLayer;
+    constexpr int Threads = std::min(tarch::accelerator::DefaultThreadsPerTeam, VolumesPerPatch);
+    constexpr int Delay   = (Reach + Threads - 1) / Threads;
+    const int     rounds  = (VolumesPerPatch + threads - 1) / threads;
+    ASSERTION(threads >= Threads, threads, Threads);
+    StoragePrecision delayedStates[Delay][NumberOfData]{};
+    for (int round = 0; round < rounds + Delay; round++) {
+      StoragePrecision computedState[NumberOfData]{};
+      const int        computedVolume = round * threads + thread;
+      if (round < rounds) {
+        if (computedVolume < VolumesPerPatch) {
+          partial = exahype2::MaxEigenvalueReduction::combine(
+            partial,
+            computeVolumeUpdate(
+              computedVolume,
+              patch,
+              faces,
+              cellCentre,
+              cellSize,
+              timeStamp,
+              timeStepSize,
+              boundaryFaces,
+              terms,
+              computedState,
+              parameters
+            )
+          );
+        }
+        tarch::accelerator::teamBarrier(team);
+      }
+      const int writtenVolume = (round - Delay) * threads + thread;
+      if (round >= Delay and writtenVolume < VolumesPerPatch) {
+        StoragePrecision* const target = patch + static_cast<std::ptrdiff_t>(writtenVolume) * NumberOfData;
+        for (int value = 0; value < NumberOfData; value++) {
+          target[value] = delayedStates[Delay - 1][value];
+        }
+        if constexpr (not PostprocessesPatch) {
+          partial = exahype2::MaxEigenvalueReduction::combine(
+            partial,
+            getMaxEigenvalueOfVolume(
+              writtenVolume,
+              patch,
+              cellCentre,
+              cellSize,
+              timeStamp + timeStepSize,
+              timeStepSize,
+              parameters
+            )
+          );
+        }
+      }
+      for (int slot = Delay - 1; slot > 0; slot--) {
+        for (int value = 0; value < NumberOfData; value++) {
+          delayedStates[slot][value] = delayedStates[slot - 1][value];
+        }
+      }
+      for (int value = 0; value < NumberOfData; value++) {
+        delayedStates[0][value] = computedState[value];
+      }
+    }
+  }
+  return partial;
+}
+
+/**
+ * Returns the bytes of the ring and the scratch patch that one host thread allocates while it
+ * sweeps a patch with the storage precision.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD constexpr std::size_t
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getSweepStorageBytes() {
+  return sizeof(typename SweepStorage<StoragePrecision>::Terms)
+    + sizeof(StoragePrecision) * (VolumesPerPatch * NumberOfData);
+}
+
+/**
+ * Advances patch by one time step into updated on one host thread and returns what update()
+ * returns. The volumes run in linearised order and the ring of the reconstruction receives the
+ * terms of a state one layer before the sweep reaches it. A sweep that updates patch in place
+ * writes the updated volumes into a scratch patch and copies it back once the last volume has read
+ * its neighbours.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::sweep(
+  const StoragePrecision* const                patch,
+  StoragePrecision* const                      updated,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
+) {
+  using Terms             = typename SweepStorage<StoragePrecision>::Terms;
+  constexpr int Lookahead = peano4::power(PatchSize, DIMENSIONS - 1);
+  constexpr int Values    = VolumesPerPatch * NumberOfData;
+  static_assert(
+    Terms::Lookahead == 0 or Terms::Lookahead == Lookahead,
+    "The finite-volume terms read ahead by one layer of volumes or not at all."
+  );
+  // The ring and the scratch live on the stack while they fit SweepStackBytes and on the heap
+  // otherwise. Two objects keep them apart and a store into one never aliases a load from the other.
+  if constexpr (getSweepStorageBytes<StoragePrecision>() <= exahype2::fv::SweepStackBytes) {
+    Terms                                          terms;
+    alignas(PEANO_WITH_ALIGNMENT) StoragePrecision scratch[Values];
+    return sweepWithStorage(
+      terms,
+      scratch,
+      patch,
+      updated,
+      faces,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      parameters
+    );
+  } else {
+    struct FreesHeapMemory final {
+      void operator()(StoragePrecision* const memory) const { tarch::freeMemory(memory, tarch::MemoryLocation::Heap); }
+    };
+    const auto                                                 terms = std::make_unique<Terms>();
+    const std::unique_ptr<StoragePrecision[], FreesHeapMemory> scratch{
+      tarch::allocateMemory<StoragePrecision>(Values, tarch::MemoryLocation::Heap)
+    };
+    return sweepWithStorage(
+      *terms,
+      scratch.get(),
+      patch,
+      updated,
+      faces,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      parameters
+    );
+  }
+}
+
+/**
+ * Runs sweep() with the given ring and the scratch of ValuesPerPatch values. Every sweep
+ * overwrites every entry of both before it reads it.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename Terms, typename StoragePrecision>
+INLINE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::sweepWithStorage(
+  Terms&                                       terms,
+  StoragePrecision* NOALIAS const              scratch,
+  const StoragePrecision* const                patch,
+  StoragePrecision* const                      updated,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
+) {
+  ASSERTION(patch != nullptr);
+  ASSERTION(updated != nullptr);
+  ASSERTION(scratch != nullptr);
+  StoragePrecision* NOALIAS const written = updated == patch ? scratch : updated;
+  if constexpr (Terms::Lookahead > 0) {
+    for (int state = 0; state < Terms::Lookahead and state < VolumesPerPatch; state++) {
+      evaluateTermsOfState(terms, state, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
+    }
+  }
+
+  double maxEigenvalue = 0.0;
+  for (int volume = 0; volume < VolumesPerPatch; volume++) {
+    if constexpr (Terms::Lookahead > 0) {
+      if (volume + Terms::Lookahead < VolumesPerPatch) {
+        evaluateTermsOfState(
+          terms,
+          volume + Terms::Lookahead,
+          patch,
+          faces,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          parameters
+        );
+      }
+    }
+    maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+      maxEigenvalue,
+      computeVolumeUpdate(
+        volume,
+        patch,
+        faces,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
+        boundaryFaces,
+        terms,
+        written + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
+        parameters
+      )
+    );
+  }
+  postprocessUpdatedPatch(written, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
+  for (int volume = 0; volume < VolumesPerPatch; volume++) {
+    maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+      maxEigenvalue,
+      getMaxEigenvalueOfVolume(
+        volume,
+        written,
+        cellCentre,
+        cellSize,
+        timeStamp + timeStepSize,
+        timeStepSize,
+        parameters
+      )
+    );
+  }
+  if (written != updated) {
+    constexpr int Values = VolumesPerPatch * NumberOfData;
+    SIMD(aligned(written : PEANO_WITH_ALIGNMENT))
+    for (int value = 0; value < Values; value++) {
+      updated[value] = written[value];
+    }
+  }
+  return maxEigenvalue;
+}
+
+/**
+ * Evaluates the terms of one state of patch into its entry of the ring.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision, typename Terms>
+INLINE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::evaluateTermsOfState(
+  Terms&                                       terms,
+  const int                                    state,
+  const StoragePrecision* NOALIAS const        patch,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const RuntimeParameters&                     parameters
+) {
+  ASSERTION(state >= 0 and state < VolumesPerPatch, state, VolumesPerPatch);
+  const tarch::la::Vector<DIMENSIONS, int> volumeIndex = peano4::dDelinearised(state, PatchSize);
+  terms.at(state).evaluate(
+    patch,
+    faces,
+    volumeIndex,
+    state * NumberOfData,
+    cellCentre,
+    cellSize,
+    exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, volumeIndex),
+    exahype2::fv::getVolumeSize(cellSize, PatchSize),
+    timeStamp,
+    timeStepSize,
+    parameters
+  );
+}
+
+/**
+ * Advances patch by one time step into updated volume by volume, with every term evaluated at
+ * the volume. updated lies outside patch. Returns what update() returns.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::updateEveryVolume(
+  const StoragePrecision* NOALIAS const        patch,
+  StoragePrecision* NOALIAS const              updated,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
+) {
+  ASSERTION(patch != nullptr);
+  ASSERTION(updated != nullptr);
+  ASSERTION(updated != patch);
+  double maxEigenvalue = 0.0;
+  for (int volume = 0; volume < VolumesPerPatch; volume++) {
+    maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+      maxEigenvalue,
+      computeVolumeUpdate(
+        volume,
+        patch,
+        faces,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
+        boundaryFaces,
+        updated + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
+        parameters
+      )
+    );
+  }
+  postprocessUpdatedPatch(updated, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
+  for (int volume = 0; volume < VolumesPerPatch; volume++) {
+    maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+      maxEigenvalue,
+      getMaxEigenvalueOfVolume(
+        volume,
+        updated,
+        cellCentre,
+        cellSize,
+        timeStamp + timeStepSize,
+        timeStepSize,
+        parameters
+      )
+    );
+  }
+  return maxEigenvalue;
+}
+
+/**
+ * Advances one volume of patch into the NumberOfData values of updatedState with every term
+ * evaluated at the volume and returns the largest wave speed of the update. volume is the
+ * linearised index of the volume with the first axis fastest. Bit f of boundaryFaces marks face f
+ * of the patch on the domain boundary.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::computeVolumeUpdate(
+  const int                                    volume,
+  const StoragePrecision* NOALIAS const        patch,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  StoragePrecision* NOALIAS const              updatedState,
+  const RuntimeParameters&                     parameters
+) {
+  exahype2::fv::NoTermRing terms;
+  return computeVolumeUpdate(
+    volume,
+    patch,
+    faces,
+    cellCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize,
+    boundaryFaces,
+    terms,
+    updatedState,
+    parameters
+  );
+}
+
+/**
+ * Advances one volume of patch into the NumberOfData values of updatedState outside patch and
+ * returns the largest wave speed of the update. The reconstruction reads each term of a state from
+ * terms when terms contains it and evaluates every other term.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision, typename Terms>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::computeVolumeUpdate(
+  const int                                    volume,
+  const StoragePrecision* NOALIAS const        patch,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  Terms&                                       terms,
+  StoragePrecision* NOALIAS const              updatedState,
+  const RuntimeParameters&                     parameters
+) {
+  ASSERTION(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
+  return Derived::TimeIntegration::template applyToVolume<
+    typename Derived::Reconstruction,
+    Derived,
+    PatchSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    exahype2::terms::HasFlux<Derived, ComputePrecision>,
+    exahype2::terms::HasNonconservativeProduct<Derived, ComputePrecision>,
+    exahype2::terms::HasSourceTerm<Derived, ComputePrecision>,
+    exahype2::terms::HasDiffusiveSourceTerm<Derived, ComputePrecision>,
+    exahype2::terms::HasRiemannSolver<Derived, ComputePrecision>,
+    ReportEigenvalues,
+    StoragePrecision,
+    ComputePrecision
+  >(volume,
+    patch,
+    faces,
+    cellCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize,
+    boundaryFaces,
+    terms,
+    updatedState,
+    parameters);
+}
+
+/**
+ * Calls postprocessUpdatedPatch of Derived on updated when Derived defines it.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::postprocessUpdatedPatch(
+  [[maybe_unused]] StoragePrecision* NOALIAS const              updated,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  if constexpr (exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>) {
+    Derived::postprocessUpdatedPatch(updated, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
+  }
+}
+
+/**
+ * Returns the largest wave speed of Derived over the volumes of patch at timeStamp. Returns zero
+ * for a fixed rule or a Derived without the eigenvalue term.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::reduceMaxEigenvalue(
+  const StoragePrecision* NOALIAS const        patch,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const RuntimeParameters&                     parameters
+) {
+  double maximum = 0.0;
+  for (int volume = 0; volume < VolumesPerPatch; volume++) {
+    maximum = exahype2::MaxEigenvalueReduction::combine(
+      maximum,
+      getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, timeStamp, 0.0, parameters)
+    );
+  }
+  return maximum;
+}
+
+/**
+ * Returns the largest wave speed over the axes at one volume of patch. Returns zero unless the
+ * time-stepping rule is adaptive and Derived defines a maxEigenvalue term.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getMaxEigenvalueOfVolume(
+  [[maybe_unused]] const int                                    volume,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const        patch,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  double maximum = 0.0;
+  if constexpr (ReportEigenvalues and exahype2::terms::HasMaxEigenvalue<Derived, ComputePrecision>) {
+    const auto waveSpeeds =
+      getWaveSpeedsOfVolume(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
+    for (int normal = 0; normal < DIMENSIONS; normal++) {
+      exahype2::fv::accumulateMaxEigenvalue(maximum, waveSpeeds(normal));
+    }
+  }
+  return maximum;
+}
+
+/**
+ * Returns the largest wave speed along every axis at one volume of patch.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, ComputePrecision>
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getWaveSpeedsOfVolume(
+  const int                                    volume,
+  const StoragePrecision* NOALIAS const        patch,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const RuntimeParameters&                     parameters
+) {
+  ASSERTION(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
+  const tarch::la::Vector<DIMENSIONS, int> volumeIndex = peano4::dDelinearised(volume, PatchSize);
+  const auto                               volumeSize  = exahype2::fv::getVolumeSize(cellSize, PatchSize);
+  const auto volumeCentre = exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, volumeIndex);
+  const StoragePrecision* NOALIAS const          stored = patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
+  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision state[NumberOfData];
+  for (int value = 0; value < NumberOfData; value++) {
+    state[value] = static_cast<ComputePrecision>(stored[value]);
+  }
+  tarch::la::Vector<DIMENSIONS, ComputePrecision> waveSpeeds;
+  for (int normal = 0; normal < DIMENSIONS; normal++) {
+    waveSpeeds(normal) =
+      Derived::maxEigenvalue(state, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, parameters);
+  }
+  return waveSpeeds;
+}
+
+/**
+ * Writes the L1 error, the squared L2 error and the largest error of patch into errors.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::measureErrors(
+  const StoragePrecision* NOALIAS const        patch,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  double* NOALIAS const                        errors,
+  const RuntimeParameters&                     parameters
+) {
+  // The static member lives in host memory. The kernel reads a constant copy.
+  constexpr auto MeasuredUnknowns = Derived::MeasuredUnknowns;
+  double         sums[exahype2::ErrorMeasurement::NumberOfNorms]{};
+  forEachVolume(
+    cellCentre,
+    cellSize,
+    patch,
+    [&](
+      const StoragePrecision* const                                 value,
+      const tarch::la::Vector<DIMENSIONS, double>&                  x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      const double                                                  weight
+    ) {
+      exahype2::accumulateSolutionError<Derived, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
+        MeasuredUnknowns,
+        value,
+        x,
+        timeStamp,
+        timeStepSize,
+        weight,
+        sums,
+        parameters
+      );
+    }
+  );
+  for (int norm = 0; norm < exahype2::ErrorMeasurement::NumberOfNorms; norm++) {
+    errors[norm] = sums[norm];
+  }
+}
+
+/**
+ * Calls functor(value, x, h, weight) for every volume of the patch, with value pointing to the
+ * first entry of the volume, x its centre, h its size and weight its measure. As a constexpr
+ * function it runs in the execution space of its caller.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename Value, typename Functor>
+INLINE_METHOD constexpr void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::forEachVolume(
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  Value* const                                 values,
+  Functor&&                                    functor
+) {
+  ASSERTION(values != nullptr);
+  const auto volumeSize = exahype2::fv::getVolumeSize(cellSize, PatchSize);
+  double     weight     = 1.0;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    ASSERTION(volumeSize(axis) > 0.0, volumeSize, axis);
+    weight *= volumeSize(axis);
+  }
+  peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+    const int  index        = peano4::dLinearised(volume, PatchSize);
+    const auto volumeCentre = exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, volume);
+    functor(values + static_cast<std::ptrdiff_t>(index) * NumberOfData, volumeCentre, volumeSize, weight);
+  });
+}
+TARGET_DECLARE_END

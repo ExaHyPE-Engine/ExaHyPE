@@ -45,19 +45,18 @@ constituents of this interface are collected in the package
 
 Peano offers user facing logging macros:
 
--   **Info**. Should be used to inform your user about the application's
-    state.
+-   **Info**. Informs the user about the application's state.
 
--   **Warning**. Should be used to inform your user about suspicious
-    behaviour. The MPI code uses it, e.g., if many messages arrive in a
+-   **Warning**. Informs the user about suspicious behaviour. The MPI code
+    uses it, e.g., if many messages arrive in a
     different order than expected. Messages written to the warning level
     are piped to `cerr` and highlighted in yellow on interactive terminals.
 
 -   **Error**. Should be used for errors. It is piped to `cerr` and
-    highlighted in bold red on interactive terminals. `logError(...)` does not
+    highlighted in bold red on interactive terminals. `LOG_ERROR(...)` does not
     terminate the process.
 
--   **Debug**. Should be used to write debug data. All debug data is removed
+-   **Debug**. Writes debug data. All debug data is removed
     unless you translate with `PEANO_DEBUG`. Debug messages are runtime
     filtered before the message is constructed. If enabled, they are written to
     the file dump and stdout.
@@ -67,10 +66,9 @@ Peano offers user facing logging macros:
 The logging macros forward information to tarch::instrumentation::Log. Log
 formats each line once and then dispatches it to the configured sinks. The
 tarch::instrumentation::CommandLineSink remains the default terminal sink.
-The same formatted line is also forwarded to tarch::instrumentation::FileSink,
-which writes `Peano.log` in the process working directory by default. Info,
-Warning, Error and Debug messages are forwarded to the file sink. The file sink
-flushes every write.
+The same formatted line is forwarded to tarch::instrumentation::FileSink when
+Log::setOutputFile() sets a file. File logging is disabled by default.
+The file sink flushes periodically and when it closes.
 
 Warning and Error messages are highlighted only in the terminal sink and only
 if the target stream is an interactive terminal. Redirected terminal output and
@@ -88,32 +86,26 @@ it for a simulation run is the `PEANO_LOG_DEBUG` environment variable:
 
 -   Otherwise: comma separated list of scope prefixes. A debug message is
     emitted if its scope name starts with one of these prefixes, e.g.
-    `PEANO_LOG_DEBUG=exahype2::TimeStepping,tarch::mpi`.
-
-The same policy can be configured from C++ through
-`tarch::instrumentation::Log::setDebug(bool)`,
-`tarch::instrumentation::Log::enableDebugScopePrefix(...)` and
-`tarch::instrumentation::Log::clearDebugFilter()`.
+    `PEANO_LOG_DEBUG=tarch::mpi,tarch::plotter`.
 
 \subsection tarch_logging_command_line_sink CommandLineSink
 
 This logger is the default terminal sink. It writes already formatted strings
 to stdout or stderr and does not coordinate other backends. The formatting and
-fan out are configured through tarch::instrumentation::Log. Please consult the
-header for details on the semantics of the arguments:
+dispatch are configured through tarch::instrumentation::Log:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-tarch::instrumentation::Log::setLogFormat(
- " ",
- true, false, false, true, true, true,
- "myFancy.log"
-);
+tarch::instrumentation::Log::setLogTimeStamp(true);
+tarch::instrumentation::Log::setLogMachineName(false);
+tarch::instrumentation::Log::setLogThreadName(false);
+tarch::instrumentation::Log::setLogMessageType(true);
+tarch::instrumentation::Log::setLogScopeName(true);
+tarch::instrumentation::Log::setOutputFile("myFancy.log");
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Log interface also allows you to override or disable the file sink. An
-empty file name disables file logging. The default is one shared file
-independent of the number of MPI ranks, written to the current working
-directory from which the executable is launched.
+empty file name disables file logging. Every rank writes the configured path;
+a caller supplies distinct paths when each rank needs its own file.
 
 \section tarch_logging_assertions Assertions
 
@@ -122,7 +114,7 @@ assertions. Assertions are offered through macros, and if you compile with
 `PEANO_ASSERTIONS=0`, then they are removed at compile time from your code.
 
 Peano's assertions interlink with the logging, i.e. before they shut
-down a rank, they ensure that all logs are flushed. Furthermore, they
+down a rank, they flush all logs. Furthermore, they
 provide a few convenient variations that
 
 1.  Support numerical "equality" checks,

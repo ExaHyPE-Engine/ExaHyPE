@@ -1,13 +1,14 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+"""
+A convergence test of the particle tracing in a radial jet flow.
+"""
+
 import argparse
+import math
 from pathlib import Path
 
 import exahype2
-
-"""
-This is a particle tracing convergence test for radial jet flow.
-"""
 
 
 def generate_radial_particles(
@@ -16,26 +17,26 @@ def generate_radial_particles(
     particles_per_ray=50,
     r_min=0.05,
     r_max=1.0,
-    center_x=1.5,
-    center_y=1.5,
+    centre_x=0.0,
+    centre_y=0.0,
 ):
     """
-    Generates a .dat file with particles arranged radially from the domain centre.
+    Generates a .dat file with particle positions on rays around (centre_x, centre_y).
+    Every ray lies between two axes. A tracer on an axis of a Hilbert grid reads only the
+    cell below its face.
     """
-    import math
-
     with open(file_path, "w") as file:
         for i in range(num_rays):
-            theta = 2 * math.pi * i / num_rays
+            theta = 2 * math.pi * (i + 0.5) / num_rays
             for j in range(particles_per_ray):
                 r = r_min + j * (r_max - r_min) / (particles_per_ray - 1)
-                x = center_x + r * math.cos(theta)
-                y = center_y + r * math.sin(theta)
+                x = centre_x + r * math.cos(theta)
+                y = centre_y + r * math.sin(theta)
                 file.write(f"{x:.6f} {y:.6f}\n")
 
     total = num_rays * particles_per_ray
     print(
-        f"Generated {total} radial particles in a 3x3 domain centred at ({center_x},{center_y}) and saved to {file_path}"
+        f"Generated {total} radial particles in a 3x3 domain centred at ({centre_x},{centre_y}) and saved to {file_path}"
     )
 
 
@@ -61,7 +62,7 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument(
         "-interp",
@@ -89,7 +90,7 @@ project = exahype2.Project(
     project_name=".",
     dimensions=2,
     size=[3.0, 3.0, 3.0],
-    offset=[0.0, 0.0, 0.0],
+    offset=[-1.5, -1.5, -1.5],
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -97,22 +98,26 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The radial jet tracer test runs in 2D only.")
+
 initial_conditions = """
   constexpr double Epsilon = 1e-3;
-  const double x0 = 1.5; // Jet centre x
-  const double y0 = 1.5; // Jet centre y
-  const double dx = x(0) - x0;
-  const double dy = x(1) - y0;
-  const double r2 = dx * dx + dy * dy + Epsilon * Epsilon;
+  constexpr double CentreX = 0.0;
+  constexpr double CentreY = 0.0;
 
-  Q[0] = 1.0;        // rho
-  Q[1] = dx / r2;    // rho * u
-  Q[2] = dy / r2;    // rho * v
-  Q[3] = 1.0;        // rho * e (constant baseline)
+  const double offsetX       = x(0) - CentreX;
+  const double offsetY       = x(1) - CentreY;
+  const double radiusSquared = tarch::la::productRoundedOnce(offsetX, offsetX)
+                             + tarch::la::productRoundedOnce(offsetY, offsetY) + Epsilon * Epsilon;
+
+  Q[Shortcuts::rho] = 1.0;
+  Q[Shortcuts::u]   = offsetX / radiusSquared;
+  Q[Shortcuts::v]   = offsetY / radiusSquared;
+  Q[Shortcuts::e]   = 1.0;
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
   Qoutside[0] = Qinside[0];
   Qoutside[1] = -Qinside[1];
   Qoutside[2] = -Qinside[2];
@@ -130,43 +135,31 @@ max_eigenvalue = """
 """
 
 analytical_solution = """
-  // Analytical solution for radial jet with velocity field v = (x/r^2, y/r^2)
+  // A tracer in the velocity field (x - CentreX, y - CentreY) / r^2 moves along its ray with
+  // r(t)^2 = r(0)^2 + 2t. The entries of solution are the position and the tracer data of
+  // tracer_attributes, with zero mass and acceleration for a tracer.
   constexpr double Epsilon = 1e-3;
+  constexpr double CentreX = 0.0;
+  constexpr double CentreY = 0.0;
 
-  // Jet centre
-  const double x_c = 1.5;
-  const double y_c = 1.5;
+  const double initialX             = particle->getData(1);
+  const double initialY             = particle->getData(2);
+  const double initialOffsetX       = initialX - CentreX;
+  const double initialOffsetY       = initialY - CentreY;
+  const double initialRadiusSquared = initialOffsetX * initialOffsetX + initialOffsetY * initialOffsetY + Epsilon * Epsilon;
+  const double radiusSquared        = initialRadiusSquared + 2.0 * t;
+  const double scale                = std::sqrt(radiusSquared / initialRadiusSquared);
 
-  // Initial position relative to centre
-  const double dx0 = particle->getData(1) - x_c;
-  const double dy0 = particle->getData(2) - y_c;
-
-  // Initial squared distance
-  const double r0_2 = dx0 * dx0 + dy0 * dy0 + Epsilon * Epsilon;
-
-  // Current distance scaling
-  const double r_t_2 = r0_2 + 2.0 * t;      // r(t)^2 = r0^2 + 2t
-  const double scale = sqrt(r_t_2 / r0_2);  // r(t)/r0
-
-  // Updated position
-  solution[0] = x_c + dx0 * scale; // x(t)
-  solution[1] = y_c + dy0 * scale; // y(t)
-
-  // Fluid velocity at particle position at time t
-  const double inv_rt2 = 1.0 / r_t_2;
-  solution[3] = (solution[0] - x_c) * inv_rt2; // u(x(t), y(t))
-  solution[4] = (solution[1] - y_c) * inv_rt2; // v(x(t), y(t))
-
-  // Particle velocity (same as fluid)
-  solution[5] = dx0 / r_t_2;  // u(t) = dx0 / (r0^2 + 2t)
-  solution[6] = dy0 / r_t_2;  // v(t) = dy0 / (r0^2 + 2t)
-
-  // Acceleration
+  solution[0] = CentreX + initialOffsetX * scale;
+  solution[1] = CentreY + initialOffsetY * scale;
+  solution[2] = 1.0;
+  solution[3] = initialX;
+  solution[4] = initialY;
+  solution[5] = initialOffsetX * scale / radiusSquared;
+  solution[6] = initialOffsetY * scale / radiusSquared;
   solution[7] = 0.0;
   solution[8] = 0.0;
-
-  solution[2] = 1.0; // rho
-  solution[9] = 1.0; // mass
+  solution[9] = 0.0;
 """
 
 fv_solver = exahype2.fv.Solver(
@@ -174,7 +167,7 @@ fv_solver = exahype2.fv.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "u": 1, "v": 1, "e": 1},
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Fixed(0.0025 / (args.degrees_of_freedom**0.5)),
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
     scheme=exahype2.fv.Godunov(),
 )
 
@@ -191,31 +184,25 @@ tracer_attributes = {
     "unknowns": {
         "rho": 1,
         "init_x": 1,
-        "init_y": 1,  # Interpolated fluid velocity
+        "init_y": 1,
         "u": 1,
-        "v": 1,  # Particle's own velocity
+        "v": 1,
         "a_x": 1,
         "a_y": 1,
-        "d": 1,
+        "mass": 1,
     }
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
 generate_radial_particles(
     "InitTracers.dat", num_rays=36, particles_per_ray=5, r_min=0.1, r_max=0.5
 )
-init_action_set = exahype2.particles.InsertParticlesFromFile(
-    particle_set=tracer_particles,
-    filename="InitTracers.dat",
-    scale_factor=1.0,
-    save_initialpos=True,
+tracer_particles.insert_from_file(
+    "InitTracers.dat", scale_factor=1.0, save_initial_position=True
 )
-
-init_action_set.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_action_set)
 
 fv_solver.trace(
     tracer_particles,
@@ -223,16 +210,13 @@ fv_solver.trace(
         integration_scheme=integration_schemes[args.integration],
         interpolation_scheme=interpolation_methods[args.interpolation],
         force_method=0,
+        # The interpolation overwrites rho, u and v of each tracer with the fluid state.
         fields_to_interpolate="0,3,4",
     ),
     initialisation=False,
 )
 
 fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
-fv_solver.measure_particle_error(
-    tracer_particles,
-    file="Error_" + Path(__file__).name,
-    descend_invocation_order=65536,  # After all other action sets
-)
+fv_solver.measure_particle_error(tracer_particles, file="Error_" + Path(__file__).name)
 
 project.generate_and_build()

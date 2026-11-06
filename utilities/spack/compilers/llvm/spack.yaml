@@ -1,28 +1,57 @@
 spack:
   specs:
-    - llvm@19.1.7 +clang +libomptarget +libomptarget_debug +gold targets=all
-    - python@3.14.0
-    - py-pip@25.1.1
-    - cuda@12.9.0
-    - hwloc@2.12.2 +cuda
-    - ucx@1.19.0 +cuda
-    - openmpi@5.0.8 +cuda fabrics=ucx
-    - memkind@1.14.0
-    - papi@7.2.0
-    - likwid@5.4.1
-    - metis@5.1.0
-    - parmetis@4.0.3
-    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp
-    - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
-    - netcdf-c@4.9.2 +mpi +shared
-    - parallel-netcdf@1.14.1 +cxx -fortran +pic +shared
+    - group: compiler
+      specs:
+        - llvm@22.1.8 +clang ~flang ~lldb ~polly libcxx=none libunwind=none +libomptarget +libomptarget_debug +gold targets=x86,nvptx,amdgpu ^hwloc@2.13.0 +cuda ^cuda@13.4.1
+    - group: main
+      needs: [compiler]
+      specs:
+        - python@3.14.5
+        - py-pip@26.2.1
+        - cuda@13.4.1
+        - hwloc@2.13.0 +cuda
+        - ucx@1.22.0 +cuda
+        - openmpi@5.0.10 +cuda fabrics=ucx
+        - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
+        - netcdf-c@4.9.3 +mpi +shared
+        - kokkos@5.2.2 +serial ~openmp +cuda ~wrapper cuda_arch=75 %cxx=llvm@22.1.8
+    - group: acpp
+      needs: [main]
+      specs:
+        - adaptivecpp@25.10.0 +cuda ^llvm@19.1.7 +clang +gold ~libomptarget ~offload ~lldb ~polly libcxx=none libunwind=none targets=x86,nvptx ^cuda@12.9.1
   packages:
     all:
       target: [x86_64]
+  repos:
+    builtin::
+      git: https://github.com/spack/spack-packages.git
+      commit: 093bed090925a0c327ba4fd927f1f1d5e36f2b3e
   concretizer:
     unify: true
     reuse: true
   config:
     install_tree:
       root: /opt/software
-  view: /opt/views/view
+  # The default view excludes CUDA 13. The clang of AdaptiveCpp reads the headers in
+  # /opt/views/view/include before the headers of its CUDA 12 and rejects the headers of CUDA 13.
+  view:
+    default:
+      root: /opt/views/view
+      group: [compiler, main]
+      exclude: [cuda]
+    cuda:
+      root: /opt/views/cuda
+      group: [main]
+      select: [cuda]
+      link: roots
+    acpp:
+      root: /opt/views/acpp
+      group: [acpp]
+      link: roots
+  env_vars:
+    set:
+      CUDA_HOME: /opt/views/cuda
+    prepend_path:
+      PATH: /opt/views/cuda/bin
+    append_path:
+      CMAKE_PREFIX_PATH: /opt/views/acpp

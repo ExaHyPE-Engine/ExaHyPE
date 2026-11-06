@@ -38,7 +38,7 @@ class SubcellScheme:
         self._time_stepping = time_stepping
         self._halo_width = halo_width
         self._fallback_reconstruction = fallback_reconstruction
-        self._includes = includes or ["exahype2/fv/FiniteVolume.h"]
+        self._includes = includes or ["exahype2/fv/FiniteVolumeScheme.h"]
 
     @property
     def reconstruction(self):
@@ -72,7 +72,7 @@ class Godunov:
             time_stepping="::exahype2::fv::timestepping::SingleStep",
             halo_width=self.halo_width,
             includes=[
-                "exahype2/fv/FiniteVolume.h",
+                "exahype2/fv/FiniteVolumeScheme.h",
                 "exahype2/fv/reconstruction/Constant.h",
                 "exahype2/fv/timestepping/SingleStep.h",
             ],
@@ -94,8 +94,8 @@ class MusclHancock:
     def __init__(self, limiter=Limiter.minmod):
         if not isinstance(limiter, str) or not limiter.startswith("::"):
             raise ValueError(
-                "The limiter is a policy type name of exahype2.fv.Limiter; a C++ body belongs "
-                "to the limited_difference term."
+                "The MUSCL-Hancock scheme expects a limiter of exahype2.fv.Limiter. A C++ "
+                "limiter body belongs into the limited_difference PDE term."
             )
         self.limiter = limiter
 
@@ -110,7 +110,7 @@ class MusclHancock:
                 "::exahype2::fv::reconstruction::LimitedLinear<::exahype2::fv::limiter::Zero>"
             ),
             includes=[
-                "exahype2/fv/FiniteVolume.h",
+                "exahype2/fv/FiniteVolumeScheme.h",
                 "exahype2/fv/limiter/SlopeLimiter.h",
                 "exahype2/fv/reconstruction/LimitedLinear.h",
                 "exahype2/fv/timestepping/SingleStep.h",
@@ -119,35 +119,3 @@ class MusclHancock:
 
     def __repr__(self):
         return "MusclHancock(limiter={})".format(self.limiter)
-
-
-
-class WavePropagation:
-    """Wave Propagation Algorithm based on doi.org/10.1137/S106482750139738X. 2nd Order scheme"""
-
-    halo_width = 2
-
-    def __init__(self, limiter=Limiter.minmod):
-        if not isinstance(limiter, str) or not limiter.startswith("::"):
-            raise ValueError(
-                "The limiter is a policy type name of exahype2.fv.Limiter; a C++ body belongs "
-                "to the limited_difference term."
-            )
-        self.limiter = limiter
-
-    def subcell_scheme(self):
-        return SubcellScheme(
-            reconstruction="::exahype2::fv::reconstruction::WavePropagation<"
-            + self.limiter
-            + ">",
-            time_stepping="::exahype2::fv::timestepping::SingleStep",
-            halo_width=self.halo_width,
-            includes=[
-                "exahype2/fv/FiniteVolume.h",
-                "exahype2/fv/reconstruction/WavePropagation.h",
-                "exahype2/fv/timestepping/SingleStep.h",
-            ],
-        )
-
-    def __repr__(self):
-        return "WavePropagation()"

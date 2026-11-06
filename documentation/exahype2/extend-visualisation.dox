@@ -4,15 +4,33 @@
 
 \tableofcontents
 
-Sometimes, you want to augment whatever ExaHyPE dumps. By default, we get the
-current volumetric solution and all tracers. However, we have seen situations
-where people wanted to write the face data for example or some postprocessed
-data as well.
+Every solver writes its volumetric solution when the runner schedules a
+snapshot. A tracer set writes trajectories when `dump_into_database()` is
+configured, and `plot_faces()` selects additional face output.
 
+# Face traces
 
-Each plotting step is a mere run through the mesh with a dedicated observer. By
-default, this observer calls the plotting action sets for each solver, and it
-invokes a tracer dump per tracer species. To add a further plotter, pass it to
-the project's add_action_set_to_plot_solution().
+An ADER-DG solver writes the two traces of selected faces into the snapshots
+`<name>-face` below the output path:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver.plot_faces(
+  "normal == faultNormal and std::abs(x(faultNormal) - faultPosition) < 0.5 * h(faultNormal)"
+)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The predicate is a C++ expression on the face centre `x`, the width `h` of
+the adjacent cells and the axis `normal`. Every selected face plots one point
+per face node at its quadrature position, the cells between neighbouring
+nodes, and per field one point field with the trace of the lower cell and one
+with the trace of the upper cell, so a dynamic rupture application reads the
+slip and the slip rate along its fault.
+
+# Postprocessed fields
+
+The hook `postprocess_updated_patch` runs on each updated patch and may
+overwrite solution values. The plotter writes the named unknowns and
+auxiliary variables declared by the solver; a derived quantity therefore
+needs a declared auxiliary variable and a hook that computes its value.
 
 */

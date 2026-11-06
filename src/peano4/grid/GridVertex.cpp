@@ -4,37 +4,20 @@
 
 static_assert(
   std::is_standard_layout_v<peano4::grid::GridVertex>,
-  "A grid vertex travels between ranks as raw bytes, so its layout has to be standard."
+  "The ranks exchange standard-layout grid vertices only."
 );
 static_assert(
   std::is_trivially_copyable_v<peano4::grid::GridVertex>,
-  "A grid vertex travels between ranks as raw bytes, so it has to be trivially copyable."
+  "The ranks exchange trivially copyable grid vertices only."
 );
 
-/** Returns whether the tree continues below every corner of one cell. */
-bool peano4::grid::GridVertex::areAllVerticesRefined(const peano4::grid::GridVertex vertices[peano4::VerticesPerCell]) {
-  return getRefinedVertices(vertices).all();
-}
-
-/**
- * Returns one bit per vertex, set where the vertex is refined. A zero result
- * means the cell holding those vertices is a leaf.
- */
-std::bitset<peano4::VerticesPerCell> peano4::grid::GridVertex::getRefinedVertices(
-  const peano4::grid::GridVertex vertices[peano4::VerticesPerCell]
-) {
-  std::bitset<peano4::VerticesPerCell> refinedVertices;
-  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
-    refinedVertices.set(vertexNumber, vertices[vertexNumber].getState() == peano4::grid::GridVertex::State::Refined);
-  }
-  return refinedVertices;
-}
-
-std::ostream& operator<<(std::ostream& out, const peano4::grid::GridVertex& vertex) {
+std::ostream&
+operator<<(std::ostream& out, const peano4::grid::GridVertex& vertex) {
   return (out << vertex.toString());
 }
 
-std::string peano4::grid::GridVertex::toString() const {
+std::string
+peano4::grid::GridVertex::toString() const {
   std::ostringstream out;
   out << "GridVertex{State=" << static_cast<int>(state) << " (";
 

@@ -1,0 +1,349 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getNumberOfSlots() const noexcept {
+  return _numberOfSlots;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getNumberOfFaces() const noexcept {
+  return _numberOfFaces;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getMinimumLevel() const noexcept {
+  return _minimumLevel;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getMaximumLevel() const noexcept {
+  return _maximumLevel;
+}
+
+INLINE_METHOD int
+peano4::CellConnectivity::getRangeIndexOfLevel(const Adjacency adjacency, const int level) const noexcept {
+  ASSERTION(level >= 0 and level <= _maximumLevel + 1, level, _maximumLevel);
+  return static_cast<int>(adjacency) * (_maximumLevel + 2) + level;
+}
+
+INLINE_METHOD int
+peano4::CellConnectivity::getRangeIndexOfKind(const Adjacency adjacency, const FaceKind kind) const noexcept {
+  return static_cast<int>(adjacency) * (peano4::NumberOfFaceKinds + 1) + static_cast<int>(kind);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::Span<const int>
+peano4::CellConnectivity::getCells() const noexcept {
+  return {_cells, _numberOfCells};
+}
+
+INLINE_METHOD tarch::Span<const int>
+peano4::CellConnectivity::getCells(const Adjacency adjacency) const noexcept {
+  if (_numberOfCells == 0) {
+    return {};
+  }
+  const int first = _cellRanges[getRangeIndexOfLevel(adjacency, 0)];
+  const int end   = _cellRanges[getRangeIndexOfLevel(adjacency, _maximumLevel + 1)];
+  return {_cells + first, end - first};
+}
+
+/**
+ * Returns an empty span for a level without cells.
+ */
+INLINE_METHOD tarch::Span<const int>
+peano4::CellConnectivity::getCells(const Adjacency adjacency, const int level) const noexcept {
+  ASSERTION(level >= 0, level);
+  if (_numberOfCells == 0 or level > _maximumLevel) {
+    return {};
+  }
+  const int first = _cellRanges[getRangeIndexOfLevel(adjacency, level)];
+  const int end   = _cellRanges[getRangeIndexOfLevel(adjacency, level + 1)];
+  return {_cells + first, end - first};
+}
+
+INLINE_METHOD tarch::Span<const int>
+peano4::CellConnectivity::getFaces(const Adjacency adjacency, const FaceKind kind) const noexcept {
+  return getFaces(adjacency, kind, kind);
+}
+
+/**
+ * Returns the faces of every kind from firstKind to lastKind in the order of FaceKind.
+ */
+INLINE_METHOD tarch::Span<const int>
+peano4::CellConnectivity::getFaces(
+  const Adjacency adjacency,
+  const FaceKind  firstKind,
+  const FaceKind  lastKind
+) const noexcept {
+  ASSERTION(
+    static_cast<int>(firstKind) <= static_cast<int>(lastKind),
+    static_cast<int>(firstKind),
+    static_cast<int>(lastKind)
+  );
+  if (_numberOfFaces == 0) {
+    return {};
+  }
+  const int first = _faceRanges[getRangeIndexOfKind(adjacency, firstKind)];
+  const int end   = _faceRanges[getRangeIndexOfKind(adjacency, lastKind) + 1];
+  return {_faces + first, end - first};
+}
+
+INLINE_METHOD tarch::Span<const peano4::LevelJump>
+peano4::CellConnectivity::getLevelJumps(const Adjacency adjacency) const noexcept {
+  if (_numberOfLevelJumps == 0) {
+    return {};
+  }
+  const int first = _levelJumpRanges[getRangeIndexOfLevel(adjacency, 0)];
+  const int end   = _levelJumpRanges[getRangeIndexOfLevel(adjacency, _maximumLevel + 1)];
+  return {_levelJumps + first, end - first};
+}
+
+/**
+ * Returns the level jumps whose coarse face lies on level. Their fine faces lie one level below.
+ */
+INLINE_METHOD tarch::Span<const peano4::LevelJump>
+peano4::CellConnectivity::getLevelJumps(const Adjacency adjacency, const int level) const noexcept {
+  return getLevelJumps(adjacency, level, level);
+}
+
+/**
+ * Returns the level jumps whose coarse face lies on a level from firstLevel to lastLevel.
+ */
+INLINE_METHOD tarch::Span<const peano4::LevelJump>
+peano4::CellConnectivity::getLevelJumps(
+  const Adjacency adjacency,
+  const int       firstLevel,
+  const int       lastLevel
+) const noexcept {
+  ASSERTION(firstLevel >= 0 and firstLevel <= lastLevel, firstLevel, lastLevel);
+  if (_numberOfLevelJumps == 0 or firstLevel > _maximumLevel) {
+    return {};
+  }
+  const int first = _levelJumpRanges[getRangeIndexOfLevel(adjacency, firstLevel)];
+  const int end   = _levelJumpRanges[getRangeIndexOfLevel(adjacency, std::min(lastLevel, _maximumLevel) + 1)];
+  return {_levelJumps + first, end - first};
+}
+
+INLINE_METHOD tarch::Span<const peano4::Neighbour>
+peano4::CellConnectivity::getNeighbours() const noexcept {
+  return {_neighbours, _numberOfNeighbours};
+}
+
+INLINE_METHOD tarch::Span<const peano4::ExchangedFace>
+peano4::CellConnectivity::getExchangedFaces(const Neighbour& neighbour) const noexcept {
+  return {_exchangedFaces + neighbour.firstFace, neighbour.numberOfFaces};
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getCellLevel(const int cell) const noexcept {
+  ASSERTION(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  return _cellLevel[cell];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int>
+peano4::CellConnectivity::getCellLattice(const int cell) const noexcept {
+  ASSERTION(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  tarch::la::Vector<DIMENSIONS, int> result(0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = _cellLattice[cell * DIMENSIONS + axis];
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::CellConnectivity::getCellCentre(const int cell, const int axis) const noexcept {
+  ASSERTION(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  return getPositionOfLatticeCoordinate(
+    static_cast<double>(_cellLattice[cell * DIMENSIONS + axis]) + 0.5,
+    getCellLevel(cell),
+    axis
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::CellConnectivity::getCellCentre(const int cell) const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = getCellCentre(cell, axis);
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::CellConnectivity::getCellWidth(const int cell, const int axis) const noexcept {
+  return getWidthOfLevel(getCellLevel(cell), axis);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::CellConnectivity::getCellWidth(const int cell) const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = getCellWidth(cell, axis);
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getCellFace(const int cell, const int faceNumber) const noexcept {
+  ASSERTION(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  ASSERTION(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber);
+  return _facesOfCell[cell * peano4::FacesPerCell + faceNumber];
+}
+
+/**
+ * Returns the index of the cell along the space-filling curve over all ranks. The indices of the
+ * cells of a rank are consecutive in curve order and follow those of the lower ranks.
+ */
+INLINE_METHOD int
+peano4::CellConnectivity::getCellCurveIndex(const int cell) const noexcept {
+  ASSERTION(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  ASSERTION(_cellCurveIndex[cell] >= 0, cell);
+  return _cellCurveIndex[cell];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD peano4::FaceKind
+peano4::CellConnectivity::getFaceKind(const int face) const noexcept {
+  ASSERTION(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  return _faceKind[face];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getFaceNormal(const int face) const noexcept {
+  ASSERTION(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  return _faceNormal[face];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getFaceLevel(const int face) const noexcept {
+  ASSERTION(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  return _faceLevel[face];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int>
+peano4::CellConnectivity::getFaceLattice(const int face) const noexcept {
+  ASSERTION(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  tarch::la::Vector<DIMENSIONS, int> result(0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = _faceLattice[face * DIMENSIONS + axis];
+  }
+  return result;
+}
+
+/**
+ * Returns one coordinate of the face centre. A face lies on the lower boundary of its lattice cell
+ * along its normal.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::CellConnectivity::getFaceCentre(const int face, const int axis) const noexcept {
+  ASSERTION(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  const double shift = axis == _faceNormal[face] ? 0.0 : 0.5;
+  return getPositionOfLatticeCoordinate(
+    static_cast<double>(_faceLattice[face * DIMENSIONS + axis]) + shift,
+    getFaceLevel(face),
+    axis
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::CellConnectivity::getFaceCentre(const int face) const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = getFaceCentre(face, axis);
+  }
+  return result;
+}
+
+/**
+ * Returns the cell width of the level of the face. The face spans one such cell along every axis
+ * except its normal.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::CellConnectivity::getFaceWidth(const int face, const int axis) const noexcept {
+  return getWidthOfLevel(getFaceLevel(face), axis);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::CellConnectivity::getFaceWidth(const int face) const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = getFaceWidth(face, axis);
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::CellConnectivity::getFaceCell(const int face, const int side) const noexcept {
+  ASSERTION(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  ASSERTION(side == 0 or side == 1, side);
+  return _cellsOfFace[face * 2 + side];
+}
+
+/**
+ * Returns the centre of a cell beside face at the level of face. side 0 selects the cell below face
+ * along its normal and side 1 the cell above it. getCellCentre() returns the same bits for that
+ * cell on every rank that stores it.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::CellConnectivity::getCellCentreBesideFace(const int face, const int side) const noexcept {
+  ASSERTION(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  ASSERTION(side == 0 or side == 1, side);
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double shift = (axis == _faceNormal[face] and side == 0) ? -0.5 : 0.5;
+    result(axis)       = getPositionOfLatticeCoordinate(
+      static_cast<double>(_faceLattice[face * DIMENSIONS + axis]) + shift,
+      getFaceLevel(face),
+      axis
+    );
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::CellConnectivity::getWidthOfLevel(const int level, const int axis) const noexcept {
+  ASSERTION(level >= 0 and level <= _maximumLevel, level, _maximumLevel);
+  ASSERTION(axis >= 0 and axis < DIMENSIONS, axis);
+  return _widthOfLevel[level * DIMENSIONS + axis];
+}
+
+/**
+ * Returns the position of latticeCoordinate, counted in cell widths of level from the lower domain
+ * boundary along axis. The difference between latticeCoordinate and the lattice centre of the level
+ * is exact. Two lattice coordinates that mirror at the domain centre therefore return exactly negated
+ * offsets from the domain centre. Their positions mirror bitwise when the domain centre is zero.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::CellConnectivity::getPositionOfLatticeCoordinate(
+  const double latticeCoordinate,
+  const int    level,
+  const int    axis
+) const noexcept {
+  const double latticeCentre = 0.5 * static_cast<double>(peano4::power(peano4::SubdivisionFactor, level));
+  ASSERTION(
+    latticeCoordinate >= 0.0 and latticeCoordinate <= 2.0 * latticeCentre,
+    latticeCoordinate,
+    latticeCentre,
+    level
+  );
+  return _domainCentre[axis] + (latticeCoordinate - latticeCentre) * getWidthOfLevel(level, axis);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::CellConnectivity::getDomainOffset() const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = _domainOffset[axis];
+  }
+  return result;
+}
+
+/**
+ * Returns the cell connectivity whose arrays a kernel reads. A build without a GPU backend returns
+ * this cell connectivity.
+ */
+INLINE_METHOD const peano4::CellConnectivity&
+peano4::CellConnectivity::onDevice() const noexcept {
+  return _deviceTwin == nullptr ? *this : *_deviceTwin;
+}

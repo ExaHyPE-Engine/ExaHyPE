@@ -2,14 +2,33 @@
 
 @page page_exahype_faq FAQ and troubleshooting
 
-# Large generated records exhaust the thread stack
+# The space-time predictor diverged
 
-High polynomial orders and large patches can make the per-cell call record too
-large for a thread stack. A debugger typically reports the failure while it
-constructs a local array of the generated cell type.
+An ADER-DG solver without a limiter ends the run when the Picard iteration of
+a cell diverges, and prints the time stamp, the centre of the first diverged
+cell and the number of diverged cells on the rank. A solver with a subcell
+limiter marks the cell as troubled and recomputes it with the finite-volume
+scheme. Reduce the time step factor or add a limiter.
 
-Use a smaller patch or order, or select a heap-based storage scheme. A
-heap-based record keeps only its small owning handle in the traversal call
-block while the patch payload remains in heap storage.
+# The simulation is unstable
+
+An adaptive solver ends the run with a non-critical assertion when its time
+step size drops to 1e-10 or below and writes the last solution. The message
+states the maximum eigenvalue that leads to this time step size. Check the PDE
+terms, the initial condition and the boundary conditions. An ADER-DG solver
+needs a subcell limiter for a solution with shocks.
+
+# The maximum eigenvalue is not finite
+
+An adaptive solver ends the run with a non-critical assertion when a cell
+reports an infinite or negative wave speed and writes the last solution. The
+plotted snapshot shows the cell; check the initial condition and the
+boundary conditions of that cell.
+
+# The solver memory grows in segments
+
+A pool reserves whole segments of slots. The reported solver memory rises in
+steps of one segment per pool when the grid grows. It stays when the grid
+shrinks until every slot of the last segment is free.
 
 */

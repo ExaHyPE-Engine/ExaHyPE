@@ -1,40 +1,61 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+{%- set runtime_parameters = NAMESPACE | join("::") ~ "::RuntimeParameters" %}
+{%- set string_parameters = RUNTIME_PARAMETERS | selectattr("is_string") | list %}
 #include "RuntimeParameters.h"
 
-#include "runner/ParameterTable.h"
+#include "Constants.h"
+#include "exahype2/runner/RuntimeParameters.h"
 
-TARGET_DECLARE
-{{NAMESPACE | join("::")}}::RuntimeParameters::Storage {{NAMESPACE | join("::")}}::RuntimeParameters::_storage;
-TARGET_DECLARE_END
+namespace {
+{%- if string_parameters %}
+  /**
+   * Stores the characters of the string parameters. Every string parameter points into
+   * loadedStrings.
+   */
+  struct StringValues final {
+{%- for parameter in string_parameters %}
+    std::string {{ parameter.name }}{ {{- parameter.default_value -}} };
+{%- endfor %}
+  };
 
-::runner::ParameterTable {{NAMESPACE | join("::")}}::RuntimeParameters::parameterTable(
-  [[maybe_unused]] Storage& storage
-) {
-  ::runner::ParameterTable result;
+  StringValues loadedStrings{};
+{% endif %}
+  ::exahype2::runner::ParameterTable getParameterTable([[maybe_unused]] {{ runtime_parameters }}& parameters) {
+    ::exahype2::runner::ParameterTable result;
 {%- for parameter in RUNTIME_PARAMETERS %}
 {%- if parameter.is_array %}
-  result.addArray("{{ parameter.name }}", storage.{{ parameter.name }}.data(), {{ parameter.array_size }});
+    result.addArray("{{ parameter.name }}", parameters.{{ parameter.name }}.getData(), {{ parameter.array_size }});
+{%- elif parameter.is_string %}
+    result.add("{{ parameter.name }}", &loadedStrings.{{ parameter.name }});
 {%- else %}
-  result.add("{{ parameter.name }}", &storage.{{ parameter.name }});
+    result.add("{{ parameter.name }}", &parameters.{{ parameter.name }});
 {%- endif %}
 {%- endfor %}
-  return result;
-}
+    return result;
+  }
+} // namespace
 
-void {{NAMESPACE | join("::")}}::RuntimeParameters::printUsage() {
-  Storage defaults{};
-  parameterTable(defaults).printUsage();
-}
-
-void {{NAMESPACE | join("::")}}::RuntimeParameters::load(tarch::reader::JSONReader* const reader) {
-  parameterTable(_storage).load(reader);
-}
-
-void {{NAMESPACE | join("::")}}::RuntimeParameters::load(
+{{ runtime_parameters }} {{ runtime_parameters }}::load(
   tarch::reader::JSONReader* const reader,
   int&                             argc,
   char** const                     argv
 ) {
-  parameterTable(_storage).load(reader, argc, argv);
+  RuntimeParameters parameters{};
+  getParameterTable(parameters).load(reader, argc, argv);
+{%- for parameter in string_parameters %}
+  parameters.{{ parameter.name }} = loadedStrings.{{ parameter.name }};
+{%- endfor %}
+  parameters.maxAdmissiblePatchSize =
+    ::exahype2::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  parameters.minAdmissiblePatchSize =
+    ::exahype2::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
+  parameters.gridLevels    = ::exahype2::runner::RuntimeParameters::getInstance().getGridLevels();
+  parameters.maxGridLevels = ::exahype2::runner::RuntimeParameters::getInstance().getMaxGridLevels();
+  return parameters;
+}
+
+void {{ runtime_parameters }}::printUsage() {
+  RuntimeParameters defaults{};
+  getParameterTable(defaults).printUsage();
 }

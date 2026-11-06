@@ -3,18 +3,19 @@
 
 /**
  * Normalises each node's conformal metric and removes the traces of A_tilde and D_kij.
+ * Clamps the lapse and the conformal factor to positive values.
  * The conformal metric must be positive definite.
- * Clamps the lapse and conformal factor to positive values.
  */
 template <class Shortcuts>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::enforceCCZ4Constraints(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exagrype::enforceCCZ4Constraints(
   double* const NOALIAS Q,
   const int             numberOfDofs,
   const int             strideBetweenDofs
 ) {
-  assertion(Q != nullptr);
-  assertion(numberOfDofs >= 0, numberOfDofs);
-  assertion(strideBetweenDofs >= Shortcuts::grad_phi + 3, strideBetweenDofs);
+  ASSERTION(Q != nullptr);
+  ASSERTION(numberOfDofs >= 0, numberOfDofs);
+  ASSERTION(strideBetweenDofs >= Shortcuts::grad_phi + 3, strideBetweenDofs);
   for (int dof = 0; dof < numberOfDofs; dof++) {
     double* const NOALIAS luh = Q + dof * strideBetweenDofs;
 
@@ -30,7 +31,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::enforce
       + 2 * luh[Shortcuts::gamma_tilde + 1] * luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 4]
       - luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 3];
 
-    assertion(std::isfinite(det) and det > 0.0, det);
+    ASSERTION(std::isfinite(det) and det > 0.0, det);
     const double phisq = 1. / std::cbrt(det);
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
@@ -42,7 +43,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::enforce
       - g_cov[1][0] * g_cov[0][1] * g_cov[2][2] + g_cov[1][0] * g_cov[0][2] * g_cov[2][1]
       + g_cov[2][0] * g_cov[0][1] * g_cov[1][2] - g_cov[2][0] * g_cov[0][2] * g_cov[1][1];
 
-    assertion(std::isfinite(det2) and det2 > 0.0, det2);
+    ASSERTION(std::isfinite(det2) and det2 > 0.0, det2);
     const double invdet        = 1. / det2;
     const double g_contr[3][3] = {
       {(g_cov[1][1] * g_cov[2][2] - g_cov[1][2] * g_cov[2][1]) * invdet,

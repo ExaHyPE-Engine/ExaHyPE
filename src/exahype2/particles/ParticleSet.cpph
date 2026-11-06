@@ -1,0 +1,731 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "peano4/Constants.h"
+#include "peano4/Spacetree.h"
+#include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
+#include "tarch/Termination.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/la/Scalar.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+
+#include <mpi.h>
+
+TARGET_DECLARE
+/**
+ * Returns the index along one axis of the lattice cell that contains coordinate. A coordinate
+ * within tarch::la::NUMERICAL_ZERO_DIFFERENCE of a face belongs to the neighbour of that face on the
+ * side of the lattice centre. A coordinate on the face through the lattice centre belongs to the
+ * cell below that face.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::particles::getLatticeIndexOf(
+  const double coordinate,
+  const double latticeOffset,
+  const double width,
+  const int    cellsPerAxis
+) {
+  ASSERTION(width > 0.0, width);
+  ASSERTION(cellsPerAxis > 0, cellsPerAxis);
+  const int    index     = static_cast<int>(std::floor((coordinate - latticeOffset) / width));
+  const double lowerFace = latticeOffset + index * width;
+  int          face      = -1;
+  if (coordinate - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
+    face = index;
+  } else if (lowerFace + width - coordinate <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
+    face = index + 1;
+  }
+  if (face < 0) {
+    return index;
+  }
+  return 2 * face < cellsPerAxis ? face : face - 1;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::particles::Particle::getX(const int axis) const {
+  ASSERTION(axis >= 0 and axis < DIMENSIONS, axis);
+  return values[axis];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::particles::Particle::getX() const {
+  return tarch::la::Vector<DIMENSIONS, double>(values);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::Particle::setX(const int axis, const double value) {
+  ASSERTION(axis >= 0 and axis < DIMENSIONS, axis);
+  values[axis] = value;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::Particle::setX(const tarch::la::Vector<DIMENSIONS, double>& position) {
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    values[axis] = position(axis);
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::particles::Particle::getData(const int index) const {
+  ASSERTION(index >= 0 and index < numberOfData, index, numberOfData);
+  return values[DIMENSIONS + index];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::Particle::setData(const int index, const double value) {
+  ASSERTION(index >= 0 and index < numberOfData, index, numberOfData);
+  values[DIMENSIONS + index] = value;
+}
+
+template <int NumberOfData>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::Particle
+exahype2::particles::ParticleSetView<NumberOfData>::getParticle(const int index) const {
+  ASSERTION(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  return Particle{values + static_cast<std::ptrdiff_t>(index) * ValuesPerParticle, NumberOfData};
+}
+
+template <int NumberOfData>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::particles::ParticleSetView<NumberOfData>::getSlot(const int index) const {
+  ASSERTION(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  return slots[index];
+}
+
+template <int NumberOfData>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::particles::ParticleSetView<NumberOfData>::hasMovedOutOfCell(const int index) const {
+  ASSERTION(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  return slots[index] < 0;
+}
+
+/**
+ * Stores the mark as minus one minus the slot. The slot of the cell that the particle moved out
+ * of stays readable from the mark.
+ */
+template <int NumberOfData>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::ParticleSetView<NumberOfData>::markAsMovedOutOfCell(const int index) const {
+  ASSERTION(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  ASSERTION(slots[index] >= 0, index, slots[index]);
+  slots[index] = -1 - slots[index];
+}
+
+/**
+ * Returns whether the cell that contains the particle index also contains position, with the rule
+ * of exahype2::particles::getLatticeIndexOf().
+ */
+template <int NumberOfData>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::particles::ParticleSetView<NumberOfData>::isInsideCell(
+  const peano4::CellConnectivity&              cellConnectivity,
+  const int                                    index,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset
+) const {
+  const int slot = getSlot(index);
+  ASSERTION(slot >= 0, index, slot);
+  const int  cellsPerAxis = peano4::power(peano4::SubdivisionFactor, cellConnectivity.getCellLevel(slot));
+  const auto lattice      = cellConnectivity.getCellLattice(slot);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double width = cellConnectivity.getCellWidth(slot, axis);
+    if (
+      exahype2::particles::getLatticeIndexOf(position(axis), domainOffset(axis), width, cellsPerAxis) != lattice(axis)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <int NumberOfData>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::CompactParticlesMovedOutOfCells<NumberOfData>::operator()(const int entry) const {
+  constexpr int ValuesPerParticle = ParticleSetView<NumberOfData>::ValuesPerParticle;
+  const int     hole              = movedParticles[entry];
+  const int     filler            = fillers[entry];
+  ASSERTION(particles.hasMovedOutOfCell(hole), entry, hole);
+  const double* const source = particles.values + static_cast<std::ptrdiff_t>(hole) * ValuesPerParticle;
+  double* const       target = movedValues + static_cast<std::ptrdiff_t>(entry) * ValuesPerParticle;
+  for (int value = 0; value < ValuesPerParticle; value++) {
+    target[value] = source[value];
+  }
+  if (filler >= 0) {
+    ASSERTION(not particles.hasMovedOutOfCell(filler), entry, filler);
+    const double* const survivor = particles.values + static_cast<std::ptrdiff_t>(filler) * ValuesPerParticle;
+    double* const       vacated  = particles.values + static_cast<std::ptrdiff_t>(hole) * ValuesPerParticle;
+    for (int value = 0; value < ValuesPerParticle; value++) {
+      vacated[value] = survivor[value];
+    }
+    particles.slots[hole] = particles.slots[filler];
+  }
+}
+TARGET_DECLARE_END
+
+template <int NumberOfData>
+INLINE_METHOD int
+exahype2::particles::ParticleSet<NumberOfData>::getSize() const noexcept {
+  return static_cast<int>(_slots.size());
+}
+
+/**
+ * Returns the number of particles of all ranks that insert() counted. A relocation keeps the
+ * count. A particle outside the cells of every rank stops the run.
+ */
+template <int NumberOfData>
+INLINE_METHOD int
+exahype2::particles::ParticleSet<NumberOfData>::getGlobalNumberOfParticles() const noexcept {
+  return _globalNumberOfParticles;
+}
+
+template <int NumberOfData>
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::particles::ParticleSet<NumberOfData>::getAllocatedBytes() const noexcept {
+  return tarch::AllocatedBytes::onHost(
+           tarch::getAllocatedBytesOf(_values) + tarch::getAllocatedBytesOf(_numbers)
+           + tarch::getAllocatedBytesOf(_slots)
+         )
+    + _valuesOnDevice.getAllocatedBytes() + _slotsOnDevice.getAllocatedBytes()
+    + _movedParticlesOnDevice.getAllocatedBytes() + _fillersOnDevice.getAllocatedBytes()
+    + _movedValuesOnDevice.getAllocatedBytes();
+}
+
+/**
+ * Returns the position of the particle index on the host. After a kernel, download() precedes it.
+ */
+template <int NumberOfData>
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::particles::ParticleSet<NumberOfData>::getPosition(const int index) const {
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
+  ASSERTION(_hostValuesAreCurrent);
+  return tarch::la::Vector<DIMENSIONS, double>(_values.data() + static_cast<std::size_t>(index) * ValuesPerParticle);
+}
+
+/**
+ * Returns the data of the particle index on the host. After a kernel, download() precedes it.
+ */
+template <int NumberOfData>
+INLINE_METHOD const double*
+exahype2::particles::ParticleSet<NumberOfData>::getData(const int index) const {
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
+  ASSERTION(_hostValuesAreCurrent);
+  return _values.data() + static_cast<std::size_t>(index) * ValuesPerParticle + DIMENSIONS;
+}
+
+/**
+ * Returns the particle index on the host for writing. After a kernel, download() precedes it. The
+ * next upload() copies the host values to the device.
+ */
+template <int NumberOfData>
+INLINE_METHOD exahype2::particles::Particle
+exahype2::particles::ParticleSet<NumberOfData>::getParticle(const int index) {
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
+  ASSERTION(_hostValuesAreCurrent);
+  _deviceValuesAreCurrent = false;
+  return Particle{_values.data() + static_cast<std::size_t>(index) * ValuesPerParticle, NumberOfData};
+}
+
+template <int NumberOfData>
+INLINE_METHOD std::pair<int, int>
+exahype2::particles::ParticleSet<NumberOfData>::getNumber(const int index) const {
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
+  return {_numbers[static_cast<std::size_t>(index) * 2], _numbers[static_cast<std::size_t>(index) * 2 + 1]};
+}
+
+template <int NumberOfData>
+INLINE_METHOD int
+exahype2::particles::ParticleSet<NumberOfData>::getSlot(const int index) const {
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
+  return _slots[static_cast<std::size_t>(index)];
+}
+
+/**
+ * Returns the slot of the cell of this rank that contains position. Returns a negative value for a
+ * position outside the cells of this rank. Every axis picks its cell with
+ * exahype2::particles::getLatticeIndexOf().
+ */
+template <int NumberOfData>
+INLINE_METHOD int
+exahype2::particles::ParticleSet<NumberOfData>::getSlotAt(
+  const peano4::CellConnectivity&              cellConnectivity,
+  const tarch::la::Vector<DIMENSIONS, double>& position
+) {
+  if (cellConnectivity.getCells().isEmpty()) {
+    return -1;
+  }
+  const auto domainOffset = cellConnectivity.getDomainOffset();
+  for (int level = cellConnectivity.getMaximumLevel(); level >= cellConnectivity.getMinimumLevel(); level--) {
+    const int                          cellsPerAxis = peano4::power(peano4::SubdivisionFactor, level);
+    tarch::la::Vector<DIMENSIONS, int> lattice;
+    bool                               insideDomain = true;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const int index = exahype2::particles::getLatticeIndexOf(
+        position(axis),
+        domainOffset(axis),
+        cellConnectivity.getWidthOfLevel(level, axis),
+        cellsPerAxis
+      );
+      insideDomain  = insideDomain and index >= 0 and index < cellsPerAxis;
+      lattice(axis) = index;
+    }
+    if (not insideDomain) {
+      return -1;
+    }
+    const int slot = peano4::Spacetree::getInstance().getCellAt(level, lattice);
+    if (slot >= 0) {
+      return slot;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Appends one particle to the host arrays. The device copy is stale afterwards. The caller uploads
+ * everything or copies the appended tail.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::append(
+  const double* const values,
+  const int           number0,
+  const int           number1,
+  const int           slot
+) {
+  ASSERTION(slot >= 0, slot);
+  _values.insert(_values.end(), values, values + ValuesPerParticle);
+  _numbers.push_back(number0);
+  _numbers.push_back(number1);
+  _slots.push_back(slot);
+}
+
+/**
+ * Appends every candidate whose position lies in a cell of this rank. candidates stores
+ * ValuesPerParticle values per particle, the coordinates first. Every rank calls this function
+ * collectively.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::insert(
+  const peano4::CellConnectivity& cellConnectivity,
+  const std::vector<double>&      candidates
+) {
+  ASSERTION(candidates.size() % ValuesPerParticle == 0, candidates.size(), ValuesPerParticle);
+  download();
+  const auto& rank = tarch::mpi::Rank::getInstance();
+  for (std::size_t offset = 0; offset < candidates.size(); offset += ValuesPerParticle) {
+    const double* const values = candidates.data() + offset;
+    const int           slot   = getSlotAt(cellConnectivity, tarch::la::Vector<DIMENSIONS, double>(values));
+    if (slot >= 0) {
+      append(values, rank.getRank(), _nextNumber, slot);
+      _nextNumber++;
+    }
+  }
+  _deviceValuesAreCurrent          = false;
+  _deviceSlotsAreCurrent           = false;
+  const int localNumberOfParticles = getSize();
+  _globalNumberOfParticles         = localNumberOfParticles;
+  if (rank.getNumberOfRanks() > 1) {
+    tarch::mpi::allreduce(
+      &localNumberOfParticles,
+      &_globalNumberOfParticles,
+      1,
+      MPI_INT,
+      MPI_SUM,
+      rank.getCommunicator()
+    );
+  }
+  ASSERTION(_globalNumberOfParticles >= localNumberOfParticles, _globalNumberOfParticles, localNumberOfParticles);
+}
+
+/**
+ * Finds the cell of every particle again on the host and moves the particles that left their
+ * rank. Every rank calls it after a regrid. The whole set travels through the host.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::CellConnectivity& cellConnectivity) {
+  download();
+  std::vector<double> leavingValues;
+  std::vector<int>    leavingNumbers;
+  int                 kept = 0;
+  for (int index = 0; index < getSize(); index++) {
+    const auto offset = static_cast<std::size_t>(index) * ValuesPerParticle;
+    const int  slot   = getSlotAt(cellConnectivity, getPosition(index));
+    if (slot >= 0) {
+      if (kept != index) {
+        const auto target = static_cast<std::size_t>(kept) * ValuesPerParticle;
+        std::copy_n(
+          _values.begin() + static_cast<std::ptrdiff_t>(offset),
+          ValuesPerParticle,
+          _values.begin() + static_cast<std::ptrdiff_t>(target)
+        );
+        _numbers[static_cast<std::size_t>(kept) * 2]     = _numbers[static_cast<std::size_t>(index) * 2];
+        _numbers[static_cast<std::size_t>(kept) * 2 + 1] = _numbers[static_cast<std::size_t>(index) * 2 + 1];
+      }
+      _slots[static_cast<std::size_t>(kept)] = slot;
+      kept++;
+    } else {
+      leavingValues.insert(
+        leavingValues.end(),
+        _values.begin() + static_cast<std::ptrdiff_t>(offset),
+        _values.begin() + static_cast<std::ptrdiff_t>(offset + ValuesPerParticle)
+      );
+      leavingNumbers.push_back(_numbers[static_cast<std::size_t>(index) * 2]);
+      leavingNumbers.push_back(_numbers[static_cast<std::size_t>(index) * 2 + 1]);
+    }
+  }
+  _values.resize(static_cast<std::size_t>(kept) * ValuesPerParticle);
+  _numbers.resize(static_cast<std::size_t>(kept) * 2);
+  _slots.resize(static_cast<std::size_t>(kept));
+  _deviceValuesAreCurrent = false;
+  _deviceSlotsAreCurrent  = false;
+  placeParticles(cellConnectivity, leavingValues, leavingNumbers);
+}
+
+/**
+ * Moves the numberOfMovedParticles particles that a kernel marked with
+ * ParticleSetView::markAsMovedOutOfCell() into the cells that contain them, on this rank or on
+ * another one. Only the marked particles leave the device. Every rank calls it after every time
+ * step of a moving set, with zero for a rank without marked particles.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::relocateParticlesMovedOutOfCells(
+  const peano4::CellConnectivity& cellConnectivity,
+  const int                       numberOfMovedParticles
+) {
+  ASSERTION(numberOfMovedParticles >= 0 and numberOfMovedParticles <= getSize(), numberOfMovedParticles, getSize());
+  std::vector<double> leavingValues;
+  std::vector<int>    leavingNumbers;
+  if (numberOfMovedParticles > 0) {
+    takeMovedParticlesFromTheDevice(numberOfMovedParticles, leavingValues, leavingNumbers);
+  }
+  placeParticles(cellConnectivity, leavingValues, leavingNumbers);
+}
+
+/**
+ * Removes the marked particles from the device copy and writes their values into values and
+ * their numbers into numbers. A survivor from the tail of the arrays fills the entry of every
+ * removed particle, on the device through CompactParticlesMovedOutOfCells and in the host arrays
+ * alike. The device copy stays the current one.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::takeMovedParticlesFromTheDevice(
+  const int            numberOfMovedParticles,
+  std::vector<double>& values,
+  std::vector<int>&    numbers
+) {
+  ASSERTION(_deviceValuesAreCurrent and _deviceSlotsAreCurrent);
+  const int size = getSize();
+  const int kept = size - numberOfMovedParticles;
+  _slotsOnDevice.copyToHost(_slots.data(), _slots.size());
+
+  std::vector<int> movedParticles;
+  movedParticles.reserve(static_cast<std::size_t>(numberOfMovedParticles));
+  for (int index = 0; index < size; index++) {
+    if (_slots[static_cast<std::size_t>(index)] < 0) {
+      movedParticles.push_back(index);
+    }
+  }
+  ASSERTION(
+    static_cast<int>(movedParticles.size()) == numberOfMovedParticles,
+    movedParticles.size(),
+    numberOfMovedParticles
+  );
+
+  // A hole below kept takes the last survivor of the tail. The filler of a hole in the tail stays -1.
+  std::vector<int> fillers(static_cast<std::size_t>(numberOfMovedParticles), -1);
+  int              tail = size - 1;
+  for (std::size_t entry = 0; entry < movedParticles.size(); entry++) {
+    const int hole = movedParticles[entry];
+    numbers.push_back(_numbers[static_cast<std::size_t>(hole) * 2]);
+    numbers.push_back(_numbers[static_cast<std::size_t>(hole) * 2 + 1]);
+    if (hole >= kept) {
+      continue;
+    }
+    while (tail >= kept and _slots[static_cast<std::size_t>(tail)] < 0) {
+      tail--;
+    }
+    ASSERTION(tail >= kept, tail, kept, hole);
+    fillers[entry] = tail;
+    tail--;
+  }
+
+  // The three device arrays of the compaction grow with the largest count of moved particles and
+  // stay allocated. A later step with fewer moved particles reuses them.
+  const auto movedCount = static_cast<std::size_t>(numberOfMovedParticles);
+  if (_movedParticlesOnDevice.getSize() < movedCount) {
+    const std::size_t capacity = movedCount + movedCount / 2;
+    _movedParticlesOnDevice.allocate(capacity);
+    _fillersOnDevice.allocate(capacity);
+    _movedValuesOnDevice.allocate(capacity * ValuesPerParticle);
+  }
+  _movedParticlesOnDevice.copyFromHost(movedParticles.data(), movedCount);
+  _fillersOnDevice.copyFromHost(fillers.data(), movedCount);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(numberOfMovedParticles),
+    CompactParticlesMovedOutOfCells<NumberOfData>{
+      getView(),
+      _movedValuesOnDevice.getData(),
+      _movedParticlesOnDevice.getData(),
+      _fillersOnDevice.getData()
+    }
+  );
+  values.resize(movedCount * ValuesPerParticle);
+  _movedValuesOnDevice.copyToHost(values.data(), values.size());
+
+  for (std::size_t entry = 0; entry < movedParticles.size(); entry++) {
+    const int filler = fillers[entry];
+    if (filler < 0) {
+      continue;
+    }
+    const auto hole = static_cast<std::size_t>(movedParticles[entry]);
+    const auto from = static_cast<std::size_t>(filler);
+    std::copy_n(
+      _values.begin() + static_cast<std::ptrdiff_t>(from * ValuesPerParticle),
+      ValuesPerParticle,
+      _values.begin() + static_cast<std::ptrdiff_t>(hole * ValuesPerParticle)
+    );
+    _numbers[hole * 2]     = _numbers[from * 2];
+    _numbers[hole * 2 + 1] = _numbers[from * 2 + 1];
+    _slots[hole]           = _slots[from];
+  }
+  _values.resize(static_cast<std::size_t>(kept) * ValuesPerParticle);
+  _numbers.resize(static_cast<std::size_t>(kept) * 2);
+  _slots.resize(static_cast<std::size_t>(kept));
+}
+
+/**
+ * Appends the particles of values and numbers to the cells that contain them, at once for a cell on
+ * this rank and after an exchange with the other ranks otherwise. Every rank calls it at the same
+ * time. A particle outside the cells of every rank stops the run.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::placeParticles(
+  const peano4::CellConnectivity& cellConnectivity,
+  const std::vector<double>&      values,
+  const std::vector<int>&         numbers
+) {
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const int      numberOfRanks = rank.getNumberOfRanks();
+  const MPI_Comm communicator  = rank.getCommunicator();
+
+  std::vector<double> arrivalValues;
+  std::vector<int>    arrivalNumbers;
+  std::vector<int>    arrivalSlots;
+  std::vector<double> leavingValues;
+  std::vector<int>    leavingNumbers;
+  const int           numberOfCandidates = static_cast<int>(numbers.size() / 2);
+  for (int candidate = 0; candidate < numberOfCandidates; candidate++) {
+    const double* const candidateValues = values.data() + static_cast<std::size_t>(candidate) * ValuesPerParticle;
+    const int           slot = getSlotAt(cellConnectivity, tarch::la::Vector<DIMENSIONS, double>(candidateValues));
+    if (slot >= 0) {
+      arrivalValues.insert(arrivalValues.end(), candidateValues, candidateValues + ValuesPerParticle);
+      arrivalNumbers.push_back(numbers[static_cast<std::size_t>(candidate) * 2]);
+      arrivalNumbers.push_back(numbers[static_cast<std::size_t>(candidate) * 2 + 1]);
+      arrivalSlots.push_back(slot);
+    } else {
+      leavingValues.insert(leavingValues.end(), candidateValues, candidateValues + ValuesPerParticle);
+      leavingNumbers.push_back(numbers[static_cast<std::size_t>(candidate) * 2]);
+      leavingNumbers.push_back(numbers[static_cast<std::size_t>(candidate) * 2 + 1]);
+    }
+  }
+
+  const int localLeaving = static_cast<int>(leavingNumbers.size() / 2);
+  int       totalLeaving = localLeaving;
+  if (numberOfRanks > 1) {
+    tarch::mpi::allreduce(&localLeaving, &totalLeaving, 1, MPI_INT, MPI_SUM, communicator);
+  }
+  if (totalLeaving > 0) {
+    std::vector<int> leavingPerRank(static_cast<std::size_t>(numberOfRanks), localLeaving);
+    if (numberOfRanks > 1) {
+      tarch::mpi::allgather(&localLeaving, 1, MPI_INT, leavingPerRank.data(), 1, MPI_INT, communicator);
+    }
+    std::vector<double> allValues(static_cast<std::size_t>(totalLeaving) * ValuesPerParticle);
+    std::vector<int>    allNumbers(static_cast<std::size_t>(totalLeaving) * 2);
+    if (numberOfRanks > 1) {
+      std::vector<int> valueCounts(static_cast<std::size_t>(numberOfRanks));
+      std::vector<int> valueDisplacements(static_cast<std::size_t>(numberOfRanks));
+      std::vector<int> numberCounts(static_cast<std::size_t>(numberOfRanks));
+      std::vector<int> numberDisplacements(static_cast<std::size_t>(numberOfRanks));
+      int              valueDisplacement  = 0;
+      int              numberDisplacement = 0;
+      for (int other = 0; other < numberOfRanks; other++) {
+        const auto entry           = static_cast<std::size_t>(other);
+        valueCounts[entry]         = leavingPerRank[entry] * ValuesPerParticle;
+        valueDisplacements[entry]  = valueDisplacement;
+        numberCounts[entry]        = leavingPerRank[entry] * 2;
+        numberDisplacements[entry] = numberDisplacement;
+        valueDisplacement += valueCounts[entry];
+        numberDisplacement += numberCounts[entry];
+      }
+      tarch::mpi::allgatherv(
+        leavingValues.data(),
+        localLeaving * ValuesPerParticle,
+        MPI_DOUBLE,
+        allValues.data(),
+        valueCounts.data(),
+        valueDisplacements.data(),
+        MPI_DOUBLE,
+        communicator
+      );
+      tarch::mpi::allgatherv(
+        leavingNumbers.data(),
+        localLeaving * 2,
+        MPI_INT,
+        allNumbers.data(),
+        numberCounts.data(),
+        numberDisplacements.data(),
+        MPI_INT,
+        communicator
+      );
+    } else {
+      allValues  = leavingValues;
+      allNumbers = leavingNumbers;
+    }
+    int placed = 0;
+    for (int candidate = 0; candidate < totalLeaving; candidate++) {
+      const double* const candidateValues = allValues.data() + static_cast<std::size_t>(candidate) * ValuesPerParticle;
+      const int           slot = getSlotAt(cellConnectivity, tarch::la::Vector<DIMENSIONS, double>(candidateValues));
+      if (slot >= 0) {
+        arrivalValues.insert(arrivalValues.end(), candidateValues, candidateValues + ValuesPerParticle);
+        arrivalNumbers.push_back(allNumbers[static_cast<std::size_t>(candidate) * 2]);
+        arrivalNumbers.push_back(allNumbers[static_cast<std::size_t>(candidate) * 2 + 1]);
+        arrivalSlots.push_back(slot);
+        placed++;
+      }
+    }
+    int globalPlaced = placed;
+    if (numberOfRanks > 1) {
+      tarch::mpi::allreduce(&placed, &globalPlaced, 1, MPI_INT, MPI_SUM, communicator);
+    }
+    if (globalPlaced != totalLeaving) {
+      tarch::terminateWithError(
+        "Particles must stay inside the domain. " + std::to_string(totalLeaving - globalPlaced) + " of "
+        + std::to_string(totalLeaving) + " moving particles leave it."
+      );
+    }
+  }
+  appendArrivals(arrivalValues, arrivalNumbers, arrivalSlots);
+}
+
+/**
+ * Appends the arriving particles. While the device copy is the current one and has room, only
+ * the appended tail travels to the device. Otherwise the host arrays grow and the next upload()
+ * copies everything.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::appendArrivals(
+  const std::vector<double>& values,
+  const std::vector<int>&    numbers,
+  const std::vector<int>&    slots
+) {
+  const int arrivals = static_cast<int>(slots.size());
+  ASSERTION(values.size() == slots.size() * ValuesPerParticle, values.size(), slots.size());
+  ASSERTION(numbers.size() == slots.size() * 2, numbers.size(), slots.size());
+  if (arrivals == 0) {
+    return;
+  }
+  const auto oldSize  = static_cast<std::size_t>(getSize());
+  const auto newSize  = oldSize + static_cast<std::size_t>(arrivals);
+  const bool tailOnly = _deviceValuesAreCurrent and _deviceSlotsAreCurrent
+    and _valuesOnDevice.getSize() >= newSize * ValuesPerParticle and _slotsOnDevice.getSize() >= newSize;
+  if (not tailOnly) {
+    download();
+  }
+  for (int arrival = 0; arrival < arrivals; arrival++) {
+    const auto entry = static_cast<std::size_t>(arrival);
+    append(values.data() + entry * ValuesPerParticle, numbers[entry * 2], numbers[entry * 2 + 1], slots[entry]);
+  }
+  if (tailOnly) {
+    tarch::copyTo(
+      _valuesOnDevice.getData() + oldSize * ValuesPerParticle,
+      values.data(),
+      values.size(),
+      tarch::MemoryLocation::Device
+    );
+    tarch::copyTo(_slotsOnDevice.getData() + oldSize, slots.data(), slots.size(), tarch::MemoryLocation::Device);
+  } else {
+    _deviceValuesAreCurrent = false;
+    _deviceSlotsAreCurrent  = false;
+  }
+}
+
+/**
+ * Copies the host values and slots to the device copy when they changed on the host since the
+ * last upload. A device copy that has to grow gets room for half as many particles again. The
+ * arrivals of the following relocations then append in place.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::upload() {
+  if (_valuesOnDevice.getSize() < _values.size() or _slotsOnDevice.getSize() < _slots.size()) {
+    const auto capacity = std::max(static_cast<std::size_t>(MinimumDeviceCapacity), _slots.size() + _slots.size() / 2);
+    _valuesOnDevice.allocate(capacity * ValuesPerParticle);
+    _slotsOnDevice.allocate(capacity);
+    _deviceValuesAreCurrent = false;
+    _deviceSlotsAreCurrent  = false;
+  }
+  if (not _deviceValuesAreCurrent) {
+    ASSERTION(_hostValuesAreCurrent);
+    _valuesOnDevice.copyFromHost(_values.data(), _values.size());
+    _deviceValuesAreCurrent = true;
+  }
+  if (not _deviceSlotsAreCurrent) {
+    _slotsOnDevice.copyFromHost(_slots.data(), _slots.size());
+    _deviceSlotsAreCurrent = true;
+  }
+}
+
+/**
+ * Copies the values a kernel wrote since the last download back to the host array.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::download() {
+  if (_hostValuesAreCurrent) {
+    return;
+  }
+  ASSERTION(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());
+  _valuesOnDevice.copyToHost(_values.data(), _values.size());
+  _hostValuesAreCurrent = true;
+}
+
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::ParticleSet<NumberOfData>::release() {
+  _values.clear();
+  _values.shrink_to_fit();
+  _numbers.clear();
+  _numbers.shrink_to_fit();
+  _slots.clear();
+  _slots.shrink_to_fit();
+  _globalNumberOfParticles = 0;
+  _valuesOnDevice.release();
+  _slotsOnDevice.release();
+  _movedParticlesOnDevice.release();
+  _fillersOnDevice.release();
+  _movedValuesOnDevice.release();
+  _hostValuesAreCurrent   = true;
+  _deviceValuesAreCurrent = false;
+  _deviceSlotsAreCurrent  = false;
+}
+
+/**
+ * Returns the device copy for a kernel that writes it. upload() precedes it. The host values stay
+ * stale until the next download().
+ */
+template <int NumberOfData>
+INLINE_METHOD exahype2::particles::ParticleSetView<NumberOfData>
+exahype2::particles::ParticleSet<NumberOfData>::getView() {
+  ASSERTION(_deviceValuesAreCurrent and _deviceSlotsAreCurrent);
+  ASSERTION(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());
+  ASSERTION(_slotsOnDevice.getSize() >= _slots.size(), _slotsOnDevice.getSize(), _slots.size());
+  _hostValuesAreCurrent = false;
+  return ParticleSetView<NumberOfData>{getSize(), _valuesOnDevice.getData(), _slotsOnDevice.getData()};
+}

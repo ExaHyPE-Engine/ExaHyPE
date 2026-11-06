@@ -8,27 +8,32 @@
 
 #include <Kokkos_Core.hpp>
 
-void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void*
+tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   void* data = Kokkos::kokkos_malloc<Kokkos::DefaultExecutionSpace::memory_space>(sizeInBytes);
-  assertion(data);
+  ASSERTION(data);
   return data;
 }
 
-void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void*
+tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   void* data = Kokkos::kokkos_malloc<Kokkos::SharedHostPinnedSpace>(sizeInBytes);
-  assertion(data);
+  ASSERTION(data);
   return data;
 }
 
-void tarch::accelerator::freeDeviceMemory(void* data, [[maybe_unused]] int device) {
+void
+tarch::accelerator::freeDeviceMemory(void* data, [[maybe_unused]] int device) {
   Kokkos::kokkos_free<Kokkos::DefaultExecutionSpace::memory_space>(data);
 }
 
-void tarch::accelerator::freePinnedMemory(void* data, [[maybe_unused]] int device) {
+void
+tarch::accelerator::freePinnedMemory(void* data, [[maybe_unused]] int device) {
   Kokkos::kokkos_free<Kokkos::SharedHostPinnedSpace>(data);
 }
 
-void tarch::accelerator::copyToDeviceMemory(
+void
+tarch::accelerator::copyToDeviceMemory(
   void*                target,
   const void*          source,
   std::size_t          sizeInBytes,
@@ -44,7 +49,8 @@ void tarch::accelerator::copyToDeviceMemory(
   Kokkos::deep_copy(dstView, srcView);
 }
 
-void tarch::accelerator::copyToPinnedMemory(
+void
+tarch::accelerator::copyToPinnedMemory(
   void*                target,
   const void*          source,
   std::size_t          sizeInBytes,
@@ -53,14 +59,18 @@ void tarch::accelerator::copyToPinnedMemory(
   std::memcpy(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::copyFromDeviceMemory(
+void
+tarch::accelerator::copyFromDeviceMemory(
   const void*          source,
   void*                target,
   std::size_t          sizeInBytes,
   [[maybe_unused]] int device
 ) {
-  using SrcViewType = Kokkos::
-    View<const unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using SrcViewType = Kokkos::View<
+    const unsigned char*,
+    Kokkos::DefaultExecutionSpace::memory_space,
+    Kokkos::MemoryTraits<Kokkos::Unmanaged>
+  >;
   SrcViewType srcView(static_cast<const unsigned char*>(source), sizeInBytes);
 
   using DstViewType = Kokkos::View<unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
@@ -69,13 +79,22 @@ void tarch::accelerator::copyFromDeviceMemory(
   Kokkos::deep_copy(dstView, srcView);
 }
 
-void tarch::accelerator::copyFromPinnedMemory(
+void
+tarch::accelerator::copyFromPinnedMemory(
   const void*          source,
   void*                target,
   std::size_t          sizeInBytes,
   [[maybe_unused]] int device
 ) {
   std::memcpy(target, source, sizeInBytes);
+}
+
+/**
+ * Blocks until every Kokkos execution space has completed its work.
+ */
+void
+tarch::accelerator::waitForDevice() {
+  Kokkos::fence();
 }
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_KOKKOS)

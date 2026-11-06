@@ -2,7 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .scenario import Scenario
 
-import os, sys
+import os
+import sys
 
 sys.path.insert(0, os.path.abspath("../equations"))
 from equations import NavierStokes
@@ -20,7 +21,7 @@ class NavierStokesTaylorGreenVortex(Scenario):
     """
 
     _dimensions = 2
-    _offset = 0.0
+    _offset = -math.pi
     _domain_size = 2 * math.pi
     _periodic_bc = True
     _end_time = 10.0
@@ -30,12 +31,11 @@ class NavierStokesTaylorGreenVortex(Scenario):
         use_advection=False,
         use_background_state=False,
         use_gravity=False,
-        use_viscosity=True,
         gamma=1.4,
         cv=1.0,
         gas_constant=0.4,
         reference_viscosity=0.1,
-        Pr=0.7,
+        prandtl_number=0.7,
     )
 
     def __init__(self):
@@ -44,21 +44,21 @@ class NavierStokesTaylorGreenVortex(Scenario):
     def analytical_solution(self):
         return (
             """
-    constexpr auto gamma = 1.4;
-    constexpr auto q0 = 0;
-    constexpr auto referenceViscosity = 0.1;
-    const double Ft = std::exp(-2 * referenceViscosity * t);
+    constexpr auto AdiabaticIndex = 1.4;
+    constexpr auto HeatRelease = 0;
+    constexpr auto ReferenceViscosity = 0.1;
+    const double decayFactor = std::exp(-2 * ReferenceViscosity * t);
 
     const double rho = 1;
     solution[Shortcuts::rho] = rho;
-    solution[Shortcuts::j+0] = std::sin(x[0]) * std::cos(x[1]) * Ft;
-    solution[Shortcuts::j+1] = -1 * std::cos(x[0]) * std::sin(x[1]) * Ft;
+    solution[Shortcuts::j+0] = std::sin(x[0]) * std::cos(x[1]) * decayFactor;
+    solution[Shortcuts::j+1] = -1 * std::cos(x[0]) * std::sin(x[1]) * decayFactor;
 
-    const double p_0 = 100. / gamma;
-    const double pressure = p_0 + ((rho * Ft * Ft) / 4) *
-                                      (std::cos(2 * x[0]) + std::cos(2 * x[1]));
-    auto j = &solution[Shortcuts::j];
-    auto Z = 0;
+    const double meanPressure = 100. / AdiabaticIndex;
+    const double pressure =
+      meanPressure + ((rho * decayFactor * decayFactor) / 4) * (std::cos(2 * x[0]) + std::cos(2 * x[1]));
+    const auto* const j = &solution[Shortcuts::j];
+    const auto Z = 0;
     """
             + self._equation.evaluate_energy()
             + """
@@ -68,6 +68,6 @@ class NavierStokesTaylorGreenVortex(Scenario):
 
     def initial_conditions(self):
         return """
-    double t = 0.;
-    auto solution = Q;
+    const double t = 0.;
+    auto* const solution = Q;
 """ + self.analytical_solution()

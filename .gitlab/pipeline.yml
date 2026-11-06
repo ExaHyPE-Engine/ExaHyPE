@@ -1,0 +1,40 @@
+include:
+  - local: .gitlab/templates.yml
+  - local: .gitlab/build.yml
+  - local: .gitlab/test.yml
+  - local: .gitlab/application.yml
+
+stages:
+  - Build
+  - Test
+  - Application
+
+workflow:
+  name: "$TOOLCHAIN: [$BUILD_MODE, $SPACE_FILLING_CURVE]"
+  rules:
+    - if: $SPACE_FILLING_CURVE == "Peano"
+      variables:
+        MIN_GRID_LEVELS: "$MIN_GRID_LEVELS_PEANO"
+        MAX_GRID_LEVELS: "$MAX_GRID_LEVELS_PEANO"
+    - if: $SPACE_FILLING_CURVE == "Hilbert"
+      variables:
+        MIN_GRID_LEVELS: "$MIN_GRID_LEVELS_HILBERT"
+        MAX_GRID_LEVELS: "$MAX_GRID_LEVELS_HILBERT"
+
+default:
+  interruptible: true
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - scheduler_failure
+      - api_failure
+      - stuck_or_timeout_failure
+  hooks:
+    # The shell executor reuses one build directory. A cancelled job leaves the
+    # configuration lock file of Git behind. The hook deletes the lock before the
+    # next job fetches the sources.
+    pre_get_sources_script:
+      - rm -f "${CI_PROJECT_DIR}.tmp/.gitlab-runner.ext.conf.lock" 2>/dev/null || true
+  tags: !reference [".Tags", "tags"]
+  before_script: !reference [".BeforeScriptSanitiser", "before_script"]

@@ -9,19 +9,23 @@
 #include <hip/hip_runtime.h>
 
 namespace tarch::accelerator {
-  hipStream_t deviceStreamCreate();
-  void        deviceStreamDestroy(hipStream_t* stream);
-  void        deviceStreamSync(hipStream_t stream);
+  void setDeviceStream(hipStream_t stream);
+  hipStream_t getDeviceStream();
 
-  void        deviceStreamSet(hipStream_t stream);
-  hipStream_t deviceStreamGet();
-
-  // HipTeam carries no state: The team overloads read threadIdx and blockDim directly.
-  struct HipTeam final {};
+  // The team overloads read threadIdx and blockDim. The scratch is the shared memory of the block.
+  struct HipTeam final {
+    unsigned char* scratch{nullptr};
+  };
   using TeamHandle = HipTeam;
 
   inline constexpr int HipBlockSize         = 256;
   inline constexpr int HipMaxNumberOfBlocks = 65535;
+  inline constexpr int ThreadsPerWarp       = 64;
+  // A team launch runs one block per team of at most HipBlockSize threads with at most
+  // TeamScratchBytes of shared memory. A launch with TeamRange::BackendDefault runs
+  // DefaultThreadsPerTeam threads.
+  inline constexpr int DefaultThreadsPerTeam = HipBlockSize;
+  inline constexpr int TeamScratchBytes      = 16384;
 } // namespace tarch::accelerator
 
 #endif

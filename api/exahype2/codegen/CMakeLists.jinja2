@@ -21,6 +21,8 @@ if(NOT DEFINED CMAKE_Fortran_COMPILER)
 endif()
 {% endif -%}
 
+# CMAKE_NOT_USING_CONFIG_FLAGS stops CMake from caching flags for its predefined build types.
+set(CMAKE_NOT_USING_CONFIG_FLAGS TRUE)
 project({{EXECUTABLENAME}}
   LANGUAGES
     C
@@ -39,6 +41,9 @@ find_package(Peano CONFIG REQUIRED)
 # Parallel HDF5 requests MPI bindings for every enabled language, so resolve Peano's C and C++
 # dependencies before enabling Fortran.
 enable_language(Fortran)
+if(IPO_SUPPORTED)
+  check_ipo_supported(RESULT IPO_SUPPORTED LANGUAGES Fortran)
+endif()
 {% endif -%}
 
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")

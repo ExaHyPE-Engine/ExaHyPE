@@ -50,11 +50,10 @@ boundary_conditions = """
 refinement_criterion = f"""
   return ::exahype2::refineOnDetail(
     Q,
-    DGOrder + 1,
+    Quadrature<double>::getQuadraturePoints1D(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     2.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    kernels::ADERDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) {{ return values[Shortcuts::rho]; }},
     [](const double* const values) {{
       constexpr double Gamma = {gamma};

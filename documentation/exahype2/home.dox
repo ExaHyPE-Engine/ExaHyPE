@@ -25,6 +25,7 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_numerics
   - \subpage page_solvers
   - Core functionality, numerics and ingredients
+    - \subpage page_exahype2_time_step
     - \subpage page_exahype2_blockstructured
     - \subpage page_exahype_tracer
     - \subpage page_exahype_boundary_conditions
@@ -82,10 +83,10 @@ This Python script yields a native Peano application (builder mechanism) which t
 
 <div style="display: flex;">
     <div style="flex: 1;">
-        @image html documentation/Excalibur-logo.png
+        @image html documentation/logos/ExCALIBUR.png
     </div>
     <div style="flex: 1;">
-        @image html documentation/EU-logo.png
+        @image html documentation/logos/EU.png
     </div>
 </div>
 

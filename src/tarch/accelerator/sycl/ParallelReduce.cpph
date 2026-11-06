@@ -3,21 +3,21 @@
 
 namespace tarch::accelerator {
   template <typename T>
-  inline auto syclOp([[maybe_unused]] const Max<T> reducer) {
+  INLINE_METHOD auto getSYCLOperator([[maybe_unused]] const Max<T> reducer) {
     return ::sycl::maximum<T>{};
   }
   template <typename T>
-  inline auto syclOp([[maybe_unused]] const Min<T> reducer) {
+  INLINE_METHOD auto getSYCLOperator([[maybe_unused]] const Min<T> reducer) {
     return ::sycl::minimum<T>{};
   }
   template <typename T>
-  inline auto syclOp([[maybe_unused]] const Sum<T> reducer) {
+  INLINE_METHOD auto getSYCLOperator([[maybe_unused]] const Sum<T> reducer) {
     return ::sycl::plus<T>{};
   }
 
   template <typename Op>
   struct SyclCombine final {
-    GPU_CALLABLE_METHOD typename Op::ValueType operator()(
+    INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType operator()(
       const typename Op::ValueType& left,
       const typename Op::ValueType& right
     ) const {
@@ -26,12 +26,32 @@ namespace tarch::accelerator {
   };
 
   template <typename Op>
-  inline auto syclOp([[maybe_unused]] const Custom<Op> reducer) {
+  INLINE_METHOD auto getSYCLOperator([[maybe_unused]] const Custom<Op> reducer) {
     return SyclCombine<Op>{};
   }
 
+  /**
+   * Combines the partial value of every work item of the team into the target of the reducer.
+   */
+  template <typename Reducer>
+  INLINE_METHOD GPU_CALLABLE_METHOD void reduceOverTeam(
+    const SyclTeam&                   team,
+    const typename Reducer::ValueType threadValue,
+    const Reducer                     reducer
+  ) {
+    const typename Reducer::ValueType groupResult = tarch::accelerator::reduceTeamValue(team, threadValue, reducer);
+    if (team.item.get_local_id(0) == 0) {
+      reducer.target = Reducer::combine(reducer.target, groupResult);
+    }
+  }
+
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const SyclTeam& team, const Range& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(
+    const SyclTeam& team,
+    const Range&    range,
+    const Functor   functor,
+    const Reducer   reducer
+  ) {
     typename Reducer::ValueType threadAccumulator = Reducer::identity();
     const int                   localIndex        = static_cast<int>(team.item.get_local_id(0));
     const int                   localSize         = static_cast<int>(team.item.get_local_range(0));
@@ -45,7 +65,7 @@ namespace tarch::accelerator {
     }
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     const SyclTeam&   team,
     const RangeMD<2>& range,
     const Functor     functor,
@@ -66,7 +86,7 @@ namespace tarch::accelerator {
     }
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     const SyclTeam&   team,
     const RangeMD<3>& range,
     const Functor     functor,
@@ -89,19 +109,20 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
     using ValueType = typename Reducer::ValueType;
     auto& queue =
       *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
-    ValueType* const deviceTarget = ::sycl::malloc_shared<ValueType>(1, queue);
-    *deviceTarget                 = reducer.target;
+    tarch::accelerator::lockReductionScratch(sizeof(ValueType));
+    auto* const deviceTarget = static_cast<ValueType*>(tarch::accelerator::getReductionStaging(sizeof(ValueType)));
+    *deviceTarget            = reducer.target;
     queue
       .submit([&](::sycl::handler& handler) {
-        auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::syclOp(reducer));
+        auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::getSYCLOperator(reducer));
         handler.parallel_for(::sycl::range<1>(range.n), reduction, [=](const ::sycl::id<1> itemId, auto& accumulator) {
           ValueType threadAccumulator = Reducer::identity();
           functor(static_cast<int>(itemId[0]), threadAccumulator);
@@ -110,13 +131,13 @@ namespace tarch::accelerator {
       })
       .wait();
     reducer.target = *deviceTarget;
-    ::sycl::free(deviceTarget, queue);
+    tarch::accelerator::unlockReductionScratch();
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     const int extentY = range.n[1];
     tarch::accelerator::parallelReduce(
       Range(range.n[0] * range.n[1]),
@@ -127,10 +148,10 @@ namespace tarch::accelerator {
     );
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     const int extentY = range.n[1];
     const int extentZ = range.n[2];
     tarch::accelerator::parallelReduce(
@@ -143,68 +164,96 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
     using ValueType = typename Reducer::ValueType;
+    static_assert(
+      std::is_trivially_copyable_v<Functor>,
+      "The SYCL backend supports team reductions with trivially copyable functors only."
+    );
     auto& queue =
       *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
-    ValueType* const deviceTarget = ::sycl::malloc_shared<ValueType>(1, queue);
-    *deviceTarget                 = reducer.target;
-    const ::sycl::nd_range<1> groupedRange(
-      ::sycl::range<1>(range.n * tarch::accelerator::SyclLocalSize),
-      ::sycl::range<1>(tarch::accelerator::SyclLocalSize)
+    // AdaptiveCpp outlines a large kernel body and copies the kernel arguments into the stack of every
+    // work item. The kernel therefore receives the address of a copy of the functor in device memory.
+    constexpr std::size_t TeamValuesOffset =
+      (sizeof(Functor) + alignof(ValueType) - 1) / alignof(ValueType) * alignof(ValueType);
+    auto* const deviceScratch = static_cast<unsigned char*>(
+      tarch::accelerator::lockReductionScratch(TeamValuesOffset + static_cast<std::size_t>(range.n) * sizeof(ValueType))
     );
+    auto* const functorOnDevice = reinterpret_cast<Functor*>(deviceScratch);
+    auto* const teamValues      = reinterpret_cast<ValueType*>(deviceScratch + TeamValuesOffset);
+    auto* const deviceTarget    = static_cast<ValueType*>(tarch::accelerator::getReductionStaging(sizeof(ValueType)));
+    *deviceTarget               = reducer.target;
+    const ::sycl::event       functorCopied = queue.memcpy(functorOnDevice, &functor, sizeof(Functor));
+    const int                 threads       = tarch::accelerator::getTeamThreads(range.threads);
+    const ::sycl::nd_range<1> groupedRange(::sycl::range<1>(range.n * threads), ::sycl::range<1>(threads));
+    // A custom team reduction writes one value per work item into the team scratch.
+    const int partialWords = static_cast<int>(
+      (static_cast<std::size_t>(threads) * sizeof(ValueType) + sizeof(std::uint64_t) - 1) / sizeof(std::uint64_t)
+    );
+    const int scratchWords = std::max(tarch::accelerator::getTeamScratchWords(range.scratchBytes), partialWords);
+    // A reduction of AdaptiveCpp combines the values of its work groups correctly only for work groups
+    // whose size is a power of two. reduceOverTeam() combines the value of a team into the accumulator
+    // of its first work item.
+    const ::sycl::event teamsReduced = queue.submit([&](::sycl::handler& handler) {
+      handler.depends_on(functorCopied);
+      const ::sycl::local_accessor<std::uint64_t, 1> scratch(::sycl::range<1>(scratchWords), handler);
+      handler.parallel_for(groupedRange, [=](const ::sycl::nd_item<1> item) {
+        ValueType threadAccumulator = Reducer::identity();
+        (*functorOnDevice)(
+          static_cast<int>(item.get_group(0)),
+          tarch::accelerator::SyclTeam{item, reinterpret_cast<unsigned char*>(&scratch[0])},
+          threadAccumulator
+        );
+        if (item.get_local_id(0) == 0) {
+          teamValues[item.get_group(0)] = threadAccumulator;
+        }
+      });
+    });
     queue
       .submit([&](::sycl::handler& handler) {
-        auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::syclOp(reducer));
-        const ::sycl::local_accessor<std::uint64_t, 1> scratch(
-          ::sycl::range<1>(tarch::accelerator::SyclTeamScratchBytes / sizeof(std::uint64_t)),
-          handler
-        );
-        handler.parallel_for(groupedRange, reduction, [=](const ::sycl::nd_item<1> item, auto& accumulator) {
-          ValueType threadAccumulator = Reducer::identity();
-          functor(
-            static_cast<int>(item.get_group(0)),
-            tarch::accelerator::SyclTeam{item, reinterpret_cast<unsigned char*>(&scratch[0])},
-            threadAccumulator
-          );
-          accumulator.combine(threadAccumulator);
+        handler.depends_on(teamsReduced);
+        auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::getSYCLOperator(reducer));
+        handler.parallel_for(::sycl::range<1>(range.n), reduction, [=](const ::sycl::id<1> team, auto& accumulator) {
+          accumulator.combine(teamValues[team[0]]);
         });
       })
       .wait();
     reducer.target = *deviceTarget;
-    ::sycl::free(deviceTarget, queue);
+    tarch::accelerator::unlockReductionScratch();
   }
 } // namespace tarch::accelerator
 
 template <typename Reducer>
-INLINE_METHOD GPU_CALLABLE_METHOD typename Reducer::ValueType tarch::accelerator::reduceTeamValue(
+INLINE_METHOD GPU_CALLABLE_METHOD typename Reducer::ValueType
+tarch::accelerator::reduceTeamValue(
   const tarch::accelerator::SyclTeam& team,
   const typename Reducer::ValueType   value,
   const Reducer                       reducer
 ) {
-  return ::sycl::reduce_over_group(team.item.get_group(), value, tarch::accelerator::syclOp(reducer));
+  return ::sycl::reduce_over_group(team.item.get_group(), value, tarch::accelerator::getSYCLOperator(reducer));
 }
 
 /**
- * Combines the values of all work items through the team scratch, since SYCL's group algorithms
+ * Combines the values of all work items through the team scratch. The group algorithms of SYCL
  * take arithmetic types only.
  */
 template <typename Op>
-INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType tarch::accelerator::reduceTeamValue(
+INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType
+tarch::accelerator::reduceTeamValue(
   const tarch::accelerator::SyclTeam&                   team,
   const typename Op::ValueType                          value,
   [[maybe_unused]] const tarch::accelerator::Custom<Op> reducer
 ) {
   using ValueType = typename Op::ValueType;
   static_assert(
-    sizeof(ValueType) * tarch::accelerator::SyclLocalSize <= tarch::accelerator::SyclTeamScratchBytes,
-    "The custom value exceeds the team scratch."
+    sizeof(ValueType) * tarch::accelerator::SyclLocalSize <= tarch::accelerator::TeamScratchBytes,
+    "A team reduction of the SYCL backend supports values of at most 64 bytes."
   );
-  static_assert(alignof(ValueType) <= alignof(std::uint64_t), "The team scratch aligns to eight bytes.");
+  static_assert(alignof(ValueType) <= alignof(std::uint64_t), "A reduction value must align to 8 bytes or less.");
   ValueType* const partials   = reinterpret_cast<ValueType*>(team.scratch);
   const auto       group      = team.item.get_group();
   const int        localIndex = static_cast<int>(team.item.get_local_id(0));

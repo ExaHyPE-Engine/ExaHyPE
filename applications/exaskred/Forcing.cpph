@@ -1,0 +1,44 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
+/**
+ * Returns the Coriolis parameter of a sphere that rotates with angularVelocity at latitudeInDegrees.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::forcing::getCoriolisParameterOnSphere(
+  const double latitudeInDegrees,
+  const double angularVelocity
+) {
+  ASSERTION(latitudeInDegrees >= -90.0 and latitudeInDegrees <= 90.0, latitudeInDegrees);
+  return 2.0 * angularVelocity * std::sin(std::numbers::pi_v<double> * latitudeInDegrees / 180.0);
+}
+
+/**
+ * Returns the Manning bed drag as the rate that multiplies the momentum.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::forcing::getManningFriction(
+  const double waterHeight,
+  const double momentumX,
+  const double momentumY,
+  const double gravity,
+  const double manningCoefficient,
+  const double minimumWaterHeight
+) {
+  ASSERTION(gravity >= 0.0, gravity);
+  ASSERTION(manningCoefficient >= 0.0, manningCoefficient);
+  ASSERTION(minimumWaterHeight >= 0.0, minimumWaterHeight);
+  if (not std::isfinite(waterHeight) or waterHeight <= minimumWaterHeight) {
+    return 0.0;
+  }
+  const double momentumMagnitude = std::hypot(momentumX, momentumY);
+  if (not std::isfinite(momentumMagnitude)) {
+    return 0.0;
+  }
+  const double heightToSevenThirds = waterHeight * waterHeight * std::cbrt(waterHeight);
+  return -gravity * manningCoefficient * manningCoefficient * momentumMagnitude / heightToSevenThirds;
+}
+TARGET_DECLARE_END

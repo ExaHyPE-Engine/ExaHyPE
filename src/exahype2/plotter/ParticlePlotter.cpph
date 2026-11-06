@@ -1,64 +1,76 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-/**
- * Returns whether the vertex sits on an upper wall of a periodic domain.
- */
-INLINE_METHOD bool exahype2::plotter::isAtUpperPeriodicBoundary(
-  const peano4::dataview::VertexMarker&        marker,
-  const std::bitset<DIMENSIONS>&               periodicBoundaries,
-  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-  const tarch::la::Vector<DIMENSIONS, double>& domainWidth
-) {
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    if (periodicBoundaries[axis] and tarch::la::equals(marker.getX()(axis), domainOffset(axis) + domainWidth(axis))) {
-      return true;
-    }
-  }
-  return false;
+#include "tarch/Assertions.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/plotter/CellTypes.h"
+#include "tarch/plotter/FileWriter.h"
+
+INLINE_METHOD
+exahype2::plotter::ParticlePlotter::ParticlePlotter(std::string filename) :
+  _filename(std::move(filename)) {
+  ASSERTION(not _filename.empty());
 }
 
 /**
- * Returns the plotter of the attribute at this position in the list the plotter opened with.
+ * Writes one snapshot of the particles of every rank in the order of their numbers. Particles has
+ * the interface of exahype2::particles::ParticleSet. Every rank calls this function collectively.
  */
-INLINE_METHOD tarch::plotter::FileWriter::CellDataPlotter& exahype2::plotter::ParticlePlotter::getAttributePlotter(
-  const int index
+template <typename Particles>
+INLINE_METHOD void
+exahype2::plotter::ParticlePlotter::plot(
+  Particles&                   particles,
+  const double                 timeStamp,
+  const tarch::plotter::Format format,
+  const std::string&           outputDirectory
 ) {
-  assertion(index >= 0, index);
-  assertion(index < static_cast<int>(_attributePlotters.size()), index, _attributePlotters.size());
-  assertion(_attributePlotters[index]);
-  return *_attributePlotters[index];
-}
+  using Values               = tarch::plotter::MeshArray<double>;
+  constexpr int NumberOfData = Particles::ValuesPerParticle - DIMENSIONS;
+  static_assert(NumberOfData >= 0);
+  particles.download();
+  const auto numberOfParticles = static_cast<std::size_t>(particles.getSize());
+  const int  rank              = tarch::mpi::Rank::getInstance().getRank();
 
-/**
- * Plots the local particles of one vertex and lets the caller write their attributes. The visit
- * at an upper periodic wall skips the vertex, so every particle appears once.
- */
-template <typename ParticleSet, typename AttributePlots>
-INLINE_METHOD void exahype2::plotter::ParticlePlotter::plotParticles(
-  const peano4::dataview::VertexMarker&        marker,
-  ParticleSet&                                 particles,
-  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-  const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
-  const std::bitset<DIMENSIONS>&               periodicBoundaries,
-  AttributePlots                               attributePlots
-) {
-  assertion(_piece.isOpen());
-
-  if (periodicBoundaries.any() and isAtUpperPeriodicBoundary(marker, periodicBoundaries, domainOffset, domainWidth)) {
-    return;
+  tarch::plotter::Mesh mesh;
+  mesh.pointsXYZ.assign(numberOfParticles * 3, 0.0);
+  mesh.connectivity.resize(numberOfParticles);
+  mesh.offsets.resize(numberOfParticles);
+  mesh.types.assign(numberOfParticles, static_cast<std::uint8_t>(tarch::plotter::CellType::Vertex));
+  mesh.cellFields.push_back({"Number", 2, Values(numberOfParticles * 2)});
+  if constexpr (NumberOfData > 0) {
+    mesh.cellFields.push_back({"Data", NumberOfData, Values(numberOfParticles * NumberOfData)});
   }
+  mesh.cellFields.push_back({"RefinementLevel", 1, Values(numberOfParticles, 1.0)});
+  mesh.cellFields.push_back({"Subdomain", 1, Values(numberOfParticles, static_cast<double>(rank))});
 
-  using Particle                           = typename ParticleSet::DoFType;
-  constexpr int RefinementLevelOfParticles = 1;
+  std::vector<int> order(numberOfParticles);
+  std::iota(order.begin(), order.end(), 0);
+  std::sort(order.begin(), order.end(), [&particles](const int left, const int right) {
+    return particles.getNumber(left) < particles.getNumber(right);
+  });
+  for (std::size_t particle = 0; particle < numberOfParticles; particle++) {
+    const int  index    = order[particle];
+    const auto position = particles.getPosition(index);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      mesh.pointsXYZ[particle * 3 + static_cast<std::size_t>(axis)] = position(axis);
+    }
+    mesh.connectivity[particle] = static_cast<std::int32_t>(particle);
+    mesh.offsets[particle]      = static_cast<std::int32_t>(particle + 1);
 
-  for (auto* const particle : particles) {
-    if (particle->getParallelState() == Particle::ParallelState::Local) {
-      const int vertexIndex = _piece.plotVertex(particle->getX());
-      const int cellIndex   = _piece.plotPoint(vertexIndex);
-
-      _piece.plotCellMarkers(cellIndex, RefinementLevelOfParticles);
-      attributePlots(cellIndex, particle);
+    const auto number                           = particles.getNumber(index);
+    mesh.cellFields[0].values[particle * 2]     = static_cast<double>(number.first);
+    mesh.cellFields[0].values[particle * 2 + 1] = static_cast<double>(number.second);
+    if constexpr (NumberOfData > 0) {
+      const double* const data = particles.getData(index);
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        mesh.cellFields[1].values[particle * NumberOfData + static_cast<std::size_t>(entry)] = data[entry];
+      }
     }
   }
+
+  if (_fileWriter == nullptr) {
+    _fileWriter = tarch::plotter::createFileWriter(format);
+  }
+  ASSERTION(_fileWriter->getFormat() == format);
+  _fileWriter->write(mesh, outputDirectory + OutputSubdirectory, _filename, timeStamp);
 }

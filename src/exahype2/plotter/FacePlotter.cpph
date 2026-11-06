@@ -1,94 +1,135 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "peano4/CellConnectivity.h"
+#include "peano4/Constants.h"
+#include "peano4/Loop.h"
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/ChunkedMemoryPool.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/plotter/CellTypes.h"
+#include "tarch/plotter/FileWriter.h"
+
 /**
- * Plots the points of one face and connects the neighbouring points to plot cells.
+ * Writes one snapshot of every face for which plotsFace(faceCentre, cellWidth, normal) is true.
+ * The chunk of a face in values stores the half of the lower cell before the half of the upper
+ * cell, each with ValuesPerNode values per face node and the lower tangential axis fastest. Every
+ * rank calls this function collectively.
  */
-template <int PointsPerAxis, int UnknownsPerPoint, typename Precision>
-INLINE_METHOD void exahype2::plotter::FacePlotter::plotFace(
-  const peano4::dataview::FaceMarker&      marker,
-  const std::array<double, PointsPerAxis>& mappingAlongAxis,
-  const Precision* const                   face
+template <int NodesPerAxis, int ValuesPerNode, typename Precision, typename Predicate>
+INLINE_METHOD void
+exahype2::plotter::FacePlotter::plot(
+  const peano4::CellConnectivity&                         cellConnectivity,
+  const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
+  const double* const                                     quadratureNodes,
+  const double                                            timeStamp,
+  const tarch::plotter::Format                            format,
+  const std::string&                                      outputDirectory,
+  const Predicate&                                        plotsFace
 ) {
-  static_assert(PointsPerAxis > 0);
-  static_assert(UnknownsPerPoint > 0);
-  assertion(_piece.isOpen());
-  assertion(face != nullptr);
+  using Values = tarch::plotter::MeshArray<double>;
+  static_assert(NodesPerAxis > 0 and ValuesPerNode > 0);
+  constexpr int  NodesPerFace   = peano4::power(NodesPerAxis, DIMENSIONS - 1);
+  constexpr int  CellsPerFace   = peano4::power(NodesPerAxis - 1, DIMENSIONS - 1);
+  constexpr int  CornersPerCell = peano4::VerticesPerCell / 2;
+  constexpr auto CellType = DIMENSIONS == 2 ? tarch::plotter::CellType::Line : tarch::plotter::CellType::Quadrangle;
+  ASSERTION(values.isHostAccessible());
+  ASSERTION(values.getChunkSize() >= 2 * NodesPerFace * ValuesPerNode, values.getChunkSize());
+  ASSERTION(quadratureNodes != nullptr);
   for ([[maybe_unused]] const auto& field : _fields) {
-    assertion(field.offset + field.components <= UnknownsPerPoint, field.offset, field.components, UnknownsPerPoint);
+    ASSERTION(field.components > 0, field.name, field.components);
   }
 
-  constexpr int TotalPoints   = DIMENSIONS == 2 ? PointsPerAxis : PointsPerAxis * PointsPerAxis;
-  constexpr int ValuesPerSide = TotalPoints * UnknownsPerPoint;
-  constexpr int CellsPerAxis  = PointsPerAxis - 1;
-  constexpr int TotalCells    = DIMENSIONS == 2 ? CellsPerAxis : CellsPerAxis * CellsPerAxis;
-
-  const int normalAxis = marker.getSelectedFaceNumber() % DIMENSIONS;
-
-  // The points of a face sit on the lower corner of the cell along the normal axis, where the
-  // plot of the neighbouring cell puts its own trace of the face.
-  const auto faceOffset = marker.getX() - marker.getH() * 0.5;
-
-  auto faceSize        = marker.getH();
-  faceSize(normalAxis) = 0.0;
-
-  std::array<int, DIMENSIONS - 1> tangentialAxes{};
-  int                             tangentialAxisCount = 0;
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    if (axis != normalAxis) {
-      tangentialAxes[tangentialAxisCount] = axis;
-      tangentialAxisCount++;
+  std::vector<int> faces;
+  for (const int face : getPlottedFaces(cellConnectivity)) {
+    if (
+      plotsFace(
+        cellConnectivity.getFaceCentre(face),
+        cellConnectivity.getFaceWidth(face),
+        cellConnectivity.getFaceNormal(face)
+      )
+    ) {
+      faces.push_back(face);
     }
   }
+  const auto numberOfFaces  = faces.size();
+  const auto numberOfCells  = numberOfFaces * CellsPerFace;
+  const auto numberOfPoints = numberOfFaces * NodesPerFace;
+  const int  rank           = tarch::mpi::Rank::getInstance().getRank();
 
-  const Precision* const leftData  = face;
-  const Precision* const rightData = face + ValuesPerSide;
-
-  std::array<int, TotalPoints> vertexIndices{};
-
-  for (int pointIndex = 0; pointIndex < TotalPoints; pointIndex++) {
-    tarch::la::Vector<DIMENSIONS, double> position;
-    position(normalAxis) = faceOffset(normalAxis);
-
-    int indexAlongTangentialAxes = pointIndex;
-    for (const int axis : tangentialAxes) {
-      position(axis) = faceOffset(axis) + faceSize(axis) * mappingAlongAxis[indexAlongTangentialAxes % PointsPerAxis];
-      indexAlongTangentialAxes /= PointsPerAxis;
-    }
-    vertexIndices[pointIndex] = _piece.plotVertex(position);
-
-    const int unknownOffset = pointIndex * UnknownsPerPoint;
-    for (const auto& field : _fields) {
-      field.leftPlotter
-        ->plotVertexData(vertexIndices[pointIndex], leftData + unknownOffset + field.offset, field.components);
-      field.rightPlotter
-        ->plotVertexData(vertexIndices[pointIndex], rightData + unknownOffset + field.offset, field.components);
-    }
+  tarch::plotter::Mesh mesh;
+  mesh.pointsXYZ.assign(numberOfPoints * 3, 0.0);
+  mesh.connectivity.resize(numberOfCells * CornersPerCell);
+  mesh.offsets.resize(numberOfCells);
+  mesh.types.assign(numberOfCells, static_cast<std::uint8_t>(CellType));
+  [[maybe_unused]] int plottedValues = 0;
+  for (const auto& field : _fields) {
+    mesh.pointFields.push_back({field.name + "L", field.components, Values(numberOfPoints * field.components)});
+    mesh.pointFields.push_back({field.name + "R", field.components, Values(numberOfPoints * field.components)});
+    plottedValues += field.components;
   }
+  ASSERTION(plottedValues <= ValuesPerNode, plottedValues, ValuesPerNode);
+  mesh.cellFields.push_back({"RefinementLevel", 1, Values(numberOfCells)});
+  mesh.cellFields.push_back({"Subdomain", 1, Values(numberOfCells, static_cast<double>(rank))});
 
-  constexpr int RefinementLevelOfFaces = 0;
-  for (int cell = 0; cell < TotalCells; cell++) {
-    int firstVertex        = 0;
-    int stride             = 1;
-    int indexAlongCellAxes = cell;
-    for (int tangential = 0; tangential < DIMENSIONS - 1; tangential++) {
-      firstVertex += (indexAlongCellAxes % CellsPerAxis) * stride;
-      indexAlongCellAxes /= CellsPerAxis;
-      stride *= PointsPerAxis;
-    }
+  tarch::accelerator::parallelForOnHost(
+    tarch::accelerator::Range(static_cast<int>(numberOfFaces)),
+    [&](const int entry) {
+      const int              face       = faces[static_cast<std::size_t>(entry)];
+      const int              normal     = cellConnectivity.getFaceNormal(face);
+      const auto             centre     = cellConnectivity.getFaceCentre(face);
+      const auto             width      = cellConnectivity.getFaceWidth(face);
+      const std::size_t      firstPoint = static_cast<std::size_t>(entry) * NodesPerFace;
+      const std::size_t      firstCell  = static_cast<std::size_t>(entry) * CellsPerFace;
+      const Precision* const lower      = values.getChunk(face);
+      const Precision* const upper      = lower + NodesPerFace * ValuesPerNode;
 
-    std::array<int, peano4::VerticesPerCell / 2> vertices{};
-    for (int corner = 0; corner < peano4::VerticesPerCell / 2; corner++) {
-      int offset       = 0;
-      int cornerStride = 1;
-      for (int tangential = 0; tangential < DIMENSIONS - 1; tangential++) {
-        offset += CellCorners[corner][tangential] * cornerStride;
-        cornerStride *= PointsPerAxis;
+      for (int node = 0; node < NodesPerFace; node++) {
+        const auto nodeIndex = peano4::dDelinearisedExclusive(node, NodesPerAxis, normal);
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          double coordinate = centre(axis);
+          if (axis != normal) {
+            coordinate = centre(axis) - 0.5 * width(axis) + quadratureNodes[nodeIndex(axis)] * width(axis);
+          }
+          mesh.pointsXYZ[(firstPoint + node) * 3 + axis] = coordinate;
+        }
+        int firstComponent = 0;
+        for (std::size_t field = 0; field < _fields.size(); field++) {
+          const int components = _fields[field].components;
+          for (int component = 0; component < components; component++) {
+            const int value = node * ValuesPerNode + firstComponent + component;
+            mesh.pointFields[2 * field].values[(firstPoint + node) * components + component] =
+              static_cast<double>(lower[value]);
+            mesh.pointFields[2 * field + 1].values[(firstPoint + node) * components + component] =
+              static_cast<double>(upper[value]);
+          }
+          firstComponent += components;
+        }
       }
-      vertices[corner] = vertexIndices[firstVertex + offset];
-    }
 
-    const int cellIndex = _piece.plotCellOnFace(vertices);
-    _piece.plotCellMarkers(cellIndex, RefinementLevelOfFaces);
+      for (int cell = 0; cell < CellsPerFace; cell++) {
+        for (int corner = 0; corner < CornersPerCell; corner++) {
+          const auto cellIndex = peano4::dDelinearised(cell, NodesPerAxis - 1);
+          int        node      = 0;
+          int        stride    = 1;
+          for (int tangential = 0; tangential < DIMENSIONS - 1; tangential++) {
+            node += (cellIndex(tangential) + CellCorners[corner][tangential]) * stride;
+            stride *= NodesPerAxis;
+          }
+          mesh.connectivity[(firstCell + cell) * CornersPerCell + corner] =
+            static_cast<std::int32_t>(firstPoint) + node;
+        }
+        mesh.offsets[firstCell + cell] = static_cast<std::int32_t>((firstCell + cell + 1) * CornersPerCell);
+        mesh.cellFields[0].values[firstCell + cell] = static_cast<double>(cellConnectivity.getFaceLevel(face));
+      }
+    }
+  );
+
+  if (_fileWriter == nullptr) {
+    _fileWriter = tarch::plotter::createFileWriter(format);
   }
+  ASSERTION(_fileWriter->getFormat() == format);
+  _fileWriter->write(mesh, outputDirectory + OutputSubdirectory, _filename, timeStamp);
 }

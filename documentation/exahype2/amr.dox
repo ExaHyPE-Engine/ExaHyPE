@@ -4,10 +4,10 @@
 
 \tableofcontents
 
-ExaHyPE solvers return cell-wise refinement decisions. The generated action
-sets turn these decisions into peano4::grid::GridControlEvent records, and
-exahype2::RefinementControlService gives every rank the same canonical request
-set.
+ExaHyPE solvers return cell-wise refinement decisions. The refinement
+dispatch of every solver turns these decisions into
+peano4::RefinementRequest records, and exahype2::RefinementRequests
+gives every rank the same request set.
 
 # Enabling adaptive levels
 
@@ -39,47 +39,51 @@ exahype2::RefinementCommand::Erase.
 
 # Decision semantics
 
-`Refine` names the current cell and requests one finer neighbourhood around
-it. The configured maximum level suppresses requests from cells that are
-already sufficiently fine. `Keep` emits no structural request. `Erase`
+`Refine` requests one finer neighbourhood around the current cell. The configured maximum level suppresses requests from cells that are
+already sufficiently fine. `Keep` leaves the grid structure as it is. `Erase`
 contributes one vote towards removing the current cell's sibling group.
 
 Erasure requires agreement from all children of the parent and all
-participating solvers. The service promotes a complete sibling vote to the
-parent cell. Peano then removes the associated plan flags only when the whole
-adjacent parent-cell ring agrees and no refine request protects it.
+participating solvers. exahype2::RefinementRequests promotes a complete
+sibling vote to the parent cell. Peano then removes the associated plan flags
+only when the whole adjacent parent-cell ring agrees and every refine request
+lies outside it.
 
 # Distributed requests
 
-Each rank evaluates the criterion on its owned cells. At the end of the step,
-the refinement service gathers, sorts, and deduplicates the committed records.
-All ranks then evaluate the same vector and independently derive the same
-target tree, ownership table, boundary topology, and migration.
+Each rank evaluates the criterion on its owned cells in one dispatch after
+the time step. The refinement requests gather, sort and deduplicate the
+committed records, so all ranks evaluate the same vector and independently
+derive the same target tree, ownership table, rank-boundary order and
+migration.
 
-A solver that participates in the refinement service contributes its decision
-for every evaluated cell. Omitting a solver's erase vote prevents the sibling
+A solver that participates in the refinement contributes its decision for
+every evaluated cell. Omitting a solver's erase vote prevents the sibling
 consensus required for coarsening.
 
-# Regrid drains
+# Regrids
 
-The time loop invokes the dynamic-AMR phase after a step commits requests. One
-sweep triggers and prepares a changed plan; the transition sweep emits the
-create and destroy callbacks and migrates the persistent solver pools. The
-phase continues until the topology reports the required stationary sweeps.
+The time loop runs the dynamic-AMR phase after a step commits requests. The
+spacetree adopts the plan, rebuilds the cell connectivity, and every solver's
+`regrid()` moves its data through the peano4::Regrid. The phase repeats
+while requests arrive.
 
 A criterion can evaluate only cells that exist. Refinement through several
 additional levels therefore requires a new decision after each level appears.
-The time loop resumes only after the complete drain settles.
+A step deletes the erase request of every cell that the regrid refines for
+the second time. A cell refines on its own request at most twice in one
+regrid. Every regrid ends after a finite number of steps. The time loop
+resumes only after the complete drain settles.
 
 # Solver data transfer
 
-Interpolation initialises data created on a finer level. Restriction preserves
-fine-grid information when cells disappear or when coarse and fine regions
-exchange face data. Each solver family owns the interpolation, restriction,
-halo, and time-stepping policy required by its data layout.
-
-Finite-volume solvers select these operators through their solver
-configuration. Wider halos require an operator that defines every coarse and
-fine halo value available at an AMR interface.
+Interpolation initialises data created on a finer level. Restriction
+preserves fine-grid information when cells disappear or when coarse and fine
+faces exchange data across a level jump. Each solver family owns the
+interpolation, restriction, halo and time-stepping policy required by its
+data layout: the finite-volume family interpolates and restricts its patches
+and rebuilds its face halos, the DG families use the operators of
+`exahype2/dg/Basis.h` derived from the quadrature nodes, and the subcell
+limiter moves its statuses and subgrids with the cells.
 
 */

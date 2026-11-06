@@ -6,89 +6,50 @@
 
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
 
 #include <hdf5.h>
 
-namespace {
-  // Paths of the .vtkhdf files this process has created. The first write to a path
-  // truncates the file and lays out its groups; every later write reopens and appends.
-  std::set<std::string>& createdPaths() {
-    static std::set<std::string> paths;
-    return paths;
-  }
-  std::mutex& createdPathsMutex() {
-    static std::mutex mutex;
-    return mutex;
-  }
-} // namespace
+tarch::plotter::Format
+tarch::plotter::VTKHDFFileWriter::getFormat() const {
+  return Format::VTKHDF;
+}
 
-tarch::plotter::VTKHDFFileWriter::VTKHDFFileWriter(const std::string& outputDirectory) :
-  tarch::plotter::FileWriter(outputDirectory) {}
+void
+tarch::plotter::VTKHDFFileWriter::write(
+  const Mesh&        mesh,
+  const std::string& outputDirectory,
+  const std::string& filename,
+  const double       time
+) {
+  validateMesh(mesh);
+  createOutputDirectory(outputDirectory);
 
-bool        tarch::plotter::VTKHDFFileWriter::isOpen() const { return true; }
-std::string tarch::plotter::VTKHDFFileWriter::getFileExtension() const { return ".vtkhdf"; }
+  const std::string filePath   = (std::filesystem::path(outputDirectory) / (filename + ".vtkhdf")).string();
+  const bool        firstWrite = _createdFiles.insert(filePath).second;
 
-bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const double time) {
-  createOutputDirectory();
-  const std::string filePath = (std::filesystem::path(_outputDirectory) / (filename + ".vtkhdf")).string();
-
-  bool firstWrite;
-  {
-    const std::lock_guard<std::mutex> lock(createdPathsMutex());
-    firstWrite = createdPaths().insert(filePath).second;
-  }
-
-  const auto localData = getSubdomainBuffersSequenceForWriting();
-  // Every rank of the writing communicator holds data, so the schema comes from the
-  // local reference.
-  const FieldSchema schema = fieldSchemaFromReference(localData.reference);
-
-  // Each rank merges its subdomains into one contiguous grid, and the grids of all
-  // ranks form one VTKHDF part per step. Each dataset takes one collective write.
-  unsigned long long localPoints = 0, localCells = 0, localConnectivity = 0;
-  for (const SubdomainBuffers* const subdomain : localData.payloads) {
-    localPoints += subdomain->pointsXYZ.size() / 3;
-    localCells += subdomain->types.size();
-    localConnectivity += subdomain->connectivity.size();
-  }
-
-  unsigned long long offsetPoints = 0, offsetCells = 0, offsetConnectivity = 0;
-  unsigned long long totalPoints = localPoints, totalCells = localCells, totalConnectivity = localConnectivity;
-
-  const auto& rank          = tarch::mpi::Rank::getInstance();
-  MPI_Comm    comm          = rank.getCommunicator();
-  bool        useParallelIO = rank.getNumberOfRanks() > 1;
-  bool        isMaster      = rank.isGlobalMaster();
-
-  // The collective HDF5 calls run on a sub-communicator of the ranks that hold data.
-  // An empty rank that joins a collective write to a filtered dataset with a zero-sized
-  // selection deadlocks the parallel chunk redistribution of some MPI-IO stacks.
-  MPI_Comm ioComm = MPI_COMM_NULL;
-  if (useParallelIO) {
-    const bool hasData    = (localData.reference != nullptr);
-    const int  localHas   = hasData ? 1 : 0;
-    int        anyHasData = 0;
-    tarch::mpi::allreduce(&localHas, &anyHasData, 1, MPI_INT, MPI_MAX, comm);
-
-    if (anyHasData == 0) {
-      // Every rank is empty: The master alone writes a valid empty file, serially.
-      if (not rank.isGlobalMaster()) {
-        return true;
-      }
-      useParallelIO = false;
-    } else {
-      MPI_Comm_split(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
-      if (not hasData) {
-        return true; // The data-holding ranks write the file
-      }
-      comm       = ioComm;
-      int ioRank = 0;
-      MPI_Comm_rank(ioComm, &ioRank);
-      isMaster = (ioRank == 0);
+  const auto check = [&filePath](const herr_t status) {
+    if (status < 0) {
+      tarch::terminateWithError("The plotter cannot write the file '" + filePath + "'.");
     }
-  }
+  };
 
+  // The meshes of all ranks form one VTKHDF part per step.
+  const unsigned long long localPoints        = mesh.pointsXYZ.size() / 3;
+  const unsigned long long localCells         = mesh.types.size();
+  const unsigned long long localConnectivity  = mesh.connectivity.size();
+  unsigned long long       offsetPoints       = 0;
+  unsigned long long       offsetCells        = 0;
+  unsigned long long       offsetConnectivity = 0;
+  unsigned long long       totalPoints        = localPoints;
+  unsigned long long       totalCells         = localCells;
+  unsigned long long       totalConnectivity  = localConnectivity;
+
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const MPI_Comm comm          = rank.getCommunicator();
+  const bool     useParallelIO = rank.getNumberOfRanks() > 1;
+  const bool     isMaster      = rank.isGlobalMaster();
   if (useParallelIO) {
     const unsigned long long local[3]  = {localPoints, localCells, localConnectivity};
     unsigned long long       prefix[3] = {0, 0, 0};
@@ -107,25 +68,15 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
   hid_t dataTransferProperties = H5P_DEFAULT;
   if (useParallelIO) {
     fileAccessProperties = H5Pcreate(H5P_FILE_ACCESS);
-    MPI_Info   info      = MPI_INFO_NULL;
-    const auto hints     = mpiIoHints();
-    if (not hints.empty()) {
-      MPI_Info_create(&info);
-      for (const auto& hint : hints) {
-        MPI_Info_set(info, hint.first.c_str(), hint.second.c_str());
-      }
-    }
-    H5Pset_fapl_mpio(fileAccessProperties, comm, info);
-    if (info != MPI_INFO_NULL) {
-      MPI_Info_free(&info);
-    }
+    MPI_Info hints       = createMPIFileHints();
+    H5Pset_fapl_mpio(fileAccessProperties, comm, hints);
+    tarch::mpi::freeInfo(&hints);
 #if H5_VERSION_GE(1, 10, 0)
     H5Pset_all_coll_metadata_ops(fileAccessProperties, 1);
     H5Pset_coll_metadata_write(fileAccessProperties, 1);
 #endif
     dataTransferProperties = H5Pcreate(H5P_DATASET_XFER);
-    // The bulk datasets are deflate-filtered, and parallel HDF5 writes to a filtered
-    // dataset collectively.
+    // Parallel HDF5 writes a deflated dataset collectively.
     H5Pset_dxpl_mpio(dataTransferProperties, H5FD_MPIO_COLLECTIVE);
   }
 
@@ -134,70 +85,14 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
   if (fileAccessProperties != H5P_DEFAULT) {
     H5Pclose(fileAccessProperties);
   }
-  // H5Pset_fapl_mpio duplicated the communicator into the file, and the file keeps that
-  // copy for the collective writes and the close.
-  if (ioComm != MPI_COMM_NULL) {
-    MPI_Comm_free(&ioComm);
-  }
   if (fileId < 0) {
-    if (dataTransferProperties != H5P_DEFAULT) {
-      H5Pclose(dataTransferProperties);
-    }
-    tarch::terminateWithError("Failed to open '" + filePath + "'.");
+    tarch::terminateWithError("The plotter cannot open the file '" + filePath + "'.");
   }
   const hid_t linkCreationProperties = H5Pcreate(H5P_LINK_CREATE);
   H5Pset_create_intermediate_group(linkCreationProperties, 1);
 
-  class HandleCloser final {
-  public:
-    HandleCloser(const hid_t fileId, const hid_t linkCreationProperties, const hid_t dataTransferProperties) :
-      _fileId(fileId),
-      _linkCreationProperties(linkCreationProperties),
-      _dataTransferProperties(dataTransferProperties) {}
-    HandleCloser(const HandleCloser&)            = delete;
-    HandleCloser(HandleCloser&&)                 = delete;
-    HandleCloser& operator=(const HandleCloser&) = delete;
-    HandleCloser& operator=(HandleCloser&&)      = delete;
-
-    ~HandleCloser() {
-      H5Pclose(_linkCreationProperties);
-      if (_dataTransferProperties != H5P_DEFAULT) {
-        H5Pclose(_dataTransferProperties);
-      }
-      H5Fclose(_fileId);
-    }
-
-  private:
-    const hid_t _fileId;
-    const hid_t _linkCreationProperties;
-    const hid_t _dataTransferProperties;
-  } handleCloser(fileId, linkCreationProperties, dataTransferProperties);
-
-  // Each dataset opens once per traversal, and its handle serves the extent, extend
-  // and write calls below. This map is declared after handleCloser, so the datasets
-  // close before the file.
   std::map<std::string, hid_t> openDatasets;
-  class DatasetCloser final {
-  public:
-    explicit DatasetCloser(const std::map<std::string, hid_t>& datasets) :
-      _datasets(datasets) {}
-    DatasetCloser(const DatasetCloser&)            = delete;
-    DatasetCloser(DatasetCloser&&)                 = delete;
-    DatasetCloser& operator=(const DatasetCloser&) = delete;
-    DatasetCloser& operator=(DatasetCloser&&)      = delete;
-
-    ~DatasetCloser() {
-      for (const auto& entry : _datasets) {
-        if (entry.second >= 0) {
-          H5Dclose(entry.second);
-        }
-      }
-    }
-
-  private:
-    const std::map<std::string, hid_t>& _datasets;
-  } datasetCloser(openDatasets);
-  const auto openDataset = [&](const std::string& name) -> hid_t {
+  const auto                   openDataset = [&](const std::string& name) -> hid_t {
     const auto existing = openDatasets.find(name);
     if (existing != openDatasets.end()) {
       return existing->second;
@@ -214,17 +109,15 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
                                   const hid_t        type,
                                   const bool         compress
                                 ) {
-    const hsize_t dimensions[2]    = {0, numberOfComponents};
-    const hsize_t maxDimensions[2] = {H5S_UNLIMITED, numberOfComponents};
-    // The bulk geometry and data datasets take a large chunk and deflate, while the
-    // one-row-per-step index datasets stay uncompressed.
+    const hsize_t dimensions[2]             = {0, numberOfComponents};
+    const hsize_t maxDimensions[2]          = {H5S_UNLIMITED, numberOfComponents};
     const hsize_t chunkDimensions[2]        = {static_cast<hsize_t>(compress ? 65536 : 1024), numberOfComponents};
     const hid_t   dataSpace                 = H5Screate_simple(numberOfDimensions, dimensions, maxDimensions);
     const hid_t   datasetCreationProperties = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_chunk(datasetCreationProperties, numberOfDimensions, chunkDimensions);
     if (compress) {
-      // The rank slabs tile each grown chunk of a compressed dataset, so every element
-      // is written and the pre-fill is skipped.
+      // The slabs of the ranks write every element of a compressed dataset. HDF5 skips the fill
+      // value of its chunks.
       H5Pset_fill_time(datasetCreationProperties, H5D_FILL_TIME_NEVER);
       H5Pset_shuffle(datasetCreationProperties);
       H5Pset_deflate(datasetCreationProperties, 1);
@@ -234,7 +127,7 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
     H5Pclose(datasetCreationProperties);
     H5Sclose(dataSpace);
     if (dataset < 0) {
-      tarch::terminateWithError("Failed to create VTKHDF dataset '" + name + "'.");
+      tarch::terminateWithError("The plotter cannot create the dataset '" + name + "' in the file '" + filePath + "'.");
     }
     H5Dclose(dataset);
   };
@@ -245,9 +138,6 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
     H5Sclose(dataSpace);
     return dimensions[0];
   };
-  // Extend a dataset to (currentRows + globalAdd) rows and write this rank's slab at
-  // the exclusive-prefix offset within the new block. With collective IO an empty
-  // rank issues a balanced empty write so the collective does not deadlock.
   const auto appendSlab = [&](
                             const std::string& name,
                             const int          numberOfDimensions,
@@ -268,45 +158,18 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
       const hsize_t count[2] = {localRows, numberOfComponents};
       H5Sselect_hyperslab(fileSpace, H5S_SELECT_SET, start, nullptr, count, nullptr);
       const hid_t memorySpace = H5Screate_simple(numberOfDimensions, count, nullptr);
-      if (H5Dwrite(dataset, type, memorySpace, fileSpace, dataTransferProperties, data) < 0) {
-        H5Sclose(memorySpace);
-        H5Sclose(fileSpace);
-        tarch::terminateWithError("Failed to write VTKHDF hyperslab '" + name + "'.");
-      }
+      check(H5Dwrite(dataset, type, memorySpace, fileSpace, dataTransferProperties, data));
       H5Sclose(memorySpace);
-    } else if (dataTransferProperties != H5P_DEFAULT) {
-      // Empty rank: It joins the collective write with an empty selection, so every
-      // rank issues the same number of collective writes.
+    } else if (useParallelIO) {
+      // An empty rank joins the collective write with an empty selection. Every rank issues the
+      // same number of collective writes.
       H5Sselect_none(fileSpace);
-      H5Dwrite(dataset, type, H5S_ALL, fileSpace, dataTransferProperties, nullptr);
+      check(H5Dwrite(dataset, type, H5S_ALL, fileSpace, dataTransferProperties, nullptr));
     }
     H5Sclose(fileSpace);
   };
-  // Appends one row to a 1D index dataset at the row the caller passes. The extend and
-  // the write are collective, the master supplies the value and every other rank joins
-  // with an empty selection.
-  const auto appendStepRow =
-    [&](const std::string& name, const hid_t type, const void* const value, const hsize_t row) {
-      const hid_t   dataset          = openDataset(name);
-      const hsize_t newDimensions[1] = {row + 1};
-      H5Dset_extent(dataset, newDimensions);
-      const hid_t fileSpace = H5Dget_space(dataset);
-      if (isMaster) {
-        const hsize_t start[1] = {row};
-        const hsize_t count[1] = {1};
-        H5Sselect_hyperslab(fileSpace, H5S_SELECT_SET, start, nullptr, count, nullptr);
-        const hid_t memorySpace = H5Screate_simple(1, count, nullptr);
-        H5Dwrite(dataset, type, memorySpace, fileSpace, dataTransferProperties, value);
-        H5Sclose(memorySpace);
-      } else if (dataTransferProperties != H5P_DEFAULT) {
-        H5Sselect_none(fileSpace);
-        H5Dwrite(dataset, type, H5S_ALL, fileSpace, dataTransferProperties, nullptr);
-      }
-      H5Sclose(fileSpace);
-    };
-  // Write the trailing Offsets sentinel. The preceding appendSlab already grew the extent
-  // collectively, so only the value is still missing.
-  const auto writeInt64At = [&](const std::string& name, const hsize_t position, const long long value) {
+  // The master writes value into the entry position of a one-dimensional dataset.
+  const auto writeAt = [&](const std::string& name, const hid_t type, const void* const value, const hsize_t position) {
     const hid_t dataset   = openDataset(name);
     const hid_t fileSpace = H5Dget_space(dataset);
     if (isMaster) {
@@ -314,25 +177,31 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
       const hsize_t count[1] = {1};
       H5Sselect_hyperslab(fileSpace, H5S_SELECT_SET, start, nullptr, count, nullptr);
       const hid_t memorySpace = H5Screate_simple(1, count, nullptr);
-      H5Dwrite(dataset, H5T_NATIVE_LLONG, memorySpace, fileSpace, dataTransferProperties, &value);
+      check(H5Dwrite(dataset, type, memorySpace, fileSpace, dataTransferProperties, value));
       H5Sclose(memorySpace);
-    } else if (dataTransferProperties != H5P_DEFAULT) {
+    } else if (useParallelIO) {
       H5Sselect_none(fileSpace);
-      H5Dwrite(dataset, H5T_NATIVE_LLONG, H5S_ALL, fileSpace, dataTransferProperties, nullptr);
+      check(H5Dwrite(dataset, type, H5S_ALL, fileSpace, dataTransferProperties, nullptr));
     }
     H5Sclose(fileSpace);
   };
+  const auto appendStepRow =
+    [&](const std::string& name, const hid_t type, const void* const value, const hsize_t row) {
+      const hsize_t newDimensions[1] = {row + 1};
+      H5Dset_extent(openDataset(name), newDimensions);
+      writeAt(name, type, value, row);
+    };
 
   if (firstWrite) {
     const hid_t group = H5Gcreate(fileId, "/VTKHDF", linkCreationProperties, H5P_DEFAULT, H5P_DEFAULT);
     {
-      // A reader rejects a file whose declared version is newer than the version it
-      // supports. This is the lowest version that covers a temporal unstructured grid.
+      // A reader rejects a file whose declared version is newer than the version it supports.
+      // Version 2.0 is the lowest version that covers a temporal unstructured grid.
       const hsize_t   dimensions[1] = {2};
       const long long version[2]    = {2, 0};
       const hid_t     dataSpace     = H5Screate_simple(1, dimensions, nullptr);
       const hid_t     attribute     = H5Acreate(group, "Version", H5T_STD_I64LE, dataSpace, H5P_DEFAULT, H5P_DEFAULT);
-      H5Awrite(attribute, H5T_NATIVE_LLONG, version);
+      check(H5Awrite(attribute, H5T_NATIVE_LLONG, version));
       H5Aclose(attribute);
       H5Sclose(dataSpace);
     }
@@ -342,7 +211,7 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
       H5Tset_size(stringType, std::strlen(type));
       const hid_t dataSpace = H5Screate(H5S_SCALAR);
       const hid_t attribute = H5Acreate(group, "Type", stringType, dataSpace, H5P_DEFAULT, H5P_DEFAULT);
-      H5Awrite(attribute, stringType, type);
+      check(H5Awrite(attribute, stringType, type));
       H5Aclose(attribute);
       H5Sclose(dataSpace);
       H5Tclose(stringType);
@@ -357,25 +226,14 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
     createExtendible("/VTKHDF/NumberOfPoints", 1, 1, H5T_STD_I64LE, false);
     createExtendible("/VTKHDF/NumberOfCells", 1, 1, H5T_STD_I64LE, false);
     createExtendible("/VTKHDF/NumberOfConnectivityIds", 1, 1, H5T_STD_I64LE, false);
-    // Vectors are stored with 3 components and tensors with 9 so ParaView reads
-    // them back as vectors and tensors; see FileWriter::classifyField.
-    for (const auto& field : schema.pointFields) {
-      createExtendible(
-        "/VTKHDF/PointData/" + field.name,
-        2,
-        classifyField(field.components).writtenComponents,
-        realStorageType,
-        true
-      );
+    // ParaView reads three components as a vector and nine as a tensor.
+    for (const auto& field : mesh.pointFields) {
+      const int written = classifyField(field.components).writtenComponents;
+      createExtendible("/VTKHDF/PointData/" + field.name, 2, written, realStorageType, true);
     }
-    for (const auto& field : schema.cellFields) {
-      createExtendible(
-        "/VTKHDF/CellData/" + field.name,
-        2,
-        classifyField(field.components).writtenComponents,
-        realStorageType,
-        true
-      );
+    for (const auto& field : mesh.cellFields) {
+      const int written = classifyField(field.components).writtenComponents;
+      createExtendible("/VTKHDF/CellData/" + field.name, 2, written, realStorageType, true);
     }
 
     H5Gclose(H5Gcreate(fileId, "/VTKHDF/Steps", linkCreationProperties, H5P_DEFAULT, H5P_DEFAULT));
@@ -384,90 +242,93 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
     createExtendible("/VTKHDF/Steps/PointOffsets", 1, 1, H5T_STD_I64LE, false);
     createExtendible("/VTKHDF/Steps/CellOffsets", 1, 1, H5T_STD_I64LE, false);
     createExtendible("/VTKHDF/Steps/ConnectivityIdOffsets", 1, 1, H5T_STD_I64LE, false);
-    for (const auto& field : schema.pointFields) {
+    for (const auto& field : mesh.pointFields) {
       createExtendible("/VTKHDF/Steps/PointDataOffsets/" + field.name, 1, 1, H5T_STD_I64LE, false);
     }
-    for (const auto& field : schema.cellFields) {
+    for (const auto& field : mesh.cellFields) {
       createExtendible("/VTKHDF/Steps/CellDataOffsets/" + field.name, 1, 1, H5T_STD_I64LE, false);
     }
     const hid_t     stepsGroup = H5Gopen(fileId, "/VTKHDF/Steps", H5P_DEFAULT);
     const hid_t     dataSpace  = H5Screate(H5S_SCALAR);
     const long long zero       = 0;
     const hid_t     attribute  = H5Acreate(stepsGroup, "NSteps", H5T_STD_I64LE, dataSpace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attribute, H5T_NATIVE_LLONG, &zero);
+    check(H5Awrite(attribute, H5T_NATIVE_LLONG, &zero));
     H5Aclose(attribute);
     H5Sclose(dataSpace);
     H5Gclose(stepsGroup);
   }
 
-  // Current extents before this step (cumulative over all prior steps) - the offsets
-  // the VTKHDF reader expects in /VTKHDF/Steps.
+  // The extents of the datasets before this step give the offsets of the step in /VTKHDF/Steps.
   const long long currentPoints       = static_cast<long long>(rowsOf("/VTKHDF/Points"));
   const long long currentConnectivity = static_cast<long long>(rowsOf("/VTKHDF/Connectivity"));
   const long long currentCells        = static_cast<long long>(rowsOf("/VTKHDF/Types"));
   const hsize_t   currentOffsets      = rowsOf("/VTKHDF/Offsets");
   const long long currentStep         = static_cast<long long>(rowsOf("/VTKHDF/Steps/Values"));
 
-  // Merge this rank's subdomains into one contiguous grid for the step. Points,
-  // connectivity and offsets are rebased to step-global indices so that the whole
-  // step is a single part (NumberOf*[step] = step totals, one entry per step).
-  std::vector<double>       pointsBuffer;
-  std::vector<std::int64_t> connectivityBuffer, beforeOffsets;
-  std::vector<std::uint8_t> typesBuffer;
-  pointsBuffer.reserve(localPoints * 3);
-  connectivityBuffer.reserve(localConnectivity);
-  beforeOffsets.reserve(localCells);
-  typesBuffer.reserve(localCells);
-  unsigned long long pointCursor        = 0;
-  unsigned long long connectivityCursor = 0;
-  for (const SubdomainBuffers* const subdomain : localData.payloads) {
-    const std::int64_t pointBase = static_cast<std::int64_t>(offsetPoints + pointCursor);
-    pointsBuffer.insert(pointsBuffer.end(), subdomain->pointsXYZ.begin(), subdomain->pointsXYZ.end());
-    for (const auto connectivityEntry : subdomain->connectivity) {
-      connectivityBuffer.push_back(static_cast<std::int64_t>(connectivityEntry) + pointBase);
-    }
-    std::int32_t previousEnd = 0;
-    for (std::size_t i = 0; i < subdomain->types.size(); i++) {
-      beforeOffsets.push_back(static_cast<std::int64_t>(offsetConnectivity + connectivityCursor) + previousEnd);
-      previousEnd = subdomain->offsets[i];
-    }
-    typesBuffer.insert(typesBuffer.end(), subdomain->types.begin(), subdomain->types.end());
-    pointCursor += subdomain->pointsXYZ.size() / 3;
-    connectivityCursor += subdomain->connectivity.size();
+  const bool        writeDouble  = getDoublePrecisionOutput();
+  const hid_t       realType     = writeDouble ? H5T_NATIVE_DOUBLE : H5T_NATIVE_FLOAT;
+  const std::size_t realBytes    = writeDouble ? sizeof(double) : sizeof(float);
+  std::size_t       scratchBytes = std::max<std::size_t>(
+    localPoints * 3 * realBytes,
+    std::max<std::size_t>(localConnectivity, localCells) * sizeof(std::int64_t)
+  );
+  for (const auto& field : mesh.pointFields) {
+    scratchBytes =
+      std::max<std::size_t>(scratchBytes, localPoints * classifyField(field.components).writtenComponents * realBytes);
   }
+  for (const auto& field : mesh.cellFields) {
+    scratchBytes =
+      std::max<std::size_t>(scratchBytes, localCells * classifyField(field.components).writtenComponents * realBytes);
+  }
+  MeshArray<std::byte> scratch(scratchBytes);
 
-  // The buffers accumulate in double precision; single-precision output narrows
-  // them right before the write.
-  const bool writeDouble    = getDoublePrecisionOutput();
-  const auto appendRealSlab = [&](
-                                const std::string&         name,
-                                const int                  components,
-                                const hsize_t              current,
-                                const hsize_t              total,
-                                const hsize_t              local,
-                                const hsize_t              offset,
-                                const std::vector<double>& buffer
-                              ) {
-    if (writeDouble) {
-      appendSlab(name, 2, components, H5T_NATIVE_DOUBLE, current, total, local, offset, buffer.data());
-    } else {
-      const std::vector<float> narrowed = narrowToFloat(buffer);
-      appendSlab(name, 2, components, H5T_NATIVE_FLOAT, current, total, local, offset, narrowed.data());
+  // Returns values in the stored precision with written components per tuple. The lambda returns the
+  // array values itself if the file stores doubles and written equals components.
+  const auto getStoredValues = [&](const MeshArray<double>& values, const int components, const int written) {
+    const std::size_t tuples = values.size() / static_cast<std::size_t>(components);
+    ASSERTION(tuples * static_cast<std::size_t>(written) * realBytes <= scratch.size(), tuples, written);
+    if (writeDouble and components == written) {
+      return static_cast<const void*>(values.data());
     }
+    if (writeDouble) {
+      copyTuples(values.data(), components, components, written, tuples, reinterpret_cast<double*>(scratch.data()));
+    } else {
+      copyTuples(values.data(), components, components, written, tuples, reinterpret_cast<float*>(scratch.data()));
+    }
+    return static_cast<const void*>(scratch.data());
   };
 
-  appendRealSlab("/VTKHDF/Points", 3, currentPoints, totalPoints, localPoints, offsetPoints, pointsBuffer);
+  appendSlab(
+    "/VTKHDF/Points",
+    2,
+    3,
+    realType,
+    currentPoints,
+    totalPoints,
+    localPoints,
+    offsetPoints,
+    getStoredValues(mesh.pointsXYZ, 3, 3)
+  );
+
+  // The point indices in Connectivity count from the first point of the step.
+  auto* const integers = reinterpret_cast<std::int64_t*>(scratch.data());
+  forEachRangeInParallel(localConnectivity, [&](const std::size_t firstEntry, const std::size_t endEntry) {
+    for (std::size_t entry = firstEntry; entry < endEntry; entry++) {
+      integers[entry] = static_cast<std::int64_t>(mesh.connectivity[entry]) + static_cast<std::int64_t>(offsetPoints);
+    }
+  });
   appendSlab(
     "/VTKHDF/Connectivity",
     1,
     1,
-    H5T_NATIVE_LLONG,
+    H5T_NATIVE_INT64,
     currentConnectivity,
     totalConnectivity,
     localConnectivity,
     offsetConnectivity,
-    connectivityBuffer.data()
+    integers
   );
+
   appendSlab(
     "/VTKHDF/Types",
     1,
@@ -477,83 +338,73 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
     totalCells,
     localCells,
     offsetCells,
-    typesBuffer.data()
+    mesh.types.data()
   );
-  // Offsets per step: One entry per cell plus a trailing sentinel that carries the
-  // connectivity total of the step, so the step block holds totalCells + 1 entries.
+
+  // The Offsets block of a step stores the first connectivity entry of every cell. Its last entry
+  // counts the connectivity entries of the step.
+  forEachRangeInParallel(localCells, [&](const std::size_t firstCell, const std::size_t endCell) {
+    for (std::size_t cell = firstCell; cell < endCell; cell++) {
+      integers[cell] = static_cast<std::int64_t>(offsetConnectivity) + (cell == 0 ? 0 : mesh.offsets[cell - 1]);
+    }
+  });
   appendSlab(
     "/VTKHDF/Offsets",
     1,
     1,
-    H5T_NATIVE_LLONG,
+    H5T_NATIVE_INT64,
     currentOffsets,
     totalCells + 1,
     localCells,
     offsetCells,
-    beforeOffsets.data()
+    integers
   );
-  writeInt64At("/VTKHDF/Offsets", currentOffsets + totalCells, static_cast<long long>(totalConnectivity));
+  const long long numberOfConnectivityIds = static_cast<long long>(totalConnectivity);
+  writeAt("/VTKHDF/Offsets", H5T_NATIVE_LLONG, &numberOfConnectivityIds, currentOffsets + totalCells);
 
-  // validateSubdomainsForWriting() establishes the schema's field order in every
-  // subdomain, so the schema index also indexes a subdomain's field list.
-  for (std::size_t fieldIndex = 0; fieldIndex < schema.pointFields.size(); ++fieldIndex) {
-    const auto&         field   = schema.pointFields[fieldIndex];
-    const int           written = classifyField(field.components).writtenComponents;
-    std::vector<double> fieldBuffer;
-    fieldBuffer.reserve(localPoints * field.components);
-    for (const SubdomainBuffers* const subdomain : localData.payloads) {
-      const auto& values = subdomain->pointFields[fieldIndex].values;
-      fieldBuffer.insert(fieldBuffer.end(), values.begin(), values.end());
+  const auto appendFields = [&](
+                              const std::vector<Mesh::Field>& fields,
+                              const std::string&              dataGroup,
+                              const std::string&              offsetsGroup,
+                              const long long&                currentEntities,
+                              const unsigned long long        totalEntities,
+                              const unsigned long long        localEntities,
+                              const unsigned long long        offsetEntities
+                            ) {
+    for (const auto& field : fields) {
+      const int written = classifyField(field.components).writtenComponents;
+      appendSlab(
+        dataGroup + field.name,
+        2,
+        written,
+        realType,
+        static_cast<hsize_t>(currentEntities),
+        totalEntities,
+        localEntities,
+        offsetEntities,
+        getStoredValues(field.values, field.components, written)
+      );
+      appendStepRow(offsetsGroup + field.name, H5T_NATIVE_LLONG, &currentEntities, static_cast<hsize_t>(currentStep));
     }
-    if (written != field.components) {
-      fieldBuffer = expandFieldComponents(fieldBuffer, field.components, written);
-    }
-    // A point field grows by the same number of rows as /VTKHDF/Points.
-    appendRealSlab(
-      "/VTKHDF/PointData/" + field.name,
-      written,
-      static_cast<hsize_t>(currentPoints),
-      totalPoints,
-      localPoints,
-      offsetPoints,
-      fieldBuffer
-    );
-    appendStepRow(
-      "/VTKHDF/Steps/PointDataOffsets/" + field.name,
-      H5T_NATIVE_LLONG,
-      &currentPoints,
-      static_cast<hsize_t>(currentStep)
-    );
-  }
-  for (std::size_t fieldIndex = 0; fieldIndex < schema.cellFields.size(); ++fieldIndex) {
-    const auto&         field   = schema.cellFields[fieldIndex];
-    const int           written = classifyField(field.components).writtenComponents;
-    std::vector<double> fieldBuffer;
-    fieldBuffer.reserve(localCells * field.components);
-    for (const SubdomainBuffers* const subdomain : localData.payloads) {
-      const auto& values = subdomain->cellFields[fieldIndex].values;
-      fieldBuffer.insert(fieldBuffer.end(), values.begin(), values.end());
-    }
-    if (written != field.components) {
-      fieldBuffer = expandFieldComponents(fieldBuffer, field.components, written);
-    }
-    // A cell field grows by the same number of rows as /VTKHDF/Types.
-    appendRealSlab(
-      "/VTKHDF/CellData/" + field.name,
-      written,
-      static_cast<hsize_t>(currentCells),
-      totalCells,
-      localCells,
-      offsetCells,
-      fieldBuffer
-    );
-    appendStepRow(
-      "/VTKHDF/Steps/CellDataOffsets/" + field.name,
-      H5T_NATIVE_LLONG,
-      &currentCells,
-      static_cast<hsize_t>(currentStep)
-    );
-  }
+  };
+  appendFields(
+    mesh.pointFields,
+    "/VTKHDF/PointData/",
+    "/VTKHDF/Steps/PointDataOffsets/",
+    currentPoints,
+    totalPoints,
+    localPoints,
+    offsetPoints
+  );
+  appendFields(
+    mesh.cellFields,
+    "/VTKHDF/CellData/",
+    "/VTKHDF/Steps/CellDataOffsets/",
+    currentCells,
+    totalCells,
+    localCells,
+    offsetCells
+  );
 
   const long long totalPointsSigned       = static_cast<long long>(totalPoints);
   const long long totalCellsSigned        = static_cast<long long>(totalCells);
@@ -576,11 +427,18 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
   const hid_t     stepsGroup    = H5Gopen(fileId, "/VTKHDF/Steps", H5P_DEFAULT);
   const hid_t     attribute     = H5Aopen(stepsGroup, "NSteps", H5P_DEFAULT);
   const long long numberOfSteps = currentStep + 1;
-  H5Awrite(attribute, H5T_NATIVE_LLONG, &numberOfSteps);
+  check(H5Awrite(attribute, H5T_NATIVE_LLONG, &numberOfSteps));
   H5Aclose(attribute);
   H5Gclose(stepsGroup);
 
-  return true;
+  for (const auto& entry : openDatasets) {
+    H5Dclose(entry.second);
+  }
+  H5Pclose(linkCreationProperties);
+  if (dataTransferProperties != H5P_DEFAULT) {
+    H5Pclose(dataTransferProperties);
+  }
+  check(H5Fclose(fileId));
 }
 
 #endif

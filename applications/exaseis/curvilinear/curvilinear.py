@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import argparse
 import os
 import sys
@@ -69,8 +71,8 @@ theSolver = exahype2.dg.ader.Solver(
         "cp": 1,
         "cs": 1,
         "jacobian": 1,
-        "metric_derivative": 9,
-        "curve_grid": 3,
+        "metricDerivative": 9,
+        "curveGrid": 3,
     },
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),
     basis=exahype2.dg.GaussLobatto,
@@ -101,16 +103,32 @@ theSolver.on_start_grid_initialisation(
 theSolver.add_includes(*CurvilinearElastic.userIncludes())
 
 project.add_solver(theSolver)
+project.output.makefile.add_include_directory("../../..")
 
 if args.use_tracers:
-    project.add_action_set_to_timestepping(
-        exahype2.particles.CurviTracer(
-            coordinates=my_scenario.tracer_coordinates,
-            solver=theSolver,
-            filename=args.scenario + "-o" + str(order) + "-" + str(args.precision),
-            time_delta_between_two_snapshots=0.01,
-            output_precision=10,
-        )
+    # invertProjection maps the physical tracer coordinates to mesh positions.
+    tracer_particles = project.add_tracer(
+        name="Tracer", particle_attributes=theSolver.state.unknowns
+    )
+    tracer_particles.insert_by_coordinates(
+        my_scenario.tracer_coordinates, transform="invertProjection"
+    )
+    tracer_particles.dump_into_database(
+        filename=args.scenario + "-o" + str(order) + "-" + str(args.precision),
+        time_delta_between_two_snapshots=0.01,
+        output_precision=10,
+    )
+    theSolver.trace(
+        tracer_particles,
+        exahype2.particles.Forces(
+            interpolation_scheme=2,
+            integration_scheme=0,
+            force_method=0,
+            fields_to_interpolate=",".join(
+                str(field) for field in range(theSolver.state.unknowns)
+            ),
+        ),
+        initialisation=False,
     )
 
 project.generate_and_build()

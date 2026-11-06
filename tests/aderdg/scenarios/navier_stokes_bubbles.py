@@ -11,32 +11,28 @@ from equations import NavierStokes
 
 class NavierStokesBubbles(Scenario):
     """
-    Scenarios described in doi.org/10.1007/978-3-030-43229-4_27.
-
-    Simulation of cloud formations via the compressible Navier-Stokes equations.
-    See the function 'mapQuantities' below for a note on the visualisation.
+    Cloud formations of the compressible Navier-Stokes equations after
+    doi.org/10.1007/978-3-030-43229-4_27. The note on mapQuantities() explains the visualisation.
     """
 
     _dimensions = 2
-    _offset = 0.0
+    _offset = -500.0
     _domain_size = 1000.0
     _periodic_bc = False
-    # _end_time = 600
     _end_time = 100
 
-    # cv = 1 / (gamma - 1) * gasConstant
+    # The heat capacity at constant volume is gas_constant / (gamma - 1).
     cv = 1 / (1.4 - 1) * 287.058
     _equation = NavierStokes(
         dimensions=2,
         use_advection=False,
         use_background_state=True,
         use_gravity=True,
-        use_viscosity=True,
         gamma=1.4,
         cv=cv,
         gas_constant=287.058,
         reference_viscosity=0.01,
-        Pr=0.71,
+        prandtl_number=0.71,
     )
 
     _reference_pressure = 100000.0
@@ -46,19 +42,20 @@ class NavierStokesBubbles(Scenario):
         return
 
     def evaluate_perturbation(self):
-        raise NotImplementedError("perturbation should be defined in child classes")
+        raise NotImplementedError("A subclass defines the perturbation.")
 
     def evaluate_hydrostatic_pressure(self):
         return """
   const auto pressure = std::pow(
-    (1 - 1 / gamma) *
-        (std::pow(std::pow(gamma, gamma / (gamma - 1)) *
-                      referencePressure,
-                  (gamma - 1) / gamma) /
-            (gamma - 1) -
-        gravity * std::pow(referencePressure, gasConstant / cp) * x[DIMENSIONS-1] /
-            (gasConstant * backgroundPotentialTemperature)),
-    gamma / (gamma - 1)
+    (1 - 1 / AdiabaticIndex) *
+        (std::pow(std::pow(AdiabaticIndex, AdiabaticIndex / (AdiabaticIndex - 1)) *
+                      ReferencePressure,
+                  (AdiabaticIndex - 1) / AdiabaticIndex) /
+            (AdiabaticIndex - 1) -
+        Gravity * std::pow(ReferencePressure, GasConstant / IsobaricHeatCapacity) *
+            (x[DIMENSIONS-1] - DomainOffset[DIMENSIONS-1]) /
+            (GasConstant * BackgroundPotentialTemperature)),
+    AdiabaticIndex / (AdiabaticIndex - 1)
   );
 """
 
@@ -66,52 +63,51 @@ class NavierStokesBubbles(Scenario):
         return (
             """
 
-  constexpr auto gamma = 1.4;
-  constexpr auto gasConstant = 287.058;
-  constexpr auto cp = gamma / (gamma - 1) * gasConstant;
-  constexpr auto referencePressure = """
+  constexpr auto AdiabaticIndex = 1.4;
+  constexpr auto GasConstant = 287.058;
+  constexpr auto IsobaricHeatCapacity = AdiabaticIndex / (AdiabaticIndex - 1) * GasConstant;
+  constexpr auto ReferencePressure = """
             + str(self._reference_pressure)
             + """;
-  constexpr auto backgroundPotentialTemperature = """
+  constexpr auto BackgroundPotentialTemperature = """
             + str(self._background_potential_temperature)
             + """;
-  constexpr auto gravity = 9.81;
-  constexpr auto q0 = 0;
+  constexpr auto Gravity = 9.81;
+  constexpr auto HeatRelease = 0;
 
   """
             + self.evaluate_perturbation()
             + """
 
-  auto potentialT = backgroundPotentialTemperature;
-  potentialT += perturbation;
+  const auto potentialTemperature = BackgroundPotentialTemperature + perturbation;
 
   std::fill_n(Q, NumberOfUnknowns+NumberOfAuxiliaryVariables, 0);
 
-  // First compute overall state """
+  // The state with the perturbation of the potential temperature. """
             + (self.evaluate_hydrostatic_pressure())
             + """
-  const auto temperature = potentialT *
-    std::pow((pressure / referencePressure), gasConstant / cp
+  const auto temperature = potentialTemperature *
+    std::pow((pressure / ReferencePressure), GasConstant / IsobaricHeatCapacity
   );
-  
-  auto rho = pressure / (gasConstant * temperature);
-  auto height = x[DIMENSIONS-1];
+
+  const auto rho = pressure / (GasConstant * temperature);
+  const auto height = x[DIMENSIONS-1] - DomainOffset[DIMENSIONS-1];
   Q[Shortcuts::rho] = rho;
   Q[Shortcuts::height] = height;
 
-  auto j = &Q[Shortcuts::j];
-  auto Z = perturbation;
+  const auto* const j = &Q[Shortcuts::j];
+  const auto Z = perturbation;
   """
             + self._equation.evaluate_energy()
             + """
 
   Q[Shortcuts::E] = E;
 
-  // Then compute background state (without pot.T. perturbation)
-  const auto backgroundTemperature = backgroundPotentialTemperature *
-    std::pow((pressure / referencePressure), gasConstant / cp
+  // The background state without the perturbation of the potential temperature.
+  const auto backgroundTemperature = BackgroundPotentialTemperature *
+    std::pow((pressure / ReferencePressure), GasConstant / IsobaricHeatCapacity
   );
-  const auto backgroundRho = pressure / (gasConstant * backgroundTemperature);
+  const auto backgroundRho = pressure / (GasConstant * backgroundTemperature);
   Q[Shortcuts::backgroundstate+0] = backgroundRho;
   Q[Shortcuts::backgroundstate+1] = pressure;
 """
@@ -120,38 +116,40 @@ class NavierStokesBubbles(Scenario):
     def boundary_conditions(self):
         return (
             """
-  constexpr auto gamma = 1.4;
-  constexpr auto gasConstant = 287.058;
-  constexpr auto cp = gamma / (gamma - 1) * gasConstant;
-  constexpr auto referencePressure = """
+  constexpr auto AdiabaticIndex = 1.4;
+  constexpr auto GasConstant = 287.058;
+  constexpr auto IsobaricHeatCapacity = AdiabaticIndex / (AdiabaticIndex - 1) * GasConstant;
+  constexpr auto ReferencePressure = """
             + str(self._reference_pressure)
             + """;
-  constexpr auto backgroundPotentialTemperature = """
+  constexpr auto BackgroundPotentialTemperature = """
             + str(self._background_potential_temperature)
             + """;
-  constexpr auto gravity = 9.81;
-  constexpr auto q0 = 0;
-  
-  std::copy_n(Qinside, NumberOfUnknowns+NumberOfAuxiliaryVariables, Qoutside);
+  constexpr auto Gravity = 9.81;
+  constexpr auto HeatRelease = 0;
 
-  // Normal velocity zero after Riemann.
+  for (int value = 0; value < NumberOfUnknowns + NumberOfAuxiliaryVariables; value++) {
+    Qoutside[value] = Qinside[value];
+  }
+
+  // The mirrored normal momentum gives a zero normal velocity at the wall.
   Qoutside[Shortcuts::j+normal] = -Qinside[Shortcuts::j+normal];
 
-  // First compute overall state """
+  // The hydrostatic background state. """
             + (self.evaluate_hydrostatic_pressure())
             + """
-  const auto T = backgroundPotentialTemperature * 
-    std::pow((pressure / referencePressure), gasConstant / cp);
+  const auto temperature = BackgroundPotentialTemperature *
+    std::pow((pressure / ReferencePressure), GasConstant / IsobaricHeatCapacity);
 
-  auto rho = pressure / (gasConstant * T);
-  auto height = Qoutside[Shortcuts::height];
-  auto j = &Qoutside[Shortcuts::j];
+  const auto rho = pressure / (GasConstant * temperature);
+  const auto height = Qoutside[Shortcuts::height];
+  const auto* const j = &Qoutside[Shortcuts::j];
 
   Qoutside[Shortcuts::rho] = rho;
   Qoutside[Shortcuts::backgroundstate+0] = Qoutside[Shortcuts::rho];
   Qoutside[Shortcuts::backgroundstate+1] = pressure;
 
-  auto Z = 0;
+  const auto Z = 0;
   """
             + self._equation.evaluate_energy()
             + """
@@ -159,11 +157,9 @@ class NavierStokesBubbles(Scenario):
 """
         )
 
-    # Currently unused, but serves as a mapping for visualization of the output quantities.
-    # Because of the high reference pressure and background potential temperature the
-    # the variation in the conservative variables (in particular the momenta and energy) is
-    # hard to see, but it is easier to see in the primitive form (velocities, but most of all
-    # in the perturbation of the background temperature)
+    # Returns the C++ code of a mapping from the conserved variables to the density, the velocities,
+    # the pressure and the potential temperature. The potential temperature shows the bubbles, whose
+    # variation in the conserved variables is small against the reference pressure.
     def mapQuantities(self):
         return (
             """
@@ -171,19 +167,19 @@ void tests::exahype2::aderdg::ADERDGSolver::mapQuantities(
   [[maybe_unused]] const double* const NOALIAS  Q, // Q[4+3]
   [[maybe_unused]] double* const NOALIAS  outputQuantities // Q[4+3]
 ){
-  constexpr auto gamma = 1.4;
-  constexpr auto gasConstant = 287.058;
-  constexpr auto cp = gamma / (gamma - 1) * gasConstant;
-  constexpr auto referencePressure = """
+  constexpr auto AdiabaticIndex = 1.4;
+  constexpr auto GasConstant = 287.058;
+  constexpr auto IsobaricHeatCapacity = AdiabaticIndex / (AdiabaticIndex - 1) * GasConstant;
+  constexpr auto ReferencePressure = """
             + str(self._reference_pressure)
             + """;
-  constexpr auto gravity = 9.81;
-  constexpr auto q0 = 0;
+  constexpr auto Gravity = 9.81;
+  constexpr auto HeatRelease = 0;
 
-  const auto j = &Q[Shortcuts::j];
-  auto E = Q[Shortcuts::E];
-  auto rho = Q[Shortcuts::rho];
-  auto height = Q[Shortcuts::height];
+  const auto* const j = &Q[Shortcuts::j];
+  const auto E = Q[Shortcuts::E];
+  const auto rho = Q[Shortcuts::rho];
+  const auto height = Q[Shortcuts::height];
 
   const auto Z = 0;
   """
@@ -198,10 +194,10 @@ void tests::exahype2::aderdg::ADERDGSolver::mapQuantities(
 #endif
   outputQuantities[Shortcuts::E] = pressure;
 
-  const auto temperature = pressure/(gasConstant * rho);
-  const auto potT = temperature / std::pow((pressure / referencePressure), (gasConstant / cp));
+  const auto temperature = pressure/(GasConstant * rho);
+  const auto potentialTemperature = temperature / std::pow((pressure / ReferencePressure), (GasConstant / IsobaricHeatCapacity));
 
-  outputQuantities[Shortcuts::height] = potT;
+  outputQuantities[Shortcuts::height] = potentialTemperature;
 }
 """
         )
@@ -209,66 +205,61 @@ void tests::exahype2::aderdg::ADERDGSolver::mapQuantities(
 
 class NavierStokesCosineBubble(NavierStokesBubbles):
     """
-    Here we simulate a homogeneous domain containing a single spherical bubble
-    of higher temperature.
-    Due to the higher temperature the bubble will rise and diffuse outward.
-
-    The bubble is best visualised in the potential temperature
+    A single warm bubble in a homogeneous domain. The bubble rises and diffuses outward. The
+    potential temperature shows the bubble best.
     """
 
     def evaluate_perturbation(self):
         return """
-  // evaluate perturbation
-  tarch::la::Vector<DIMENSIONS, double> bubbleCenter = {
-    500, 350
+  const tarch::la::Vector<DIMENSIONS, double> bubbleCentre = {
+    0, -150
 #if DIMENSIONS == 3
-    ,350
+    ,-150
 #endif
   };
 
-  constexpr double size = 250;
-  constexpr auto tempDifference = 0.5;
+  constexpr double BubbleRadius = 250;
+  constexpr auto TemperatureDifference = 0.5;
 
-  const auto dist = tarch::la::norm2(x-bubbleCenter);
-  auto perturbation = dist <= size ? 
-    tempDifference / 2 * (1 + std::cos((std::numbers::pi * dist) / size))
+  const auto distance = tarch::la::norm2(x-bubbleCentre);
+  const auto perturbation = distance <= BubbleRadius ?
+    TemperatureDifference / 2 * (1 + std::cos((std::numbers::pi * distance) / BubbleRadius))
     : 0;
 """
 
 
 class NavierStokesTwoBubbles(NavierStokesBubbles):
     """
-    Here we simulate a homogeneous domain containing two bubbles, one of higher
-    temperature beneath the other of colder temperature.
-    Their repsective temperatures will cause the two bubbles to move towards one
-    another and collide, causing mixing effects.
+    A warm bubble beneath a cold bubble in a homogeneous domain. The bubbles move towards each
+    other, collide and mix.
     """
 
     def evaluate_perturbation(self):
         return """
-  // evaluate perturbation
-  tarch::la::Vector<DIMENSIONS, double> hotBubbleCenter = {
-    500, 300
+  const tarch::la::Vector<DIMENSIONS, double> hotBubbleCentre = {
+    0, -200
 #if DIMENSIONS == 3
-    ,300
+    ,-200
 #endif
   };
 
-  tarch::la::Vector<DIMENSIONS, double> coldBubbleCenter = {
-    560, 640
+  const tarch::la::Vector<DIMENSIONS, double> coldBubbleCentre = {
+    60, 140
 #if DIMENSIONS == 3
-    ,640
+    ,140
 #endif
   };
-  
-  constexpr double decay = 50.;
-  constexpr double tempDifferenceHot  = 0.5;
-  constexpr double tempDifferenceCold = -0.15;
- 
-  const auto d1 = tarch::la::norm2(x-hotBubbleCenter) - 150; // Hot bubble has a radius of 150
-  auto perturbation = d1 <= 0 ? tempDifferenceHot
-    : tempDifferenceHot * std::exp(-(d1 * d1) / (decay * decay));
 
-  const auto d2 = tarch::la::norm2(x-coldBubbleCenter) - 0; // Cold bubble has a radius of 0
-  perturbation += tempDifferenceCold * std::exp(-(d2 * d2) / (decay * decay));
+  constexpr double DecayLength               = 50.;
+  constexpr double HotBubbleRadius           = 150;
+  constexpr double ColdBubbleRadius          = 0;
+  constexpr double HotTemperatureDifference  = 0.5;
+  constexpr double ColdTemperatureDifference = -0.15;
+
+  const auto hotBubbleDistance = tarch::la::norm2(x-hotBubbleCentre) - HotBubbleRadius;
+  auto perturbation = hotBubbleDistance <= 0 ? HotTemperatureDifference
+    : HotTemperatureDifference * std::exp(-(hotBubbleDistance * hotBubbleDistance) / (DecayLength * DecayLength));
+
+  const auto coldBubbleDistance = tarch::la::norm2(x-coldBubbleCentre) - ColdBubbleRadius;
+  perturbation += ColdTemperatureDifference * std::exp(-(coldBubbleDistance * coldBubbleDistance) / (DecayLength * DecayLength));
 """

@@ -1,0 +1,135 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/la/Scalar.h"
+#include "tarch/la/ScalarOperations.h"
+#include "tarch/la/VectorOperations.h"
+
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::particles::Forces::enables(const ForceType force) const {
+  return (forceMethod & static_cast<int>(force)) == static_cast<int>(force);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::particles::getMass(const Particle& particle) {
+  return particle.getData(ParticleMassAttribute);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::particles::getRadius(const Particle& particle) {
+  return particle.getData(ParticleRadiusAttribute);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::particles::getFluidDensity(const Particle& particle) {
+  return particle.getData(FluidDensityAttribute);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::particles::getFluidVelocity(const Particle& particle) {
+  tarch::la::Vector<DIMENSIONS, double> velocity;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    velocity(axis) = particle.getData(FluidVelocityAttribute + axis);
+  }
+  return velocity;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::particles::getVelocity(const Particle& particle) {
+  tarch::la::Vector<DIMENSIONS, double> velocity;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    velocity(axis) = particle.getData(ParticleVelocityAttribute + axis);
+  }
+  return velocity;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::particles::getAcceleration(const Particle& particle) {
+  tarch::la::Vector<DIMENSIONS, double> acceleration;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    acceleration(axis) = particle.getData(ParticleAccelerationAttribute + axis);
+  }
+  return acceleration;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::setVelocity(Particle& particle, const tarch::la::Vector<DIMENSIONS, double>& velocity) {
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    particle.setData(ParticleVelocityAttribute + axis, velocity(axis));
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::setAcceleration(Particle& particle, const tarch::la::Vector<DIMENSIONS, double>& acceleration) {
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    particle.setData(ParticleAccelerationAttribute + axis, acceleration(axis));
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
+exahype2::particles::getState(const Particle& particle) {
+  State state;
+  state.position     = particle.getX();
+  state.velocity     = getVelocity(particle);
+  state.acceleration = getAcceleration(particle);
+  return state;
+}
+
+/**
+ * Writes the velocity and the acceleration of state. The caller sets the position.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::setState(Particle& particle, const State& state) {
+  setVelocity(particle, state.velocity);
+  setAcceleration(particle, state.acceleration);
+}
+
+/**
+ * Writes the acceleration of the enabled forces at position into particle. A particle without mass
+ * is a tracer with zero acceleration.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::applyForces(
+  Particle&                                    particle,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const Forces&                                forces,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth
+) {
+  const double mass = getMass(particle);
+  if (tarch::la::smallerEquals(mass, 0.0)) {
+    setAcceleration(particle, tarch::la::Vector<DIMENSIONS, double>(0.0));
+    return;
+  }
+
+  tarch::la::Vector<DIMENSIONS, double> totalForce(0.0);
+  if (forces.enables(ForceType::CentralGravity)) {
+    tarch::la::Vector<DIMENSIONS, double> distanceVector;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      distanceVector(axis) = position(axis) - (domainOffset(axis) + domainWidth(axis) / 2.0);
+    }
+    const double distance       = tarch::la::norm2(distanceVector);
+    const double forceMagnitude = mass * forces.gravitationalParameter / (distance * distance);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      totalForce(axis) += -forceMagnitude * distanceVector(axis) / distance;
+    }
+  }
+  if (forces.enables(ForceType::Buoyancy)) {
+    const double radius = getRadius(particle);
+    const double volume = (4.0 / 3.0) * tarch::la::PI * radius * radius * radius;
+    totalForce(DIMENSIONS - 1) += getFluidDensity(particle) * volume * forces.gravityMagnitude;
+  }
+  if (forces.enables(ForceType::StokesDrag)) {
+    const double radius         = getRadius(particle);
+    const double relaxationTime = mass / (6.0 * tarch::la::PI * forces.dynamicViscosity * radius + 1e-12);
+    const tarch::la::Vector<DIMENSIONS, double> relativeVelocity = getVelocity(particle) - getFluidVelocity(particle);
+    totalForce += -(mass / relaxationTime) * relativeVelocity;
+  }
+  if (forces.enables(ForceType::ConstantGravity)) {
+    totalForce(DIMENSIONS - 1) += -mass * forces.gravityMagnitude;
+  }
+
+  setAcceleration(particle, totalForce / mass);
+}
+TARGET_DECLARE_END

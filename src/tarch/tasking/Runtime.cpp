@@ -4,8 +4,6 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/instrumentation/Debug.h"
-#include "tarch/instrumentation/Warning.h"
-#include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Rank.h"
 
 #include <omp.h>
@@ -19,11 +17,11 @@
 #endif
 
 /**
- * Prints the affinity mask of the calling process.
- *
- * An `x` denotes an available logical processor and an `o` a masked one.
+ * Returns the affinity mask of the calling thread with an x for every available logical processor
+ * and an o for every masked one.
  */
-std::string tarch::tasking::printUnmaskedThreads() {
+std::string
+tarch::tasking::printUnmaskedThreads() {
   std::ostringstream output;
   output << "(";
 #ifdef COMPILER_HAS_SYSINFO
@@ -31,7 +29,7 @@ std::string tarch::tasking::printUnmaskedThreads() {
   if (sched_getaffinity(0, sizeof(cpu_set_t), &mask) == 0) {
     const auto numberOfProcessors =
       std::min(static_cast<unsigned int>(CPU_SETSIZE), std::thread::hardware_concurrency());
-    for (auto processorIndex = 0u; processorIndex < numberOfProcessors; processorIndex++) {
+    for (auto processorIndex = 0U; processorIndex < numberOfProcessors; processorIndex++) {
       if (CPU_ISSET(processorIndex, &mask) != 0) {
         output << "x";
       } else {
@@ -49,9 +47,10 @@ std::string tarch::tasking::printUnmaskedThreads() {
 }
 
 /**
- * Counts the logical processors available through the process affinity mask.
+ * Returns the number of logical processors in the affinity mask of the calling thread.
  */
-int tarch::tasking::getNumberOfUnmaskedThreads() {
+int
+tarch::tasking::getNumberOfUnmaskedThreads() {
 #ifdef COMPILER_HAS_SYSINFO
   cpu_set_t mask{};
   if (sched_getaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
@@ -71,67 +70,90 @@ int tarch::tasking::getNumberOfUnmaskedThreads() {
 #endif
 }
 
-tarch::tasking::Runtime& tarch::tasking::Runtime::getInstance() {
+/**
+ * Returns whether the ranks on this node start more threads than the node or the affinity mask of
+ * this rank has logical processors. The thread count comes from OMP_NUM_THREADS. The OpenMP runtime
+ * fixes its wait policy when it starts.
+ */
+bool
+tarch::tasking::oversubscribesNode() {
+  const int unmaskedThreads = getNumberOfUnmaskedThreads();
+  int       threadsPerRank  = unmaskedThreads;
+  if (const char* const variable = std::getenv("OMP_NUM_THREADS"); variable != nullptr) {
+    const std::string_view value(variable);
+    int                    requestedThreads = 0;
+    const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), requestedThreads);
+    if (error == std::errc() and requestedThreads > 0) {
+      threadsPerRank = requestedThreads;
+    }
+  }
+  const int processorsOfNode = std::max(static_cast<int>(std::thread::hardware_concurrency()), unmaskedThreads);
+  return threadsPerRank > unmaskedThreads
+    or tarch::mpi::Rank::getInstance().getNumberOfRanksOnNode() * threadsPerRank > processorsOfNode;
+}
+
+tarch::tasking::Runtime&
+tarch::tasking::Runtime::getInstance() {
   static tarch::tasking::Runtime instance{};
   return instance;
 }
 
-bool tarch::tasking::Runtime::init() {
+bool
+tarch::tasking::Runtime::init() {
 #ifdef __GLIBC__
-  // Glibc grows each thread's arena through mprotect, and the kernel
-  // serialises those calls across the threads of the first parallel sweep. A
-  // large top padding takes the arena growth out of that sweep. A sanitizer or
-  // a replaced allocator answers every mallopt() option with zero, and its
-  // arena has no top padding to set.
+  // A large top padding moves the arena growth of glibc and its serialised mprotect calls out of the
+  // first parallel sweep. A sanitizer or a replaced allocator rejects every mallopt() option.
   if (mallopt(M_TOP_PAD, 128 * 1024 * 1024) == 0) {
-    logDebug("The allocator rejected the requested top padding.");
+    LOG_DEBUG("The allocator rejected the requested top padding.");
   }
 #endif
-  // A team thread that spins at a barrier takes the core that the master of
-  // another rank on the same node needs, so the teams of such a node sleep
-  // while they wait. The OpenMP runtime reads the variable once when it
-  // starts, so it has to be set before the first OpenMP call, and a value the
-  // user set wins.
-  const auto& rank = tarch::mpi::Rank::getInstance();
-  if (rank.getNumberOfRanks() > rank.getNumberOfNodes() and std::getenv("OMP_WAIT_POLICY") == nullptr) {
+  // On an oversubscribed node a team thread that spins at a barrier takes the core of another rank.
+  // The teams of such a node sleep while they wait, unless the user has set the variable.
+  if (oversubscribesNode() and std::getenv("OMP_WAIT_POLICY") == nullptr) {
     setenv("OMP_WAIT_POLICY", "passive", 0);
 #ifdef KMP_VERSION_MAJOR
-    // The LLVM runtime also takes the policy after it has started, so these
-    // two calls set it for a runtime that a log line started before this call.
+    // The LLVM runtime also takes the policy after it has started. These two calls set it for a
+    // runtime that a log line started before this call.
     kmp_set_library_throughput();
     kmp_set_blocktime(0);
 #endif
   }
-  int maximumNumberOfThreads = std::min(omp_get_num_procs(), omp_get_max_threads());
-  // The dedicated communication thread polls continuously and would otherwise
-  // sit on the core of a team thread, which slows both down.
-  if (tarch::mpi::AbstractCommunicationManager::usesDedicatedThread() and maximumNumberOfThreads > 1) {
-    maximumNumberOfThreads--;
-  }
+  const int maximumNumberOfThreads = std::min(omp_get_num_procs(), omp_get_max_threads());
   omp_set_num_threads(maximumNumberOfThreads);
   _numberOfThreads = omp_get_max_threads();
 
   if (_numberOfThreads > tarch::tasking::getNumberOfUnmaskedThreads()) {
-    logDebug(
+    LOG_DEBUG(
       "The number of configured threads (" << _numberOfThreads
                                            << ") is greater than the number of available unmasked threads ("
                                            << tarch::tasking::getNumberOfUnmaskedThreads() << ")."
     );
-    logDebug("Unmasked threads: " << tarch::tasking::printUnmaskedThreads() << ".");
+    LOG_DEBUG("Unmasked threads: " << tarch::tasking::printUnmaskedThreads() << ".");
   }
 
   return tarch::tasking::Runtime::isInitialised();
 }
 
-void tarch::tasking::Runtime::shutdown() {}
+void
+tarch::tasking::Runtime::shutdown() {}
 
-bool tarch::tasking::Runtime::isInitialised() const { return _numberOfThreads > 0; }
+bool
+tarch::tasking::Runtime::isInitialised() const {
+  return _numberOfThreads > 0;
+}
 
-int tarch::tasking::Runtime::getNumberOfThreads() const { return _numberOfThreads; }
+int
+tarch::tasking::Runtime::getNumberOfThreads() const {
+  return _numberOfThreads;
+}
 
-int tarch::tasking::Runtime::getThreadNumber() const { return omp_get_thread_num(); }
+int
+tarch::tasking::Runtime::getThreadNumber() const {
+  return omp_get_thread_num();
+}
 
-int tarch::tasking::Runtime::getCoreNumber() const {
+int
+tarch::tasking::Runtime::getCoreNumber() const {
 #ifdef COMPILER_HAS_SYSINFO
   return sched_getcpu();
 #else

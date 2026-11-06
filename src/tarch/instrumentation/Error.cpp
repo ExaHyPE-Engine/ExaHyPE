@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Error.h"
 
-void tarch::instrumentation::Log::errorWithScopeName(std::string_view scopeName, std::string_view message) {
+void
+tarch::instrumentation::Log::errorWithScopeName(std::string_view scopeName, std::string_view message) {
   const auto context = createContext();
   writeMessage(
     "Error",

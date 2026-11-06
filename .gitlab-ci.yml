@@ -1,32 +1,36 @@
-# Define the stages we have overall.
-# Python compiles the Python sources and runs the postprocessing tests once, without a compiler.
-# Compiler is where we build and test the actual code against different compilers.
 stages:
   - Python
-  - Toolchain
+  - CPU
+  - GPU
 
 workflow:
   rules:
-    # Always create pipelines for merge requests
+    # A merge request creates a pipeline.
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    # Do not create pipelines for tag pushes
+    # GitLab skips the pipeline of a tag push.
     - if: '$CI_COMMIT_TAG'
       when: never
-    # Create pipelines for branch pushes only if there is no open MR for this branch
+    # A branch push creates a pipeline until the branch is the source of an open merge request.
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS == null'
-    # Trigger for child pipelines
+    # A trigger job of a parent pipeline creates its child pipeline.
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
-    # Else do not create a pipeline
+    # GitLab skips the pipeline of every other event.
     - when: never
 
-# Cancelling a superseded trigger job cancels its whole child pipeline, which the
-# child's own interruptible default cannot arrange from the inside.
+# The child pipelines read the source of this pipeline in their rules.
+variables:
+  UPSTREAM_PIPELINE_SOURCE: "$CI_PIPELINE_SOURCE"
+  UPSTREAM_MR_TARGET_BRANCH: "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+  UPSTREAM_MR_SOURCE_BRANCH: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+  UPSTREAM_COMMIT_BRANCH: "$CI_COMMIT_BRANCH"
+
+# A newer pipeline cancels a superseded trigger job and with it the whole child pipeline. The
+# interruptible default of the child pipeline cannot cancel the child pipeline from the inside.
 default:
   interruptible: true
 
-# The templates define the tags, variables, scripts and rules the jobs extend.
-# gitlab-toolchain.yml defines one job per compiler, gitlab-python.yml the jobs without a compiler.
 include:
-  - local: .continuous_integration/templates/*.yml
-  - local: .continuous_integration/gitlab-python.yml
-  - local: .continuous_integration/gitlab-toolchain.yml
+  - local: .gitlab/templates.yml
+  - local: .gitlab/python.yml
+  - local: .gitlab/cpu.yml
+  - local: .gitlab/gpu.yml

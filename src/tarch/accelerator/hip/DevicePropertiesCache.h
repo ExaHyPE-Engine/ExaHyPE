@@ -12,7 +12,7 @@ namespace tarch::accelerator::hip {
 
 class tarch::accelerator::hip::DevicePropertiesCache {
 public:
-  static hipDeviceProp_t& get();
+  static hipDeviceProp_t& getProperties();
 
 private:
   std::mutex                     _mtx;

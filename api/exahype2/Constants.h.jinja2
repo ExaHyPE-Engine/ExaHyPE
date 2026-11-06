@@ -2,13 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 namespace {{NAMESPACE | join("::")}} {
-  inline const tarch::la::Vector<DIMENSIONS, double> DomainOffset{ {{DOMAIN_OFFSET}} };
-  inline const tarch::la::Vector<DIMENSIONS, double> DomainSize{ {{DOMAIN_SIZE}} };
-  constexpr std::bitset<DIMENSIONS>                  PeriodicBoundaries{ {{PERIODIC_BOUNDARIES}}ULL };
+  constexpr std::bitset<DIMENSIONS> PeriodicBoundaries{ {{PERIODIC_BOUNDARIES}}ULL };
+  TARGET_DECLARE
+  DEVICE_VARIABLE constexpr tarch::la::Vector<DIMENSIONS, double> DomainOffset{ {{DOMAIN_OFFSET}} };
+  DEVICE_VARIABLE constexpr tarch::la::Vector<DIMENSIONS, double> DomainSize{ {{DOMAIN_SIZE}} };
 {%- for constant in CONSTANTS %}
-  constexpr {{constant.type}} {{constant.name}} = {{constant.value}};
+  DEVICE_VARIABLE constexpr {{constant.type}} {{constant.name}} = {{constant.value}};
 {%- endfor %}
+  TARGET_DECLARE_END
 } // namespace {{NAMESPACE | join("::")}}

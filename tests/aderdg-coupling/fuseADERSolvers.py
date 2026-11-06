@@ -1,233 +1,137 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import argparse
 import os
+import sys
 
-from coupling.kernels.Limiter import compute_projector_to_point_set, flatten
+import exahype2
 
+sys.path.insert(0, os.path.abspath("../aderdg/"))
+sys.path.insert(0, os.path.abspath("../aderdg/scenarios"))
+import scenarios
 
-def different_basis_postprocessing_kernel(condition, order, proj, solver_name):
-    return (
-        """
-    if (
-      repositories::{{SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep()
-      and not marker.willBeRefined() and not marker.hasBeenRefined()
-      """
-        + condition
-        + """
-    ) {
-      constexpr int fromPoints = {{ORDER}} + 1;
-      constexpr int toPoints = """
-        + str(order)
-        + """ + 1;
+available_precisions = ("float", "double", "fp32", "fp64", "fp16", "bf16")
 
-      constexpr int FluxElementsPerFace   = facedata::{{UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
-      constexpr int BasisElementsPerFace  = facedata::{{UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
-
-      constexpr int FluxElementsPerFace2  = facedata::"""
-        + solver_name
-        + """FluxEstimates::Cardinality / 2;
-      constexpr int BasisElementsPerFace2 = facedata::"""
-        + solver_name
-        + """Estimates::Cardinality / 2;
-
-      constexpr double proj[toPoints * fromPoints] = {"""
-        + proj
-        + """};
-
-      for (int d = 0; d < DIMENSIONS; d++) {
-        dg2dgFace(
-          fineGridFaces"""
-        + solver_name
-        + """Estimates(d).data() + BasisElementsPerFace2,
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).data() + BasisElementsPerFace,
-          proj, toPoints, fromPoints, ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}));
-        dg2dgFace(
-          fineGridFaces"""
-        + solver_name
-        + """Estimates(d + DIMENSIONS).data(),
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d + DIMENSIONS).data(),
-          proj, toPoints, fromPoints, ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}));
-
-        dg2dgFace(
-          fineGridFaces"""
-        + solver_name
-        + """FluxEstimates(d).data() + FluxElementsPerFace2,
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).data() + FluxElementsPerFace,
-          proj, toPoints, fromPoints, {{NUMBER_OF_UNKNOWNS}});
-        dg2dgFace(
-          fineGridFaces"""
-        + solver_name
-        + """FluxEstimates(d + DIMENSIONS).data(),
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d + DIMENSIONS).data(),
-          proj, toPoints, fromPoints, {{NUMBER_OF_UNKNOWNS}});
-      }
-    }
-"""
-    )
-
-
-def same_basis_postprocessing_kernel(condition, solver_name):
-    return (
-        """
-    if (
-      repositories::{{SOLVER_INSTANCE}}.isFirstGridSweepOfTimeStep()
-      and not marker.willBeRefined() and not marker.hasBeenRefined()
-      """
-        + condition
-        + """
-    ) {
-      constexpr int FluxElementsPerFace   = facedata::{{UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
-      constexpr int BasisElementsPerFace  = facedata::{{UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
-
-      // Entry 0 of the face holds the left side and entry 1 the right side.
-      const int ownFaceSide = fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated(0) ? 0 : 1;
-
-      // A face between two trees can have neither side updated.
-      if (fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated(ownFaceSide)) {
-        std::copy_n(
-          fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.data() + ownFaceSide * BasisElementsPerFace,
-          BasisElementsPerFace,
-          fineGridFace"""
-        + solver_name
-        + """QEstimates.data() + ownFaceSide * BasisElementsPerFace
-        );
-        std::copy_n(
-          fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.data() + ownFaceSide * FluxElementsPerFace,
-          FluxElementsPerFace,
-          fineGridFace"""
-        + solver_name
-        + """QFluxEstimates.data() + ownFaceSide * FluxElementsPerFace
-        );
-      }
-    }
-"""
-    )
-
-
-def dg2dg_face_header():
-    return """
-#pragma once
-#include "peano4/Loop.h"
-
-template<typename To, typename From>
-inline void dg2dgFace(To* qTo, const From* qFrom, const double* proj, int toPoints, int fromPoints, int numVars) {
-#if DIMENSIONS == 3
-  const int toSize = toPoints * toPoints * numVars;
-#else
-  const int toSize = toPoints * numVars;
-#endif
-
-  std::fill_n(qTo, toSize, 0.0);
-
-  peano4::dForEachExclusive(toPoints, DIMENSIONS - 1, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dofTo) {
-    const int dofToSerialised = dofTo[0]
-#if DIMENSIONS == 3
-      + dofTo[1] * toPoints
-#endif
-    ;
-
-    peano4::dForEachExclusive(fromPoints, DIMENSIONS - 1, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dofFrom) {
-      const int dofFromSerialised = dofFrom[0]
-#if DIMENSIONS == 3
-        + dofFrom[1] * fromPoints
-#endif
-      ;
-
-      for (int var = 0; var < numVars; var++) {
-        qTo[dofToSerialised * numVars + var] += qFrom[dofFromSerialised * numVars + var] * proj[dofTo[0] * fromPoints + dofFrom[0]]
-#if DIMENSIONS == 3
-          * proj[dofTo[1] * fromPoints + dofFrom[1]]
-#endif
-        ;
-      }
-    });
-  });
+scenario_factories = {
+    "AcousticPlanarWaves": lambda: scenarios.AcousticPlanarWaves(dimensions=2),
+    "AdvectionLinear": scenarios.AdvectionLinear,
+    "ElasticPlanarWaves": lambda: scenarios.ElasticPlanarWaves(dimensions=2),
+    "EulerGaussianBell": scenarios.EulerGaussianBell,
+    "EulerIsentropicVortex": scenarios.EulerIsentropicVortex,
+    "SWERadialDamBreak": scenarios.SWERadialDamBreak,
+    "SWERestingLake": scenarios.SWERestingLake,
 }
-"""
 
 
-def update_solver_storage(solver, cond):
-    s1_load_cell = solver._load_cell_data_default_guard() + cond
-    s1_store_cell = solver._store_cell_data_default_guard() + cond
-    s1_provide_cell = (
-        solver._provide_cell_data_to_compute_kernels_default_guard() + cond
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=None)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
+    parser.add_argument("-l", "--grid-levels", type=int, default=3)
+    parser.add_argument(
+        "-p",
+        "--polynomials",
+        type=int,
+        choices=(0, 1),
+        default=0,
+        help="Polynomial type, 0 is Gauss-Legendre, 1 is Gauss-Lobatto",
+    )
+    parser.add_argument(
+        "-pr", "--precision", choices=available_precisions, default="fp64"
+    )
+    parser.add_argument(
+        "-pr2",
+        "--second-precision",
+        choices=available_precisions,
+        default="fp32",
+        help="Precision of the solver that owns the upper part of the domain",
+    )
+    parser.add_argument(
+        "-s",
+        "--scenario",
+        choices=scenario_factories.keys(),
+        default="SWERadialDamBreak",
+    )
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
+scenario = scenario_factories[args.scenario]()
+order = args.degrees_of_freedom - 1
+end_time = scenario._end_time if args.end_time is None else args.end_time
+
+basis = exahype2.dg.GaussLegendre if args.polynomials == 0 else exahype2.dg.GaussLobatto
+
+project = exahype2.Project(
+    ["tests", "exahype2", "aderdg"],
+    "ADERDGCoupling",
+    dimensions=scenario._dimensions,
+    size=[scenario._domain_size for _ in range(3)],
+    offset=[scenario._offset for _ in range(3)],
+    periodic_bc=[scenario._periodic_bc for _ in range(3)],
+    executable=scenario.__class__.__name__,
+    min_end_time=end_time,
+    max_end_time=end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
+)
+
+if project.dimensions != scenario._dimensions:
+    raise ValueError(
+        f"The scenario {args.scenario} runs in {scenario._dimensions}D only."
     )
 
-    solver._load_cell_data_default_guard = lambda: s1_load_cell
-    solver._store_cell_data_default_guard = lambda: s1_store_cell
-    solver._provide_cell_data_to_compute_kernels_default_guard = lambda: s1_provide_cell
+# The plane between the two solvers is a cell boundary of the coarsest level and therefore of
+# every finer level.
+interface_plane = (
+    "(DomainOffset(0) + DomainSize(0) / peano4::sfc::ActiveCurve::SubdivisionFactor)"
+)
 
-    s1_load_face = solver._load_face_data_default_guard() + cond
-    s1_store_face = solver._store_face_data_default_guard() + cond
-
-    solver._load_face_data_default_guard = lambda: s1_load_face
-    solver._store_face_data_default_guard = lambda: s1_store_face
-
-    # The solver reads these conditions when it creates its face projections, which
-    # happens once the project builds the solver.
-    s1_send = solver._projection_send_condition() + cond
-    s1_receive = solver._projection_receive_condition() + cond
-
-    solver._projection_send_condition = lambda: s1_send
-    solver._projection_receive_condition = lambda: s1_receive
-
-
-def fuse_ader_solvers(solver1, solver2, cond_1, cond_2):
-    solver_1_cond = " and " + cond_1
-    solver_2_cond = " and " + cond_2
-
-    update_solver_storage(solver1, solver_1_cond)
-    update_solver_storage(solver2, solver_2_cond)
-
-    # Fit the time step sizes to one another.
-    time_step_size = (
-        "std::min( repositories::"
-        + solver1.instance_name
-        + ".getTimeStepSize(), repositories::"
-        + solver2.instance_name
-        + ".getTimeStepSize())"
+solvers = []
+for name, precision, predicate in (
+    (scenario.__class__.__name__, args.precision, "x(0) < " + interface_plane),
+    (
+        scenario.__class__.__name__ + "2",
+        args.second_precision,
+        "x(0) > " + interface_plane,
+    ),
+):
+    solver = exahype2.dg.ader.Solver(
+        name=name,
+        order=order,
+        unknowns=scenario._equation.num_unknowns,
+        auxiliary_variables=scenario._equation.num_auxiliary_variables,
+        time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+        basis=basis,
+        linear=scenario._equation.is_linear,
+        precision=precision,
     )
+    solver.set_pde_terms(
+        initial_condition=scenario.initial_conditions(),
+        boundary_conditions=scenario.boundary_conditions(),
+        max_eigenvalue=scenario._equation.eigenvalues(),
+        flux=scenario._equation.flux(),
+        ncp=scenario._equation.ncp(),
+        riemann_solver=scenario._equation.riemann_solver(),
+    )
+    if scenario.analytical_solution() is not None:
+        solver.set_pde_terms(analytical_solution=scenario.analytical_solution())
+        solver.measure_error(file="Error_" + name, every=scenario._end_time / 100.0)
+    solver.restrict_to_cells(predicate)
+    solver.add_includes("peano4/sfc/ActiveCurve.h")
+    project.add_solver(solver)
+    solvers.append(solver)
 
-    solver1.use_time_step_size(time_step_size)
-    solver2.use_time_step_size(time_step_size)
+project.couple(solvers[0], solvers[1])
 
-    quadrature_points_1 = [float(point) for point in solver1.basis.quadrature_points]
-    quadrature_points_2 = [float(point) for point in solver2.basis.quadrature_points]
-
-    if quadrature_points_1 != quadrature_points_2:
-        proj1 = flatten(
-            compute_projector_to_point_set(quadrature_points_1, quadrature_points_2)
-        )
-        proj2 = flatten(
-            compute_projector_to_point_set(quadrature_points_2, quadrature_points_1)
-        )
-        # Add a postprocessing kernel that interpolates the face data of each solver onto the other.
-        solver1.postprocess_solution.add_cell_kernel(
-            different_basis_postprocessing_kernel(
-                solver_1_cond, str(solver2.order), proj1, solver2._unknown_identifier()
-            )
-        )
-        solver2.postprocess_solution.add_cell_kernel(
-            different_basis_postprocessing_kernel(
-                solver_2_cond, str(solver1.order), proj2, solver1._unknown_identifier()
-            )
-        )
-
-        os.makedirs("observers", exist_ok=True)
-        with open("observers/dg2dgface.h", "w") as header:
-            header.write(dg2dg_face_header())
-
-        solver1.add_includes("observers/dg2dgface.h")
-        solver2.add_includes("observers/dg2dgface.h")
-    else:
-        # Add a postprocessing kernel that copies the face data of each solver to the other.
-        solver1.postprocess_solution.add_face_kernel(
-            same_basis_postprocessing_kernel(
-                solver_1_cond + solver_2_cond, solver2.name
-            )
-        )
-        solver2.postprocess_solution.add_face_kernel(
-            same_basis_postprocessing_kernel(
-                solver_1_cond + solver_2_cond, solver1.name
-            )
-        )
+project.generate_and_build()

@@ -13,18 +13,12 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-# --------------------------------------------------------------------------- #
-# XDMF topology tables
-# --------------------------------------------------------------------------- #
-# XDMF mixed-topology element code -> number of nodes (HDF5 /topology stream).
+# The number of nodes of each XDMF mixed-topology element code in the HDF5 /topology stream.
 XDMF_NODE_COUNTS = {4: 3, 5: 4, 6: 4, 7: 5, 8: 6, 9: 8}
-# XDMF poly types carry an explicit node count in the stream instead.
+# XDMF poly types store their node count in the stream.
 XDMF_POLY_TYPES = {1, 2, 3}
 
 
-# --------------------------------------------------------------------------- #
-# Common mesh model
-# --------------------------------------------------------------------------- #
 @dataclass
 class MeshSnapshot:
     """One snapshot in a common form, whatever format it was read from.
@@ -58,16 +52,14 @@ class MeshSnapshot:
             return self.node_data[name], "node"
         if name in self.cell_data:
             return self.cell_data[name], "cell"
-        raise KeyError(f"No field named {name!r} in {self.name}")
+        raise KeyError(
+            f"The solution reader cannot find the field {name!r} in {self.name}."
+        )
 
 
 @dataclass
 class SnapshotRef:
-    """A picklable description of where one snapshot lives.
-
-    A worker process, or a lazy viewer, can load the snapshot on demand without
-    re-parsing an index.
-    """
+    """A picklable reference to one snapshot that a worker process loads without parsing the index."""
 
     fmt: str
     path: str
@@ -77,7 +69,7 @@ class SnapshotRef:
 
 
 def _squeeze_field(values: np.ndarray) -> np.ndarray:
-    """A single-column field is a scalar; keep everything else as written."""
+    """Returns a single-column field as a 1D array and every other field unchanged."""
     values = np.asarray(values)
     if values.ndim == 2 and values.shape[1] == 1:
         return values[:, 0]
@@ -85,7 +77,7 @@ def _squeeze_field(values: np.ndarray) -> np.ndarray:
 
 
 def _pack_cells(cell_list: list[np.ndarray]) -> object:
-    """An ``(Ncells, k)`` array when every cell has the same corner count, else a list."""
+    """Returns an ``(Ncells, k)`` array when every cell has the same corner count, else a list."""
     if not cell_list:
         return np.empty((0, 0), dtype=np.int64)
     widths = {len(cell) for cell in cell_list}
@@ -102,9 +94,7 @@ def _ordered_field_names(
     ]
 
 
-# --------------------------------------------------------------------------- #
-# Snapshot time encoded in a file name (e.g. elastic-0_500000.h5 -> 0.5)
-# --------------------------------------------------------------------------- #
+# The file name elastic-0_500000.h5 encodes the snapshot time 0.5.
 def _time_from_name(path: Path) -> float:
     try:
         return float(path.stem.rsplit("-", 1)[1].replace("_", "."))
@@ -117,9 +107,7 @@ def _time_sort_key(path: Path):
     return (1, 0.0, path.name) if time != time else (0, time, path.name)
 
 
-# --------------------------------------------------------------------------- #
-# VTKHDF reader (single growing file, all steps concatenated)
-# --------------------------------------------------------------------------- #
+# A VTKHDF file stores all steps one after the other.
 def _scan_vtkhdf(path: Path) -> tuple[str, list[SnapshotRef]]:
     import h5py
 
@@ -166,8 +154,8 @@ def _load_vtkhdf_step(ref: SnapshotRef) -> MeshSnapshot:
             group["Points"][point_start : point_start + npt, :], dtype=float
         )
 
-        # Each step's Offsets block restarts at zero and has Ncells + 1 entries;
-        # its block starts after every earlier step's block.
+        # The Offsets block of every step restarts at zero, has Ncells + 1 entries and
+        # follows the blocks of the earlier steps.
         block_start = int(np.sum(n_cells[:step] + 1))
         offsets_block = np.asarray(
             group["Offsets"][block_start : block_start + ncl + 1]
@@ -205,10 +193,7 @@ def _read_vtkhdf_fields(
 def _cells_from_offsets(
     connectivity: np.ndarray, offsets: np.ndarray, num_cells: int
 ) -> object:
-    """Turn a flat connectivity stream plus its (num_cells + 1) offsets into cells.
-
-    Cells that all have the same corner count are reshaped in one go.
-    """
+    """Returns the cells of a flat connectivity stream and its num_cells + 1 offsets."""
     if num_cells == 0:
         return np.empty((0, 0), dtype=np.int64)
     widths = np.diff(offsets)
@@ -219,9 +204,7 @@ def _cells_from_offsets(
     )
 
 
-# --------------------------------------------------------------------------- #
-# HDF5 / XDMF reader (temporal index inlines a grid per step)
-# --------------------------------------------------------------------------- #
+# The temporal XDMF index of an HDF5 run inlines one grid per step.
 def _data_item_ref(index_dir: Path, text: str | None) -> tuple[Path, str]:
     if text is None:
         raise ValueError("Missing DataItem reference")
@@ -236,7 +219,7 @@ def _grid_to_payload(index_dir: Path, grid: ET.Element) -> dict:
     if topology is None or geometry is None:
         raise ValueError("XDMF grid is missing Topology or Geometry")
     topology_ref = _data_item_ref(index_dir, topology.find("DataItem").text)
-    # XYZ geometry is one interleaved array; X_Y_Z is one DataItem per axis.
+    # An XYZ geometry is one interleaved DataItem. An X_Y_Z geometry has one DataItem per axis.
     geometry_refs = [
         _data_item_ref(index_dir, di.text) for di in geometry.findall("DataItem")
     ]
@@ -276,7 +259,7 @@ def _scan_xdmf(path: Path) -> tuple[str, list[SnapshotRef]]:
 
     grid = root.find(".//Grid")
     if grid is None:
-        raise ValueError(f"No Grid element found in {path}")
+        raise ValueError(f"The solution reader cannot find a Grid element in {path}.")
     payload = _grid_to_payload(index_dir, grid)
     return path.stem, [
         SnapshotRef("xdmf", str(path), _time_from_name(path), path.stem, payload)
@@ -326,9 +309,8 @@ def _decode_xdmf_topology(topology: np.ndarray) -> object:
     if flat.size == 0:
         return np.empty((0, 0), dtype=np.int64)
 
-    # Fast path: When every cell is the same fixed-arity element the stream has a
-    # constant stride and reshapes in one go, without a Python loop over (up to
-    # millions of) cells.
+    # The elements of a stream of one fixed-arity element type follow at a constant stride. One
+    # reshape splits such a stream.
     first = int(flat[0])
     if first in XDMF_NODE_COUNTS:
         stride = XDMF_NODE_COUNTS[first] + 1
@@ -394,9 +376,7 @@ def _load_bare_hdf5(ref: SnapshotRef) -> MeshSnapshot:
     )
 
 
-# --------------------------------------------------------------------------- #
-# NetCDF UGRID reader (a .nc per step, listed in a .nc.series JSON index)
-# --------------------------------------------------------------------------- #
+# A NetCDF UGRID run writes one .nc file per step and lists the files in a .nc.series JSON index.
 def _scan_netcdf(path: Path) -> tuple[str, list[SnapshotRef]]:
     if str(path).endswith(".nc.series"):
         base = path.name[: -len(".nc.series")]
@@ -439,7 +419,7 @@ def _load_netcdf(ref: SnapshotRef) -> MeshSnapshot:
         )
         fill = getattr(connectivity_variable, "_FillValue", -1)
         raw = np.ma.filled(connectivity_variable[:], fill).astype(np.int64)
-        if np.all(raw != fill):  # fixed width with no ragged padding: one array
+        if np.all(raw != fill):
             cells = raw - start_index
         else:
             cells = _pack_cells([(row[row != fill] - start_index) for row in raw])
@@ -469,7 +449,9 @@ def _netcdf_mesh_variable(dataset):
     for variable in dataset.variables.values():
         if getattr(variable, "cf_role", None) == "mesh_topology":
             return variable
-    raise ValueError("NetCDF file has no mesh_topology variable")
+    raise ValueError(
+        "The NetCDF reader reads files with a mesh_topology variable only."
+    )
 
 
 _COMPONENT_SUFFIX = re.compile(r"^(.*)_(\d+)$")
@@ -479,10 +461,10 @@ _COMPONENT_LONG_NAME = re.compile(r"^(.*) \(component (\d+)\)$")
 def _netcdf_fields(
     dataset, dimension: str, coordinate_names: list[str]
 ) -> dict[str, np.ndarray]:
-    """Group the variables defined over ``dimension`` into scalar and vector fields.
+    """Groups the variables over ``dimension`` into scalar and vector fields.
 
-    A field's ``name_0``, ``name_1`` ... components are regrouped into one
-    ``(N, components)`` array, guided by each variable's ``long_name``.
+    A vector field stacks its components ``name_0``, ``name_1`` ... into one
+    ``(N, components)`` array, guided by the ``long_name`` of each variable.
     """
     scalars: dict[str, str] = {}
     components: dict[str, dict[int, str]] = {}
@@ -490,8 +472,8 @@ def _netcdf_fields(
     for name, variable in dataset.variables.items():
         if variable.dimensions != (dimension,) or name in reserved:
             continue
-        # A variable named after its own dimension is a CF coordinate variable (here the
-        # plotter's dimension-scale placeholder), not a data field.
+        # A variable named after its own dimension is a CF coordinate variable, here the
+        # dimension-scale placeholder of the plotter.
         if name == dimension:
             continue
         if getattr(variable, "cf_role", None) is not None:
@@ -505,9 +487,9 @@ def _netcdf_fields(
         if tagged:
             components.setdefault(tagged.group(1), {})[int(tagged.group(2))] = name
         elif long_name is not None:
-            scalars[name] = name  # writer-declared scalar, kept under its own name
+            scalars[name] = name
         else:
-            # No metadata (a foreign/legacy NetCDF): Fall back to the name-suffix heuristic.
+            # A file without long_name attributes groups components by their name suffix.
             match = _COMPONENT_SUFFIX.match(name)
             if match and match.group(1):
                 components.setdefault(match.group(1), {})[int(match.group(2))] = name
@@ -525,9 +507,7 @@ def _netcdf_fields(
     return fields
 
 
-# --------------------------------------------------------------------------- #
-# VTU reader (a .pvd collection of per-step .pvtu, each a set of per-rank .vtu)
-# --------------------------------------------------------------------------- #
+# A .pvd collection lists one .pvtu file per step. Each .pvtu file lists one .vtu file per rank.
 def _local_tag(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
@@ -557,9 +537,7 @@ def _scan_vtu(path: Path) -> tuple[str, list[SnapshotRef]]:
 
 
 def _load_vtu(ref: SnapshotRef) -> MeshSnapshot:
-    # Prefer VTK: ExaHyPE writes one <Piece> per subdomain inside each per-rank
-    # .vtu and stores the data zlib-appended, both of which meshio mishandles (it keeps all points
-    # but only one piece's cells). Use VTK when available, falling back to meshio otherwise.
+    # VTK reads appended data and multi-piece grids. Without VTK, meshio reads the file.
     path = Path(ref.path)
     try:
         return _load_vtu_vtk(ref, path)
@@ -580,7 +558,9 @@ def _load_vtu_vtk(ref: SnapshotRef, path: Path) -> MeshSnapshot:
     grid = reader.GetOutput()
 
     points = _drop_trivial_z(
-        np.asarray(vtk_to_numpy(grid.GetPoints().GetData()), dtype=float)
+        np.empty((0, 3))
+        if grid.GetNumberOfPoints() == 0
+        else np.asarray(vtk_to_numpy(grid.GetPoints().GetData()), dtype=float)
     )
     cell_array = grid.GetCells()
     connectivity = np.asarray(
@@ -621,12 +601,29 @@ def _load_vtu_meshio(ref: SnapshotRef, path: Path) -> MeshSnapshot:
     cell_acc: dict[str, list[np.ndarray]] = {}
     point_offset = 0
     for piece in piece_files:
-        if piece.read_bytes()[:65536].count(b"<Piece") > 1:
+        with piece.open("rb") as source:
+            header = source.read(65536)
+        piece_tags = re.findall(rb"<Piece\b[^>]*>", header)
+        if (
+            b"</VTKFile>" in header
+            and piece_tags
+            and all(
+                dict(
+                    re.findall(
+                        rb"\b(NumberOfPoints|NumberOfCells)\s*=\s*[\"'](\d+)[\"']", tag
+                    )
+                )
+                == {b"NumberOfPoints": b"0", b"NumberOfCells": b"0"}
+                for tag in piece_tags
+            )
+        ):
+            continue
+        if len(piece_tags) > 1:
             import warnings
 
             warnings.warn(
-                f"{piece.name} holds several <Piece> elements; meshio reads only one. "
-                "Install vtk for complete multi-piece VTU reading.",
+                f"meshio reads only one of the <Piece> elements of the VTU file {piece.name}. "
+                "The vtk package reads all of them.",
                 stacklevel=2,
             )
         points, blocks, node_data, cell_data = _read_vtu_piece(piece)
@@ -655,7 +652,7 @@ def _load_vtu_meshio(ref: SnapshotRef, path: Path) -> MeshSnapshot:
 
 
 def _pack_cell_blocks(blocks: list[np.ndarray]) -> object:
-    """Concatenate same-arity cell blocks into one array, else keep a per-cell list."""
+    """Returns the cell blocks as one array when they have one arity, else as a per-cell list."""
     blocks = [block for block in blocks if block.size]
     if not blocks:
         return np.empty((0, 0), dtype=np.int64)
@@ -687,14 +684,8 @@ def _read_vtu_piece(path: Path):
     return np.asarray(mesh.points, dtype=float), cell_blocks, node_data, cell_data
 
 
-# --------------------------------------------------------------------------- #
-# Format dispatch
-# --------------------------------------------------------------------------- #
 def _drop_trivial_z(points: np.ndarray) -> np.ndarray:
-    """Drop a trailing column of zeros so a planar mesh is treated as 2D.
-
-    Geometry is always stored with three columns.
-    """
+    """Drops a z column of zeros. A planar mesh stored with three columns then reads as 2D."""
     if points.ndim == 2 and points.shape[1] == 3 and np.all(points[:, 2] == 0.0):
         return points[:, :2]
     return points
@@ -741,12 +732,10 @@ class SolutionSource:
         self, name: str, refs: list[SnapshotRef], path: str | Path | None = None
     ):
         if not refs:
-            raise ValueError(f"No snapshots found for {name!r}")
+            raise ValueError(f"The solution reader cannot find a snapshot of {name!r}.")
         self.name = name
         self.refs = refs
-        self.path = (
-            path  # the file/index/directory this source was opened from (for messages)
-        )
+        self.path = path  # The opened file, index or directory, for messages.
         self._cache_index: int | None = None
         self._cache_snapshot: MeshSnapshot | None = None
         self._variables: list[str] | None = None
@@ -786,7 +775,7 @@ class SolutionSource:
         return names.get(self.refs[0].fmt, self.refs[0].fmt) if self.refs else "unknown"
 
     def describe(self) -> str:
-        """A one-line summary for messages: source, format, snapshot count and time span."""
+        """Returns a one-line summary of the source, the format, the snapshot count and the time span."""
         where = (
             self.path
             if self.path is not None
@@ -806,7 +795,7 @@ class SolutionSource:
         if path.is_dir():
             return cls.open(_index_in_directory(path))
         if not path.exists():
-            raise FileNotFoundError(f"No such file: {path}")
+            raise FileNotFoundError(f"The solution reader cannot find the file {path}.")
         name, refs = _scan_path(path)
         refs = [ref for ref in refs if Path(ref.path).exists()]
         return cls(name, refs, path)
@@ -834,18 +823,15 @@ class SolutionSource:
             str(directory) for directory in _candidate_directories(directory)
         )
         raise FileNotFoundError(
-            f"No plotter output found for {name!r}. Looked in: {searched}. "
+            f"The solution reader cannot find the plotter output of {name!r} in {searched}. "
             "Run the cells that build and execute the solver first."
         )
 
     @classmethod
     def locate(cls, spec, directory: str | Path | None = None) -> "SolutionSource":
-        """A source for ``spec``, opened from a path or discovered by solver name.
+        """Returns the source at the path ``spec``, or the one discovered for the solver name ``spec``.
 
-        An existing file or directory path is opened, anything else is taken to be
-        a solver name and discovered. A SolutionSource is returned unchanged, which
-        also tolerates the sibling-module class duplication (see
-        render_solution.render_solution_image).
+        Returns an object that is not a path, such as a SolutionSource, unchanged.
         """
         if not isinstance(spec, (str, os.PathLike)):
             return spec
@@ -853,12 +839,14 @@ class SolutionSource:
         if path.exists():
             return cls.open(path)
         if path.is_absolute():
-            raise FileNotFoundError(f"No such file or directory: {path}")
+            raise FileNotFoundError(
+                f"The solution reader cannot find the file or directory {path}."
+            )
         return cls.discover(str(spec), directory)
 
 
 def _index_in_directory(directory: Path) -> Path:
-    """The single discoverable index in a directory, preferring a sub-folder."""
+    """Returns the index of the only solver output in a directory or its output sub-folders."""
     candidates: list[Path] = []
     for subfolder in OUTPUT_SUBFOLDERS:
         base = directory / subfolder if subfolder else directory
@@ -868,7 +856,9 @@ def _index_in_directory(directory: Path) -> Path:
             candidates.extend(sorted(base.glob(pattern)))
         candidates.extend(sorted(_temporal_xmf_files(base)))
     if not candidates:
-        raise FileNotFoundError(f"No plotter index found under {directory}")
+        raise FileNotFoundError(
+            f"The solution reader cannot find a plotter index under {directory}."
+        )
     if len({path.name for path in candidates}) > 1:
         listing = ", ".join(str(path) for path in candidates)
         raise ValueError(f"Several solver outputs found; point at one of: {listing}")
@@ -893,8 +883,8 @@ def _candidate_directories(directory: str | Path | None) -> list[Path]:
     else:
         cwd = Path(".")
         roots = [cwd, Path("output")] + sorted(cwd.glob("*.output"))
-        # The output directory can be named anything (e.g. solutions/ or <project>.output),
-        # so also look one level down: Every immediate sub-directory and its patch/face/particle.
+        # The output directory can have any name. The search includes every immediate
+        # sub-directory.
         roots += [
             child
             for child in sorted(cwd.iterdir())

@@ -24,6 +24,8 @@ class TPV16(DynamicRuptureScenario):
 
     end_time = 15.0
 
+    auxiliary_variables = {"initialShearStress": 1, "criticalSlipDistance": 1}
+
     tracer_coordinates = [
         [26.0, 0.0, 11.0],
         [26.0, 0.0, 20.0],
@@ -66,9 +68,32 @@ class TPV16(DynamicRuptureScenario):
 
     def initial_conditions(self):
         return """
+      // The file stores the coordinate along the fault first and the depth second.
+      static tarch::reader::NetCDFFieldSampler<2> faultSampler(
+        {
+          {"stress", "tpv16-parameters.nc", "stress"},
+          {"slip", "tpv16-parameters.nc", "slip"}
+        },
+        {48.0, 19.5},
+        {-4.0, 0.0}
+      );
+
       Q[Shortcuts::rho] = 2.67;
       Q[Shortcuts::cp ] = 6.0;
       Q[Shortcuts::cs ] = 3.464;
+
+      Q[Shortcuts::initialShearStress] = faultSampler.samplePiecewiseConstant(
+        "stress",
+        {x[2], x[1]}
+      );
+
+      Q[Shortcuts::criticalSlipDistance] = 0.4;
+      if (std::abs(x[2] - 20.0) < 24.0 and x[1] < 19.5) {
+        Q[Shortcuts::criticalSlipDistance] = faultSampler.samplePiecewiseConstant(
+          "slip",
+          {x[2], x[1]}
+        );
+      }
 """
 
     def generate_required_files(self):
@@ -84,22 +109,11 @@ class TPV16(DynamicRuptureScenario):
 
     dynamicRuptureDictionary = {
         "initialStresses": """
-  static tarch::reader::NetCDFFieldSampler netcdfSampler(
-    {
-      {"stress", "tpv16-parameters.nc", "stress"}
-    },
-    {48.,  // size[0], here along-fault
-    19.5}, // size[1], here vertical
-    {-4., 0.}
-  );
   sxx = -60;
   syy = 0;
   szz = 0;
   sxy = 0;
-  sxz = netcdfSampler.samplePiecewiseConstant(
-    "stress",
-    {x[2], x[1]}
-  );
+  sxz = Q[Shortcuts::initialShearStress];
   syz = 0;
     """,
         "n_yz": "return 0;",
@@ -109,22 +123,7 @@ class TPV16(DynamicRuptureScenario):
   }
   return 0;""",
         "forced_rupture_time": "return 9999999;",
-        "d_c": """
-if(std::abs(x[1]-20.)<24. && x[1]<19.5){
-  static tarch::reader::NetCDFFieldSampler netcdfSampler(
-    {
-      {"slip", "tpv16-parameters.nc", "slip"}
-    },
-    {48.,  // size[0], here along-fault
-    19.5}, // size[1], here vertical
-    {-4., 0.}
-  );
-  return netcdfSampler.samplePiecewiseConstant(
-    "slip",
-    {x[2], x[1]}
-  );
-}
-return 0.4;""",
+        "d_c": "return Q[Shortcuts::criticalSlipDistance];",
         # constant parameters
         "mu_d": 0.373,
         "mu_s": 0.677,  # Should increase in locations where the initial shear stress is very high according to documentation

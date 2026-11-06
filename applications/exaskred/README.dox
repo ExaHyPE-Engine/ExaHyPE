@@ -18,9 +18,9 @@ The current ExaSkred sub-applications are:
 
 Each application directory contains the code it needs to build and run its own
 set of cases: setup scripts, kernels, source terms, runtime parameters, and
-scenario data. Some components are shared where the same solver logic is used
-in more than one place, but the application-specific parts stay local to the
-respective subdirectory.
+scenario data. The kernels that several applications use, such as
+AugmentedState.cpph and Landslide.cpph, lie in this directory. The
+application-specific parts stay in their subdirectory.
 
 # Scope
 

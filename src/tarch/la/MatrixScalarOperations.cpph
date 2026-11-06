@@ -1,11 +1,10 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>& tarch::la::operator*=(
-  Matrix<Rows, Cols, Scalar>& matrix,
-  const Scalar&               scalar
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>&
+tarch::la::operator*=(Matrix<Rows, Cols, Scalar>& matrix, const Scalar& scalar) {
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
       matrix(i, j) *= scalar;
@@ -15,11 +14,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>& tarch::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>& tarch::la::operator*=(
-  Matrix<2, 2, Scalar>& matrix,
-  const Scalar&         scalar
-) {
-  Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>&
+tarch::la::operator*=(Matrix<2, 2, Scalar>& matrix, const Scalar& scalar) {
+  Scalar* values = matrix.getData();
   values[0] *= scalar;
   values[1] *= scalar;
   values[2] *= scalar;
@@ -28,11 +25,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>& tarch::la::op
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>& tarch::la::operator*=(
-  Matrix<3, 3, Scalar>& matrix,
-  const Scalar&         scalar
-) {
-  Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>&
+tarch::la::operator*=(Matrix<3, 3, Scalar>& matrix, const Scalar& scalar) {
+  Scalar* values = matrix.getData();
   for (int i = 0; i < 9; i++) {
     values[i] *= scalar;
   }
@@ -40,11 +35,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>& tarch::la::op
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>& tarch::la::operator*=(
-  Matrix<4, 4, Scalar>& matrix,
-  const Scalar&         scalar
-) {
-  Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>&
+tarch::la::operator*=(Matrix<4, 4, Scalar>& matrix, const Scalar& scalar) {
+  Scalar* values = matrix.getData();
   for (int i = 0; i < 16; i++) {
     values[i] *= scalar;
   }
@@ -52,10 +45,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>& tarch::la::op
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::operator*(
-  const tarch::la::Matrix<Rows, Cols, Scalar>& matrix,
-  const Scalar&                                scalar
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>
+tarch::la::operator*(const tarch::la::Matrix<Rows, Cols, Scalar>& matrix, const Scalar& scalar) {
   Matrix<Rows, Cols, Scalar> result(matrix);
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
@@ -66,20 +57,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::l
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::operator*(
-  const tarch::la::Matrix<2, 2, Scalar>& matrix,
-  const Scalar&                          scalar
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>
+tarch::la::operator*(const tarch::la::Matrix<2, 2, Scalar>& matrix, const Scalar& scalar) {
+  const Scalar* values = matrix.getData();
   return Matrix<2, 2, Scalar>{values[0] * scalar, values[1] * scalar, values[2] * scalar, values[3] * scalar};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::operator*(
-  const tarch::la::Matrix<3, 3, Scalar>& matrix,
-  const Scalar&                          scalar
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>
+tarch::la::operator*(const tarch::la::Matrix<3, 3, Scalar>& matrix, const Scalar& scalar) {
+  const Scalar* values = matrix.getData();
   return Matrix<3, 3, Scalar>{
     values[0] * scalar,
     values[1] * scalar,
@@ -94,11 +81,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::ope
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::operator*(
-  const tarch::la::Matrix<4, 4, Scalar>& matrix,
-  const Scalar&                          scalar
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>
+tarch::la::operator*(const tarch::la::Matrix<4, 4, Scalar>& matrix, const Scalar& scalar) {
+  const Scalar* values = matrix.getData();
   return Matrix<4, 4, Scalar>{
     values[0] * scalar,
     values[1] * scalar,
@@ -120,9 +105,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::ope
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::operator*(
-  const Scalar&                                scalar,
-  const tarch::la::Matrix<Rows, Cols, Scalar>& matrix
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>
+tarch::la::operator*(const Scalar& scalar, const tarch::la::Matrix<Rows, Cols, Scalar>& matrix) {
   return matrix * scalar;
 }
+TARGET_DECLARE_END

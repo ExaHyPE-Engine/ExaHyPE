@@ -25,7 +25,8 @@ namespace {
   }
 } // namespace
 
-tarch::StackSizeLimit tarch::StackSizeLimit::detect() {
+tarch::StackSizeLimit
+tarch::StackSizeLimit::detect() {
   StackSizeLimit result;
 
 #if defined(_WIN32)
@@ -45,27 +46,28 @@ tarch::StackSizeLimit tarch::StackSizeLimit::detect() {
 #endif
 }
 
-std::string tarch::detectStackSizeLimit() {
+std::string
+tarch::detectStackSizeLimit() {
   const auto& stackSizeLimit = getCachedStackSizeLimit();
 #if defined(_WIN32)
-  logWarning("Stack size limit detection is not implemented on Windows");
-  return "unknown";
+  LOG_WARNING("The stack size check cannot read the limit on Windows.");
+  return "Unknown";
 #else
   constexpr unsigned long long RecommendedMinimumStackLimitInKiB = 0x200'000ULL;
   constexpr unsigned long long RecommendedMinimumStackLimit      = RecommendedMinimumStackLimitInKiB * KiB;
 
   if (not stackSizeLimit.detected) {
-    logError("Stack size cannot be determined because getrlimit() failed");
-    return "unknown";
+    LOG_ERROR("The stack size check cannot read the limit.");
+    return "Unknown";
   }
 
   if (stackSizeLimit.unlimited) {
-    return "unlimited";
+    return "Unlimited";
   }
 
   const auto currentLimitInKiB = stackSizeLimit.bytes / KiB;
   if (stackSizeLimit.bytes < RecommendedMinimumStackLimit) {
-    logDebug(
+    LOG_DEBUG(
       "Stack size of " << currentLimitInKiB << " KiB (=" << formatMemorySize(stackSizeLimit.bytes)
                        << ") is lower than recommended minimum of " << RecommendedMinimumStackLimitInKiB
                        << " KiB (=" << formatMemorySize(RecommendedMinimumStackLimit)
