@@ -300,6 +300,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::StateTerms<
   evaluate(
     const StoragePrecision* NOALIAS const                         patch,
     const StoragePrecision* NOALIAS const                         faces[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const                         auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, int>&                     volumeIndex,
     const int                                                     centreOffset,
     [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
@@ -456,6 +457,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   const StoragePrecision* NOALIAS const        inputPatch,
   const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const        faceAuxVarsPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
   const int                                    centreOffset,
   const StoragePrecision* NOALIAS const        centreState,

@@ -58,6 +58,7 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::release() {
   _haloExchange.release();
+  _auxVarsHaloExchange.release();
   _statusExchange.release();
   _extremaExchange.release();
   _subcellMigration.release();
@@ -65,6 +66,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   _previousSolution.release();
   _subcells.release();
   _subcellHalo.release();
+  // if constexpr (SubcellScheme::NumberOfAuxiliaryVariables > 0){
+    _subcellAuxVarsHalo.release();
+  // }
   _statuses.release();
   _faceStatuses.release();
   _referenceExtrema.release();
@@ -91,12 +95,13 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD tarch::AllocatedBytes
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return _previousSolution.getAllocatedBytes() + _subcells.getAllocatedBytes() + _subcellHalo.getAllocatedBytes()
-    + _statuses.getAllocatedBytes() + _faceStatuses.getAllocatedBytes() + _referenceExtrema.getAllocatedBytes()
-    + _extremaFaces.getAllocatedBytes() + _cellsOnSubcellScheme.getAllocatedBytes()
+    + _subcellAuxVarsHalo.getAllocatedBytes() + _statuses.getAllocatedBytes() + _faceStatuses.getAllocatedBytes()
+    + _referenceExtrema.getAllocatedBytes() + _extremaFaces.getAllocatedBytes() + _cellsOnSubcellScheme.getAllocatedBytes()
     + _recomputedCells.getAllocatedBytes() + _freedCells.getAllocatedBytes() + _cellCountsOfBlocks.getAllocatedBytes()
     + _recomputeScratch.getAllocatedBytes() + _detectorScratch.getAllocatedBytes() + _haloExchange.getAllocatedBytes()
-    + _statusExchange.getAllocatedBytes() + _extremaExchange.getAllocatedBytes() + _subcellMigration.getAllocatedBytes()
-    + _statusMigration.getAllocatedBytes() + _statusesOnHost.getAllocatedBytes() + _subcellsOnHost.getAllocatedBytes();
+    + _auxVarsHaloExchange.getAllocatedBytes() + _statusExchange.getAllocatedBytes() + _extremaExchange.getAllocatedBytes()
+    + _subcellMigration.getAllocatedBytes() + _statusMigration.getAllocatedBytes() + _statusesOnHost.getAllocatedBytes()
+    + _subcellsOnHost.getAllocatedBytes();
 }
 
 /**
@@ -163,16 +168,41 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 ) {
   CellPool   copyOnHost{SubcellScheme::SubcellValuesPerCell, tarch::MemoryLocation::Heap};
   CellPool&  subcells = _subcells.download(copyOnHost);
+  FacePool&  subcellAuxVarsHalo = _subcellAuxVarsHalo.download(copyOnHost);
   const auto cells    = cellConnectivity.getCells();
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int entry) {
     const int slot = cells[entry];
+    StoragePrecision* auxVarsHaloHalves[peano4::FacesPerCell];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      auxVarsHaloHalves[faceNumber] = subcellAuxVarsHalo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+    }
     SubcellScheme::sampleInitialCondition(
       subcells.getChunk(slot),
+      auxVarsHaloHalves,
       cellConnectivity.getCellCentre(slot),
       cellConnectivity.getCellWidth(slot)
     );
   });
   _subcells.upload(subcells);
+
+  _subcellAuxVarsHalo.upload(subcellAuxVarsHalo);
+  if constexpr (SubcellScheme::NumberOfAuxiliaryVariables > 0){
+    // Upon computing initial condition we fill the auxiliary variables and exchange them, they can then remain as is until a regrid
+    exchangeFaces(
+      cellConnectivity,
+      exahype2::fv::InjectAuxVarsHaloHalves<Derived, StoragePrecision, ComputePrecision>{
+        cellConnectivity.onDevice(),
+        _subcellAuxVarsHalo.getView()
+      },
+      exahype2::fv::RestrictAuxVarsHaloHalves<Derived, StoragePrecision, ComputePrecision>{
+        cellConnectivity.onDevice(),
+        _subcellAuxVarsHalo.getView()
+      },
+      _auxVarsHaloExchange,
+      [](const peano4::Adjacency adjacency) {
+      }
+    );
+  }
 }
 
 /**
@@ -262,6 +292,36 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
     .migrate(_statuses, regrid, exahype2::dg::limiting::StatusTransfer{std::as_const(_statuses).getView()});
 
   rebuild(cellConnectivity);
+
+  if constexpr (SubcellScheme::NumberOfAuxiliaryVariables > 0){
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::TeamRange(
+        cellConnectivity.getCells().size,
+        tarch::accelerator::getTeamThreads(SubcellScheme::HaloAuxVarsPerFace/2),
+        0
+      ),
+      exahype2::fv::ProjectAuxVarsOntoFaces<Derived, StoragePrecision, ComputePrecision>{
+        cellConnectivity.onDevice(),
+        std::as_const(_subcells).getView(),
+        _subcellAuxVarsHalo.getView()
+      }
+    );
+    exchangeFaces(
+      cellConnectivity,
+      exahype2::fv::InjectAuxVarsHaloHalves<Derived, StoragePrecision, ComputePrecision>{
+        cellConnectivity.onDevice(),
+        _subcellAuxVarsHalo.getView()
+      },
+      exahype2::fv::RestrictAuxVarsHaloHalves<Derived, StoragePrecision, ComputePrecision>{
+        cellConnectivity.onDevice(),
+        _subcellAuxVarsHalo.getView()
+      },
+      _auxVarsHaloExchange,
+      [](const peano4::Adjacency adjacency) {
+      }
+    );
+  }
+
   _extremaOfSolutionAreReduced = false;
 }
 
@@ -407,11 +467,15 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const peano4::CellConnectivity& cellConnectivity
 ) {
   _subcellHalo.reserve(cellConnectivity.getNumberOfFaces());
+  _haloExchange.rebuild(cellConnectivity);
+  // if constexpr (SubcellScheme::NumberOfAuxiliaryVariables > 0) {
+    _subcellAuxVarsHalo.reserve(cellConnectivity.getNumberOfFaces());
+    _auxVarsHaloExchange.rebuild(cellConnectivity);
+  // }
   _faceStatuses.reserve(cellConnectivity.getNumberOfFaces());
   if constexpr (Detector::UsesMaximumPrinciple) {
     _extremaFaces.reserve(cellConnectivity.getNumberOfFaces());
   }
-  _haloExchange.rebuild(cellConnectivity);
   _statusExchange.rebuild(cellConnectivity);
   if constexpr (Detector::UsesMaximumPrinciple) {
     _extremaExchange.rebuild(cellConnectivity);
@@ -743,7 +807,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(boundaryFaces.size * SubcellScheme::Subgrid::VolumesPerLayer),
     exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>{
-      {cellConnectivity.onDevice(), boundaryFaces, _subcellHalo.getView(), timeStamp},
+      {cellConnectivity.onDevice(), boundaryFaces, _subcellHalo.getView(), _subcellAuxVarsHalo.getView(), timeStamp},
       std::as_const(_statuses).getView()
     }
   );
@@ -775,6 +839,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
           solution.getView(),
           _subcells.getView(),
           std::as_const(_subcellHalo).getView(),
+          std::as_const(_subcellAuxVarsHalo).getView(),
           SubcellProjection<StoragePrecision>::SubcellsToNodes1D,
           timeStamp,
           timeStepSize,

@@ -27,17 +27,19 @@ TARGET_DECLARE
  * The cell layout of the limiter tests.
  */
 struct exahype2::dg::limiting::tests::StubLayout final {
-  static constexpr int    NodesPerAxis         = 2;
-  static constexpr int    SubcellsPerAxis      = 3;
-  static constexpr int    NumberOfData         = 2;
-  static constexpr int    NumberOfObservables  = 1;
-  static constexpr int    NodesPerCell         = peano4::power(NodesPerAxis, DIMENSIONS);
-  static constexpr int    SubcellsPerCell      = peano4::power(SubcellsPerAxis, DIMENSIONS);
-  static constexpr int    ValuesPerCell        = NodesPerCell * NumberOfData;
-  static constexpr int    SubcellValuesPerCell = SubcellsPerCell * NumberOfData;
-  static constexpr int    ExtremaPerCell       = 2 * NumberOfObservables;
-  static constexpr double TimeStamp            = 0.75;
-  static constexpr double TimeStepSize         = 0.125;
+  static constexpr int    NodesPerAxis                = 2;
+  static constexpr int    SubcellsPerAxis             = 3;
+  static constexpr int    NumberOfUnknowns            = 1;
+  static constexpr int    NumberOfAuxiliaryVariables  = 1;
+  static constexpr int    NumberOfData                = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  static constexpr int    NumberOfObservables         = 1;
+  static constexpr int    NodesPerCell                = peano4::power(NodesPerAxis, DIMENSIONS);
+  static constexpr int    SubcellsPerCell             = peano4::power(SubcellsPerAxis, DIMENSIONS);
+  static constexpr int    ValuesPerCell               = NodesPerCell * NumberOfData;
+  static constexpr int    SubcellValuesPerCell        = SubcellsPerCell * NumberOfData;
+  static constexpr int    ExtremaPerCell              = 2 * NumberOfObservables;
+  static constexpr double TimeStamp                   = 0.75;
+  static constexpr double TimeStepSize                = 0.125;
 };
 TARGET_DECLARE_END
 

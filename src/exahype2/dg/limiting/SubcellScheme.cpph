@@ -23,6 +23,7 @@ template <typename StoragePrecision>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::sampleInitialCondition(
   StoragePrecision* NOALIAS const              subcells,
+  StoragePrecision* const                      auxVarsHaloHalves[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
 ) {
@@ -36,6 +37,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::sampleInitialC
       const tarch::la::Vector<DIMENSIONS, double>& h
     ) { Derived::initialCondition(values, x, h); }
   );
+  if constexpr (NumberOfAuxiliaryVariables>0){
+    Subgrid::projectAuxVarsOntoFaces(subcells, auxVarsHaloHalves);
+  }
 }
 
 /**
@@ -108,7 +112,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgrid
   if (not exahype2::dg::limiting::runsSubcellScheme(previousStatus) and not subcellsStoreInitialCondition) {
     projectNodesOntoSubcells(previousSolution, subcells, nodesToSubcells);
   }
-  Subgrid::projectOntoFaces(subcells, haloHalves);
+  Subgrid::projectUnknownsOntoFaces(subcells, haloHalves);
 }
 
 /**
@@ -172,7 +176,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgrid
   if (not exahype2::dg::limiting::runsSubcellScheme(previousStatus) and not subcellsStoreInitialCondition) {
     projectNodesOntoSubcellsInTeam(team, previousSolution, subcells, nodesToSubcells, scratch);
   }
-  Subgrid::projectOntoFacesInTeam(team, subcells, haloHalves);
+  // Subgrid::projectOntoFacesInTeam(team, subcells, haloHalves);
+  Subgrid::projectUnknownsOntoFacesInTeam(team, subcells, haloHalves);
 }
 
 /**
@@ -189,6 +194,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
   StoragePrecision* NOALIAS const              subcells,
   StoragePrecision* NOALIAS const              evolvedSubcells,
   const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* const                auxVarsHaloHalves[peano4::FacesPerCell],
   const StoragePrecision* NOALIAS const        subcellsToNodes,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -201,6 +207,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
     subcells,
     evolvedSubcells,
     haloHalves,
+    auxVarsHaloHalves,
     cellCentre,
     cellSize,
     boundaryFaces,
@@ -224,6 +231,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
         subcells,
         evolvedSubcells,
         haloHalves,
+        auxVarsHaloHalves,
         cellCentre,
         cellSize,
         boundaryFaces,
@@ -255,6 +263,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeInTea
   StoragePrecision* NOALIAS const                       subcells,
   StoragePrecision* NOALIAS const                       evolvedSubcells,
   const StoragePrecision* const                         haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* const                         auxVarsHaloHalves[peano4::FacesPerCell],
   const StoragePrecision* NOALIAS const                 subcellsToNodes,
   const tarch::la::Vector<DIMENSIONS, double>&          cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&          cellSize,
@@ -269,6 +278,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeInTea
       subcells,
       evolvedSubcells,
       haloHalves,
+      auxVarsHaloHalves,
       subcellsToNodes,
       cellCentre,
       cellSize,
@@ -284,6 +294,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeInTea
       subcells,
       evolvedSubcells,
       haloHalves,
+      auxVarsHaloHalves,
       subcellsToNodes,
       cellCentre,
       cellSize,
@@ -309,6 +320,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithT
   StoragePrecision* NOALIAS const              subcells,
   StoragePrecision* NOALIAS const              evolvedSubcells,
   const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* const                auxVarsHaloHalves[peano4::FacesPerCell],
   const StoragePrecision* NOALIAS const        subcellsToNodes,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -327,6 +339,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithT
       subcell,
       subcells,
       haloHalves,
+      auxVarsHaloHalves,
       cellCentre,
       cellSize,
       timeStamp,
@@ -354,6 +367,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithT
           subcell,
           subcells,
           haloHalves,
+          auxVarsHaloHalves,
           cellCentre,
           cellSize,
           timeStamp,
@@ -482,6 +496,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::advanceSubcell
   const StoragePrecision* NOALIAS const        subcells,
   StoragePrecision* NOALIAS const              evolvedSubcells,
   const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* const                auxVarsHaloHalves[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int                                    boundaryFaces,
@@ -496,6 +511,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::advanceSubcell
     subcells,
     evolvedSubcells,
     haloHalves,
+    auxVarsHaloHalves,
     cellCentre,
     cellSize,
     timeStamp,
@@ -781,8 +797,10 @@ exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrec
 ) const {
   const int               slot = cells[entry];
   const StoragePrecision* haloHalves[peano4::FacesPerCell];
+  const StoragePrecision* auxVarsHaloHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     haloHalves[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+    auxVarsHaloHalves[faceNumber] = auxVarsHalo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
   StoragePrecision* const evolvedSubcells = scratch
     + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::ScratchValuesPerRecomputedCell;
@@ -794,6 +812,7 @@ exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrec
     subcells.getChunk(slot),
     evolvedSubcells,
     haloHalves,
+    auxVarsHaloHalves,
     subcellsToNodes,
     centre,
     width,

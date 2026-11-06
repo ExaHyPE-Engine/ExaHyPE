@@ -35,6 +35,7 @@ exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecisio
   const int faceNumber = lowerCell >= 0 ? normal + DIMENSIONS : normal;
   Kernel::applyBoundaryConditions(
     halo.getChunk(face),
+    auxVarsHalo.getChunk(face),
     cellConnectivity.getCellCentre(slot),
     cellConnectivity.getCellWidth(slot),
     timeStamp,
@@ -57,6 +58,18 @@ exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision>
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::InterpolateAuxVarsHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
+  const int                     normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
+  const StoragePrecision* const coarse = auxVarsHalo.getChunk(levelJump.coarseFace);
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    Kernel::interpolateAuxVarsHalo(coarse, auxVarsHalo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::InjectHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
   const peano4::LevelJump& levelJump
 ) const {
@@ -64,6 +77,18 @@ exahype2::fv::InjectHaloHalves<Derived, StoragePrecision, ComputePrecision>::ope
   const StoragePrecision* const coarse = halo.getChunk(levelJump.coarseFace);
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
     Kernel::injectHalo(coarse, halo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::InjectAuxVarsHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
+  const int                     normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
+  const StoragePrecision* const coarse = auxVarsHalo.getChunk(levelJump.coarseFace);
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    Kernel::injectHalo(coarse, auxVarsHalo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
   }
 }
 
@@ -82,7 +107,20 @@ exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>::o
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
+exahype2::fv::RestrictAuxVarsHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
+  const int               normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
+  const StoragePrecision* fine[peano4::SubfacesPerFace];
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    fine[subface] = auxVarsHalo.getChunk(levelJump.fineFaces[subface]);
+  }
+  Kernel::restrictAuxVarsHalo(fine, auxVarsHalo.getChunk(levelJump.coarseFace), 1 - levelJump.coarseSide, normal);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ProjectUnknownsOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int                            entry,
   const tarch::accelerator::TeamHandle team
 ) const {
@@ -91,7 +129,21 @@ exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecisio
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     faces[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
-  Kernel::projectOntoFacesInTeam(team, solution.getChunk(slot), faces);
+  Kernel::projectUnknownsOntoFacesInTeam(team, solution.getChunk(slot), faces);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ProjectAuxVarsOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int                            entry,
+  const tarch::accelerator::TeamHandle team
+) const {
+  const int         slot = cellConnectivity.getCells()[entry];
+  StoragePrecision* faces[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    faces[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+  }
+  Kernel::projectAuxVarsOntoFacesInTeam(team, solution.getChunk(slot), faces);
 }
 
 /**
@@ -109,8 +161,10 @@ exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::operat
 ) const {
   const int               slot = cells[entry];
   const StoragePrecision* faces[peano4::FacesPerCell];
+  const StoragePrecision* auxVarsFaces[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     faces[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+    auxVarsFaces[faceNumber] = auxVarsHalo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
   StoragePrecision* const                     patch         = solution.getChunk(slot);
   const tarch::la::Vector<DIMENSIONS, double> cellCentre    = cellConnectivity.getCellCentre(slot);
@@ -120,7 +174,7 @@ exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::operat
   const double                                stepSize      = timeStepSize;
 
   const double partial =
-    Kernel::updateInTeam(team, patch, faces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces);
+    Kernel::updateInTeam(team, patch, faces, auxVarsFaces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces);
   COMPILE_IF_ON_HOST(accumulator = exahype2::MaxEigenvalueReduction::combine(accumulator, partial);)
   COMPILE_IF_ON_DEVICE(
     reduceWaveSpeedsWithThreadsOfTeam(team, partial, patch, cellCentre, cellSize, stepStart, stepSize, accumulator);

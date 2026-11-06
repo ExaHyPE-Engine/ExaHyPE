@@ -66,7 +66,8 @@ public:
   static constexpr int SubcellsPerFace            = peano4::power(SubcellsPerAxis, DIMENSIONS - 1);
   static constexpr int ValuesPerCell              = NodesPerCell * NumberOfData;
   static constexpr int SubcellValuesPerCell       = SubcellsPerCell * NumberOfData;
-  static constexpr int HaloValuesPerFace          = 2 * HaloSize * SubcellsPerFace * NumberOfData;
+  static constexpr int HaloUnknownsPerFace        = 2 * HaloSize * SubcellsPerFace * NumberOfUnknowns;
+  static constexpr int HaloAuxVarsPerFace         = 2 * HaloSize * SubcellsPerFace * NumberOfAuxiliaryVariables;
   static constexpr int NodeProjectionScratchValues =
     exahype2::dg::getScratchValuesOfTensorProduct<DIMENSIONS, SubcellsPerAxis, NodesPerAxis, NumberOfData>();
   static constexpr int SubcellProjectionScratchValues =
@@ -83,6 +84,7 @@ public:
   template <typename StoragePrecision>
   static INLINE_METHOD void sampleInitialCondition(
     StoragePrecision* NOALIAS                    subcells,
+    StoragePrecision* const                      auxVarsHaloHalves[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
   );
@@ -131,6 +133,7 @@ public:
     StoragePrecision* NOALIAS                    subcells,
     StoragePrecision* NOALIAS                    evolvedSubcells,
     const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+    const StoragePrecision* const                auxVarsHaloHalves[peano4::FacesPerCell],
     const StoragePrecision* NOALIAS              subcellsToNodes,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -146,6 +149,7 @@ public:
     StoragePrecision* NOALIAS                    subcells,
     StoragePrecision* NOALIAS                    evolvedSubcells,
     const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+    const StoragePrecision* const                auxVarsHaloHalves[peano4::FacesPerCell],
     const StoragePrecision* NOALIAS              subcellsToNodes,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -202,6 +206,7 @@ private:
     StoragePrecision* NOALIAS                    subcells,
     StoragePrecision* NOALIAS                    evolvedSubcells,
     const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+    const StoragePrecision* const                auxVarsHaloHalves[peano4::FacesPerCell],
     const StoragePrecision* NOALIAS              subcellsToNodes,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -223,6 +228,7 @@ private:
     const StoragePrecision* NOALIAS              subcells,
     StoragePrecision* NOALIAS                    evolvedSubcells,
     const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+    const StoragePrecision* const                auxVarsHaloHalves[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     int                                          boundaryFaces,
@@ -419,6 +425,7 @@ struct exahype2::dg::limiting::RecomputeSubcells final {
   typename CellPool::View      nodes{};
   typename CellPool::View      subcells{};
   typename CellPool::ConstView halo{};
+  typename CellPool::ConstView auxVarsHalo{};
   const StoragePrecision*      subcellsToNodes{nullptr};
   double                       timeStamp{0.0};
   double                       timeStepSize{0.0};

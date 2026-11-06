@@ -558,15 +558,19 @@ namespace {
     const double* patches{nullptr};
     double*       updated{nullptr};
     const double* faces{nullptr};
+    const double* auxVarsFaces{nullptr};
     const double* cellCentres{nullptr};
     const double* cellSizes{nullptr};
     double*       eigenvalues{nullptr};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int cell, const tarch::accelerator::TeamHandle team) const {
       const double* facesOfCell[peano4::FacesPerCell];
+      const double* auxVarsFacesOfCell[peano4::FacesPerCell];
       for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         facesOfCell[faceNumber] =
-          faces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * DeviceKernel::ValuesPerFace;
+          faces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * DeviceKernel::UnknownsPerFace;
+        auxVarsFacesOfCell[faceNumber] =
+          auxVarsFaces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * DeviceKernel::AuxVarsPerFace;
       }
       const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
@@ -586,6 +590,7 @@ namespace {
               volume,
               patch,
               facesOfCell,
+              auxVarsFacesOfCell,
               cellCentre,
               cellSize,
               TimeStamp,
@@ -619,6 +624,7 @@ namespace {
   struct UpdatePatchOfCellInTeam final {
     double*       patches{nullptr};
     const double* faces{nullptr};
+    const double* auxVarsFaces{nullptr};
     const double* cellCentres{nullptr};
     const double* cellSizes{nullptr};
     double        timeStepSize{0.0};
@@ -629,9 +635,12 @@ namespace {
       double&                              accumulator
     ) const {
       const double* facesOfCell[peano4::FacesPerCell];
+      const double* auxVarsFacesOfCell[peano4::FacesPerCell];
       for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         facesOfCell[faceNumber] =
-          faces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::ValuesPerFace;
+          faces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::UnknownsPerFace;
+        auxVarsFacesOfCell[faceNumber] =
+          auxVarsFaces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::AuxVarsPerFace;
       }
       const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
@@ -640,6 +649,7 @@ namespace {
         team,
         patches + static_cast<std::ptrdiff_t>(cell) * Kernel::ValuesPerPatch,
         facesOfCell,
+        auxVarsFacesOfCell,
         cellCentre,
         cellSize,
         exahype2::dg::tests::KernelTestSetup::TimeStamp,
@@ -659,6 +669,7 @@ namespace {
   template <typename Kernel>
   struct ApplyBoundaryConditionsAtTangentialVolume final {
     double*       faces{nullptr};
+    double*       auxVarsFaces{nullptr};
     const double* cellCentres{nullptr};
     const double* cellSizes{nullptr};
 
@@ -666,7 +677,8 @@ namespace {
       const int            face             = entry / Kernel::VolumesPerLayer;
       const std::ptrdiff_t coordinateOffset = static_cast<std::ptrdiff_t>(face / peano4::FacesPerCell) * DIMENSIONS;
       Kernel::applyBoundaryConditions(
-        faces + static_cast<std::ptrdiff_t>(face) * Kernel::ValuesPerFace,
+        faces + static_cast<std::ptrdiff_t>(face) * Kernel::UnknownsPerFace,
+        auxVarsFaces + static_cast<std::ptrdiff_t>(face) * Kernel::AuxVarsPerFace,
         tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         exahype2::dg::tests::KernelTestSetup::TimeStamp,
@@ -689,9 +701,9 @@ namespace {
       double* facesOfCell[peano4::FacesPerCell];
       for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         facesOfCell[faceNumber] =
-          faces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::ValuesPerFace;
+          faces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::UnknownsPerFace;
       }
-      Kernel::projectOntoFacesInTeam(
+      Kernel::projectUnknownsOntoFacesInTeam(
         team,
         patches + static_cast<std::ptrdiff_t>(cell) * Kernel::ValuesPerPatch,
         facesOfCell
@@ -712,13 +724,14 @@ namespace {
   template <typename Kernel>
   void applyBoundaryConditionsToFace(
     double* const                                face,
+    double* const                                auxVarsFace,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     const double                                 timeStamp,
     const int                                    faceNumber
   ) {
     for (int tangentialVolume = 0; tangentialVolume < Kernel::VolumesPerLayer; tangentialVolume++) {
-      Kernel::applyBoundaryConditions(face, cellCentre, cellSize, timeStamp, faceNumber, tangentialVolume);
+      Kernel::applyBoundaryConditions(face, auxVarsFace, cellCentre, cellSize, timeStamp, faceNumber, tangentialVolume);
     }
   }
 
@@ -732,7 +745,7 @@ namespace {
    * that differs from face to face and from entry to entry.
    */
   template <typename Solver>
-  void fillSmoothEulerPatchAndFaces(std::vector<double>& q, std::vector<std::vector<double>>& faceStorage) {
+  void fillSmoothEulerPatchAndFaces(std::vector<double>& q, std::vector<std::vector<double>>& faceStorage, std::vector<std::vector<double>>& auxVarsFaceStorage) {
     using Kernel = exahype2::fv::FiniteVolumeScheme<Solver, double>;
     q.assign(Kernel::ValuesPerPatch, 0.0);
     for (int volume = 0; volume < Kernel::VolumesPerPatch; volume++) {
@@ -743,14 +756,15 @@ namespace {
       }
       state[DIMENSIONS + 1] = 2.5 + 0.5 * std::cos(0.5 * volume);
     }
-    faceStorage.assign(peano4::FacesPerCell, std::vector<double>(Kernel::ValuesPerFace, 0.0));
+    faceStorage.assign(peano4::FacesPerCell, std::vector<double>(Kernel::UnknownsPerFace, 0.0));
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-      for (int entry = 0; entry < Kernel::ValuesPerFace; entry++) {
+      for (int entry = 0; entry < Kernel::UnknownsPerFace; entry++) {
         const int unknown = entry % SodUnknowns;
         faceStorage[faceNumber][entry] =
           (unknown == 0 or unknown == DIMENSIONS + 1) ? 1.5 + 0.01 * faceNumber + 0.001 * entry : 0.02 * faceNumber;
       }
     }
+    auxVarsFaceStorage.assign(peano4::FacesPerCell, std::vector<double>(Kernel::AuxVarsPerFace, 0.0));
   }
 
   /**
@@ -766,8 +780,10 @@ namespace {
 
     std::vector<double>              q;
     std::vector<std::vector<double>> faceStorage;
-    fillSmoothEulerPatchAndFaces<Solver>(q, faceStorage);
+    std::vector<std::vector<double>> auxVarsFaceStorage;
+    fillSmoothEulerPatchAndFaces<Solver>(q, faceStorage, auxVarsFaceStorage);
     const auto                                  faces = getFacePointersOf(faceStorage);
+    const auto                                  auxVarsFaces = getFacePointersOf(auxVarsFaceStorage);
     const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
     const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
 
@@ -776,6 +792,7 @@ namespace {
       q.data(),
       sweep.data(),
       faces.data(),
+      auxVarsFaces.data(),
       patchCentre,
       patchExtent,
       TimeStamp,
@@ -792,6 +809,7 @@ namespace {
           volume,
           q.data(),
           faces.data(),
+          auxVarsFaces.data(),
           patchCentre,
           patchExtent,
           TimeStamp,
@@ -837,8 +855,10 @@ namespace {
 
     std::vector<double>              q;
     std::vector<std::vector<double>> faceStorage;
-    fillSmoothEulerPatchAndFaces<Solver>(q, faceStorage);
+    std::vector<std::vector<double>> auxVarsFaceStorage;
+    fillSmoothEulerPatchAndFaces<Solver>(q, faceStorage, auxVarsFaceStorage);
     const auto                                  faces = getFacePointersOf(faceStorage);
+    const auto                                  auxVarsFaces = getFacePointersOf(auxVarsFaceStorage);
     const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
     const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
 
@@ -847,6 +867,7 @@ namespace {
       q.data(),
       separate.data(),
       faces.data(),
+      auxVarsFaces.data(),
       patchCentre,
       patchExtent,
       TimeStamp,
@@ -857,6 +878,7 @@ namespace {
       q.data(),
       q.data(),
       faces.data(),
+      auxVarsFaces.data(),
       patchCentre,
       patchExtent,
       TimeStamp,
@@ -1007,8 +1029,10 @@ namespace {
     }
 
     std::vector<double>              qNext(Kernel::ValuesPerPatch, 0.0);
-    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::ValuesPerFace, 0.0));
+    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::UnknownsPerFace, 0.0));
+    std::vector<std::vector<double>> faceAuxVarsStorage(peano4::FacesPerCell, std::vector<double>(Kernel::AuxVarsPerFace, 0.0));
     const auto                       faces = getFacePointersOf(faceStorage);
+    const auto                       auxVarsFaces = getFacePointersOf(faceAuxVarsStorage);
 
     const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
     const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
@@ -1020,6 +1044,7 @@ namespace {
         q.data(),
         qNext.data(),
         faces.data(),
+        auxVarsFaces.data(),
         patchCentre,
         patchExtent,
         timeStamp,
@@ -1062,11 +1087,24 @@ namespace {
 
   template <typename Kernel>
   std::vector<std::vector<double>> getLogicalHalo() {
-    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::ValuesPerFace, 0.0));
+    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::UnknownsPerFace, 0.0));
     forEachHaloVolume<Kernel::PatchSize, Kernel::HaloSize>(
       [&faceStorage](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int face, const int faceVolume) {
-        for (int unknown = 0; unknown < NumberOfData; unknown++) {
-          faceStorage[face][faceVolume * NumberOfData + unknown] = getLogicalState(volumeIndex, unknown);
+        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          faceStorage[face][faceVolume * NumberOfUnknowns + unknown] = getLogicalState(volumeIndex, unknown);
+        }
+      }
+    );
+    return faceStorage;
+  }
+
+  template <typename Kernel>
+  std::vector<std::vector<double>> getLogicalHaloAuxVars() {
+    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::AuxVarsPerFace, 0.0));
+    forEachHaloVolume<Kernel::PatchSize, Kernel::HaloSize>(
+      [&faceStorage](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int face, const int faceVolume) {
+        for (int unknown = 0; unknown < NumberOfAuxiliaryVariables; unknown++) {
+          faceStorage[face][faceVolume * NumberOfAuxiliaryVariables + unknown] = getLogicalState(volumeIndex, unknown+NumberOfUnknowns);
         }
       }
     );
@@ -1089,6 +1127,9 @@ namespace {
     const auto constantHalo  = getLogicalHalo<ConstantKernel>();
     const auto zeroSlopeHalo = getLogicalHalo<ZeroSlopeKernel>();
 
+    const auto constantAuxVarsHalo  = getLogicalHaloAuxVars<ConstantKernel>();
+    const auto zeroSlopeAuxVarsHalo = getLogicalHaloAuxVars<ZeroSlopeKernel>();
+
     std::vector<double> qOutConstant(ConstantKernel::ValuesPerPatch, 0.0);
     std::vector<double> qOutZeroSlope(ConstantKernel::ValuesPerPatch, 0.0);
 
@@ -1100,6 +1141,7 @@ namespace {
       qIn.data(),
       qOutConstant.data(),
       getFacePointersOf(constantHalo).data(),
+      getFacePointersOf(constantAuxVarsHalo).data(),
       patchCentre,
       patchExtent,
       0.0,
@@ -1110,6 +1152,7 @@ namespace {
       qIn.data(),
       qOutZeroSlope.data(),
       getFacePointersOf(zeroSlopeHalo).data(),
+      getFacePointersOf(zeroSlopeAuxVarsHalo).data(),
       patchCentre,
       patchExtent,
       0.0,
@@ -1137,8 +1180,10 @@ namespace {
     }
 
     std::vector<double>              qNext(Kernel::ValuesPerPatch, 0.0);
-    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::ValuesPerFace, 0.0));
+    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::UnknownsPerFace, 0.0));
     const auto                       faces = getFacePointersOf(faceStorage);
+    std::vector<std::vector<double>> faceAuxVarsStorage(peano4::FacesPerCell, std::vector<double>(Kernel::AuxVarsPerFace, 0.0));
+    const auto                       facesAuxVars = getFacePointersOf(faceAuxVarsStorage);
 
     const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
     const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
@@ -1149,6 +1194,7 @@ namespace {
         q.data(),
         qNext.data(),
         faces.data(),
+        facesAuxVars.data(),
         patchCentre,
         patchExtent,
         step * timeStepSize,
@@ -1188,8 +1234,10 @@ namespace {
     }
 
     std::vector<double>              qNext(Kernel::ValuesPerPatch, 0.0);
-    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::ValuesPerFace, 0.0));
+    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::UnknownsPerFace, 0.0));
     const auto                       faces = getFacePointersOf(faceStorage);
+    std::vector<std::vector<double>> faceAuxVarsStorage(peano4::FacesPerCell, std::vector<double>(Kernel::AuxVarsPerFace, 0.0));
+    const auto                       facesAuxVars = getFacePointersOf(faceAuxVarsStorage);
 
     const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
     const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
@@ -1216,6 +1264,7 @@ namespace {
         q.data(),
         qNext.data(),
         faces.data(),
+        facesAuxVars.data(),
         patchCentre,
         patchExtent,
         step * timeStepSize,
@@ -1258,7 +1307,11 @@ namespace {
     const std::vector<double>              qIn(Kernel::ValuesPerPatch, uniformValue);
     const std::vector<std::vector<double>> faceStorage(
       peano4::FacesPerCell,
-      std::vector<double>(Kernel::ValuesPerFace, uniformValue)
+      std::vector<double>(Kernel::UnknownsPerFace, uniformValue)
+    );
+    const std::vector<std::vector<double>> faceAuxVarsStorage(
+      peano4::FacesPerCell,
+      std::vector<double>(Kernel::AuxVarsPerFace, uniformValue)
     );
     qOut.assign(Kernel::ValuesPerPatch, 0.0);
     const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
@@ -1267,6 +1320,7 @@ namespace {
       qIn.data(),
       qOut.data(),
       getFacePointersOf(faceStorage).data(),
+      getFacePointersOf(faceAuxVarsStorage).data(),
       patchCentre,
       patchExtent,
       0.0,
@@ -1335,12 +1389,14 @@ namespace {
   std::vector<double> updateOnDevice(
     const std::vector<double>&            patches,
     const std::vector<double>&            faces,
+    // const std::vector<double>&            auxVarsFaces,
     const exahype2::dg::tests::CellChain& geometry,
     std::vector<double>&                  updated
   ) {
     const exahype2::dg::tests::DeviceBuffer<double> devicePatches(patches);
     const exahype2::dg::tests::DeviceBuffer<double> deviceUpdated(updated);
     const exahype2::dg::tests::DeviceBuffer<double> deviceFaces(faces);
+    // const exahype2::dg::tests::DeviceBuffer<double> deviceAuxVarsFaces(auxVarsFaces);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
     std::vector<double> eigenvalues(exahype2::dg::tests::KernelTestSetup::NumberOfCells, 0.0);
@@ -1352,6 +1408,8 @@ namespace {
         devicePatches.getData(),
         deviceUpdated.getData(),
         deviceFaces.getData(),
+        // deviceAuxVarsFaces.getData(),
+        nullptr, //case has no auxiliary variables, so this should never be accessed
         deviceCellCentres.getData(),
         deviceCellSizes.getData(),
         deviceEigenvalues.getData()
@@ -1371,11 +1429,13 @@ namespace {
   double updateInTeamsOnDevice(
     std::vector<double>&                  patches,
     const std::vector<double>&            faces,
+    const std::vector<double>&            auxVarsFaces,
     const exahype2::dg::tests::CellChain& geometry,
     const double                          timeStepSize
   ) {
     const exahype2::dg::tests::DeviceBuffer<double> devicePatches(patches);
     const exahype2::dg::tests::DeviceBuffer<double> deviceFaces(faces);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceAuxVarsFaces(auxVarsFaces);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
     double                                          eigenvalue = 0.0;
@@ -1388,6 +1448,7 @@ namespace {
       UpdatePatchOfCellInTeam<Kernel>{
         devicePatches.getData(),
         deviceFaces.getData(),
+        deviceAuxVarsFaces.getData(),
         deviceCellCentres.getData(),
         deviceCellSizes.getData(),
         timeStepSize
@@ -1406,15 +1467,19 @@ namespace {
   double updateInPlaceOnHost(
     std::vector<double>&                  patches,
     const std::vector<double>&            faces,
+    const std::vector<double>&            auxVarsFaces,
     const exahype2::dg::tests::CellChain& geometry,
     const double                          timeStepSize
   ) {
     double eigenvalue = 0.0;
     for (int cell = 0; cell < exahype2::dg::tests::KernelTestSetup::NumberOfCells; cell++) {
       const double* facesOfCell[peano4::FacesPerCell];
+      const double* auxVarsFacesOfCell[peano4::FacesPerCell];
       for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         facesOfCell[faceNumber] = faces.data()
-          + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::ValuesPerFace;
+          + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::UnknownsPerFace;
+        auxVarsFacesOfCell[faceNumber] = auxVarsFaces.data()
+          + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::AuxVarsPerFace;
       }
       const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
@@ -1426,6 +1491,7 @@ namespace {
           patch,
           patch,
           facesOfCell,
+          auxVarsFacesOfCell,
           cellCentre,
           cellSize,
           exahype2::dg::tests::KernelTestSetup::TimeStamp,
@@ -1442,16 +1508,21 @@ namespace {
    * every cell of the test chain.
    */
   template <typename Solver>
-  void fillSmoothEulerPatchesAndFacesOfChain(std::vector<double>& patches, std::vector<double>& faces) {
+  void fillSmoothEulerPatchesAndFacesOfChain(std::vector<double>& patches, std::vector<double>& faces, std::vector<double>& auxVarsFaces) {
     std::vector<double>              q;
     std::vector<std::vector<double>> faceStorage;
-    fillSmoothEulerPatchAndFaces<Solver>(q, faceStorage);
+    std::vector<std::vector<double>> auxVarsFaceStorage;
+    fillSmoothEulerPatchAndFaces<Solver>(q, faceStorage, auxVarsFaceStorage);
     patches.clear();
     faces.clear();
+    auxVarsFaces.clear();
     for (int cell = 0; cell < exahype2::dg::tests::KernelTestSetup::NumberOfCells; cell++) {
       patches.insert(patches.end(), q.begin(), q.end());
       for (const std::vector<double>& face : faceStorage) {
         faces.insert(faces.end(), face.begin(), face.end());
+      }
+      for (const std::vector<double>& face : auxVarsFaceStorage) {
+        auxVarsFaces.insert(faces.end(), face.begin(), face.end());
       }
     }
   }
@@ -1724,8 +1795,9 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testBoundaryConditionsCopyAUniformS
   const double                                uniformValue = 1.23;
 
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    std::vector<double> face(Kernel::ValuesPerFace, uniformValue);
-    applyBoundaryConditionsToFace<Kernel>(face.data(), patchCentre, patchSize, 0.0, faceNumber);
+    std::vector<double> face(Kernel::UnknownsPerFace, uniformValue);
+    std::vector<double> auxVarsFace(Kernel::AuxVarsPerFace, uniformValue);
+    applyBoundaryConditionsToFace<Kernel>(face.data(), auxVarsFace.data(), patchCentre, patchSize, 0.0, faceNumber);
     for (const double entry : face) {
       validateNumericalEqualsWithParams1(entry, uniformValue, faceNumber);
     }
@@ -1739,7 +1811,8 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEachOuterLayerReadsTheMatchingI
   const tarch::la::Vector<DIMENSIONS, double> patchSize(1.0);
 
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    std::vector<double> face(Kernel::ValuesPerFace, -1.0);
+    std::vector<double> face(Kernel::UnknownsPerFace, -1.0);
+    std::vector<double> auxVarsFace(Kernel::AuxVarsPerFace, -1.0);
     const int           normal = faceNumber % DIMENSIONS;
 
     for (int tangentialVolume = 0; tangentialVolume < Kernel::VolumesPerLayer; tangentialVolume++) {
@@ -1747,24 +1820,37 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEachOuterLayerReadsTheMatchingI
       for (int layer = 0; layer < Kernel::HaloSize; layer++) {
         haloVolume(normal) = faceNumber < DIMENSIONS ? Kernel::HaloSize + layer : Kernel::HaloSize - 1 - layer;
         const int inside   = exahype2::fv::getFaceVolumeIndex(haloVolume, Kernel::PatchSize, Kernel::HaloSize, normal);
-        for (int entry = 0; entry < Kernel::NumberOfData; entry++) {
-          face[inside * Kernel::NumberOfData + entry] =
+        for (int entry = 0; entry < Kernel::NumberOfUnknowns; entry++) {
+          face[inside * Kernel::NumberOfUnknowns + entry] =
             static_cast<double>(100 * tangentialVolume + 10 * layer + entry);
+        }
+        for (int entry = 0; entry < Kernel::NumberOfAuxiliaryVariables; entry++) {
+          auxVarsFace[inside * Kernel::NumberOfAuxiliaryVariables + entry] =
+            static_cast<double>(100 * tangentialVolume + 10 * layer + entry + NumberOfUnknowns);
         }
       }
     }
 
-    applyBoundaryConditionsToFace<Kernel>(face.data(), patchCentre, patchSize, 0.0, faceNumber);
+    applyBoundaryConditionsToFace<Kernel>(face.data(), auxVarsFace.data(), patchCentre, patchSize, 0.0, faceNumber);
 
     for (int tangentialVolume = 0; tangentialVolume < Kernel::VolumesPerLayer; tangentialVolume++) {
       auto haloVolume = peano4::dDelinearisedExclusive(tangentialVolume, Kernel::PatchSize, normal);
       for (int layer = 0; layer < Kernel::HaloSize; layer++) {
         haloVolume(normal) = faceNumber < DIMENSIONS ? Kernel::HaloSize - 1 - layer : Kernel::HaloSize + layer;
         const int outside  = exahype2::fv::getFaceVolumeIndex(haloVolume, Kernel::PatchSize, Kernel::HaloSize, normal);
-        for (int entry = 0; entry < Kernel::NumberOfData; entry++) {
+        for (int entry = 0; entry < Kernel::NumberOfUnknowns; entry++) {
           validateNumericalEqualsWithParams3(
-            face[outside * Kernel::NumberOfData + entry],
+            face[outside * Kernel::NumberOfUnknowns + entry],
             static_cast<double>(100 * tangentialVolume + 10 * layer + entry),
+            faceNumber,
+            tangentialVolume,
+            layer
+          );
+        }
+        for (int entry = 0; entry < Kernel::NumberOfAuxiliaryVariables; entry++) {
+          validateNumericalEqualsWithParams3(
+            auxVarsFace[outside * Kernel::NumberOfAuxiliaryVariables + entry],
+            static_cast<double>(100 * tangentialVolume + 10 * layer + NumberOfUnknowns + entry),
             faceNumber,
             tangentialVolume,
             layer
@@ -1783,12 +1869,19 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEachOuterVolumeIsWrittenOnce() 
   const int expectedWrittenEntries = Kernel::HaloSize * Kernel::VolumesPerLayer * Kernel::NumberOfData;
 
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    std::vector<double> face(Kernel::ValuesPerFace, 0.0);
-    applyBoundaryConditionsToFace<Kernel>(face.data(), patchCentre, patchSize, 0.0, faceNumber);
+    std::vector<double> face(Kernel::UnknownsPerFace, 0.0);
+    std::vector<double> auxVarsFace(Kernel::AuxVarsPerFace, 0.0);
+    applyBoundaryConditionsToFace<Kernel>(face.data(), auxVarsFace.data(), patchCentre, patchSize, 0.0, faceNumber);
 
     int    numberOfWrittenEntries = 0;
     double maximumEntry           = 0.0;
     for (const double entry : face) {
+      if (entry > 0.5) {
+        numberOfWrittenEntries++;
+      }
+      maximumEntry = std::max(entry, maximumEntry);
+    }
+    for (const double entry : auxVarsFace) {
       if (entry > 0.5) {
         numberOfWrittenEntries++;
       }
@@ -1809,16 +1902,20 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryThreadOfADeviceAppliesTheB
   constexpr int Faces = exahype2::dg::tests::KernelTestSetup::NumberOfCells * peano4::FacesPerCell;
   const exahype2::dg::tests::CellChain geometry;
   std::vector<double>                  hostFaces =
-    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Faces) * Kernel::ValuesPerFace, 1.0, 0.001);
+    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Faces) * Kernel::UnknownsPerFace, 1.0, 0.001);
   std::vector<double> deviceFaces(hostFaces);
-
   const exahype2::dg::tests::DeviceBuffer<double> facesOnDevice(deviceFaces);
+  std::vector<double>                  hostAuxVarsFaces =
+    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Faces) * Kernel::AuxVarsPerFace, 1.0, 0.001);
+  std::vector<double> deviceAuxVarsFaces(hostAuxVarsFaces);
+  const exahype2::dg::tests::DeviceBuffer<double> auxVarFacesOnDevice(deviceAuxVarsFaces);
   const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
   const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(Faces * Kernel::VolumesPerLayer),
     ApplyBoundaryConditionsAtTangentialVolume<Kernel>{
       facesOnDevice.getData(),
+      auxVarFacesOnDevice.getData(),
       deviceCellCentres.getData(),
       deviceCellSizes.getData()
     }
@@ -1827,7 +1924,8 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryThreadOfADeviceAppliesTheB
   for (int face = 0; face < Faces; face++) {
     const std::ptrdiff_t coordinateOffset = static_cast<std::ptrdiff_t>(face / peano4::FacesPerCell) * DIMENSIONS;
     applyBoundaryConditionsToFace<Kernel>(
-      hostFaces.data() + static_cast<std::ptrdiff_t>(face) * Kernel::ValuesPerFace,
+      hostFaces.data() + static_cast<std::ptrdiff_t>(face) * Kernel::UnknownsPerFace,
+      hostAuxVarsFaces.data() + static_cast<std::ptrdiff_t>(face) * Kernel::AuxVarsPerFace,
       tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
       tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
       exahype2::dg::tests::KernelTestSetup::TimeStamp,
@@ -1848,13 +1946,13 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testProjectionFillsTheOwnHalfOfEver
       patch[volume * Kernel::NumberOfData + unknown] = getPatchValue(volume, unknown);
     }
   }
-  std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::ValuesPerFace, 0.0));
+  std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::UnknownsPerFace, 0.0));
   double*                          faces[peano4::FacesPerCell];
   for (int face = 0; face < peano4::FacesPerCell; face++) {
     faces[face] = faceStorage[static_cast<std::size_t>(face)].data();
   }
 
-  Kernel::projectOntoFaces(patch.data(), faces);
+  Kernel::projectUnknownsOntoFaces(patch.data(), faces);
 
   for (int normal = 0; normal < DIMENSIONS; normal++) {
     tarch::la::Vector<DIMENSIONS, int> range(Kernel::PatchSize);
@@ -1890,12 +1988,12 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryTeamOfADeviceProjectsLikeT
     using Kernel = typename decltype(kernel)::type;
     const std::vector<double> patches =
       exahype2::dg::tests::getRamp(static_cast<std::size_t>(Cells) * Kernel::ValuesPerPatch, 1.0, 0.001);
-    std::vector<double> hostFaces(static_cast<std::size_t>(Cells) * peano4::FacesPerCell * Kernel::ValuesPerFace, -1.0);
+    std::vector<double> hostFaces(static_cast<std::size_t>(Cells) * peano4::FacesPerCell * Kernel::UnknownsPerFace, -1.0);
     std::vector<double> deviceFaces(hostFaces);
     const exahype2::dg::tests::DeviceBuffer<double> devicePatches(patches);
     const exahype2::dg::tests::DeviceBuffer<double> facesOnDevice(deviceFaces);
     tarch::accelerator::parallelFor(
-      tarch::accelerator::TeamRange(Cells, tarch::accelerator::getTeamThreads(Kernel::ValuesPerHalfFace), 0),
+      tarch::accelerator::TeamRange(Cells, tarch::accelerator::getTeamThreads(Kernel::UnknownsPerHalfFace), 0),
       ProjectPatchOfCellInTeam<Kernel>{devicePatches.getData(), facesOnDevice.getData()}
     );
     facesOnDevice.copyBack(deviceFaces);
@@ -1903,9 +2001,9 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryTeamOfADeviceProjectsLikeT
       double* facesOfCell[peano4::FacesPerCell];
       for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         facesOfCell[faceNumber] = hostFaces.data()
-          + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::ValuesPerFace;
+          + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::UnknownsPerFace;
       }
-      Kernel::projectOntoFaces(
+      Kernel::projectUnknownsOntoFaces(
         patches.data() + static_cast<std::ptrdiff_t>(cell) * Kernel::ValuesPerPatch,
         facesOfCell
       );
@@ -2006,10 +2104,10 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testHaloInjectionCopiesTheCoveringV
                 exahype2::fv::getFaceVolumeIndex<Setup::DofsPerAxis, Setup::HaloSize>(normal, layer, i, j);
               const int coarseVolume =
                 exahype2::fv::getFaceVolumeIndex<Setup::DofsPerAxis, Setup::HaloSize>(normal, layer, coarseI, coarseJ);
-              for (int unknown = 0; unknown < Setup::NumberOfData; unknown++) {
-                const double expected = inHalf ? coarseFace[coarseVolume * Setup::NumberOfData + unknown] : -1.0;
+              for (int unknown = 0; unknown < Kernel::NumberOfUnknowns; unknown++) {
+                const double expected = inHalf ? coarseFace[coarseVolume * Kernel::NumberOfUnknowns + unknown] : -1.0;
                 validateEqualsWithParams4(
-                  fineFace[fineVolume * Setup::NumberOfData + unknown],
+                  fineFace[fineVolume * Kernel::NumberOfUnknowns + unknown],
                   expected,
                   normal,
                   side,
@@ -2218,7 +2316,11 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testZeroTimeStepPreservesState() {
   }
   const std::vector<std::vector<double>> faceStorage(
     peano4::FacesPerCell,
-    std::vector<double>(Kernel::ValuesPerFace, 0.5)
+    std::vector<double>(Kernel::UnknownsPerFace, 0.5)
+  );
+  const std::vector<std::vector<double>> faceAuxVarsStorage(
+    peano4::FacesPerCell,
+    std::vector<double>(Kernel::AuxVarsPerFace, 0.5)
   );
 
   const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
@@ -2227,6 +2329,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testZeroTimeStepPreservesState() {
     qIn.data(),
     qOut.data(),
     getFacePointersOf(faceStorage).data(),
+    getFacePointersOf(faceAuxVarsStorage).data(),
     patchCentre,
     patchExtent,
     0.0,
@@ -2464,8 +2567,10 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testPeriodicAdvectionConservesMass(
   }
 
   std::vector<double>              qNext(Kernel::ValuesPerPatch, 0.0);
-  std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::ValuesPerFace, 0.0));
+  std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::UnknownsPerFace, 0.0));
   const auto                       faces = getFacePointersOf(faceStorage);
+  std::vector<std::vector<double>> faceAuxVarsStorage(peano4::FacesPerCell, std::vector<double>(Kernel::AuxVarsPerFace, 0.0));
+  const auto                       facesAuxVars = getFacePointersOf(faceStorage);
 
   const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
   const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
@@ -2477,6 +2582,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testPeriodicAdvectionConservesMass(
       q.data(),
       qNext.data(),
       faces.data(),
+      facesAuxVars.data(),
       patchCentre,
       patchExtent,
       step * timeStepSize,
@@ -2576,7 +2682,11 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testMirroredVolumesReceiveMirroredS
   }
   const std::vector<std::vector<double>> faceStorage(
     peano4::FacesPerCell,
-    std::vector<double>(Kernel::ValuesPerFace, 0.75)
+    std::vector<double>(Kernel::UnknownsPerFace, 0.75)
+  );
+  const std::vector<std::vector<double>> faceAuxVarsStorage(
+    peano4::FacesPerCell,
+    std::vector<double>(Kernel::AuxVarsPerFace, 0.75)
   );
 
   const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
@@ -2585,6 +2695,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testMirroredVolumesReceiveMirroredS
     qIn.data(),
     qOut.data(),
     getFacePointersOf(faceStorage).data(),
+    getFacePointersOf(faceAuxVarsStorage).data(),
     patchCentre,
     patchExtent,
     0.0,
@@ -2637,7 +2748,11 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::validateMirroredRadialAdvection() {
   }
   const std::vector<std::vector<double>> faceStorage(
     peano4::FacesPerCell,
-    std::vector<double>(Kernel::ValuesPerFace, 1.0)
+    std::vector<double>(Kernel::UnknownsPerFace, 1.0)
+  );
+  const std::vector<std::vector<double>> faceAuxVarsStorage(
+    peano4::FacesPerCell,
+    std::vector<double>(Kernel::AuxVarsPerFace, 1.0)
   );
 
   // A centre at the origin and a width without a binary representation make the positions round.
@@ -2649,6 +2764,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::validateMirroredRadialAdvection() {
     qIn.data(),
     qOut.data(),
     getFacePointersOf(faceStorage).data(),
+    getFacePointersOf(faceAuxVarsStorage).data(),
     patchCentre,
     patchExtent,
     0.0,
@@ -2763,21 +2879,31 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryCellOfADeviceRangeUpdatesL
   const std::vector<double>            patches =
     exahype2::dg::tests::getRamp(static_cast<std::size_t>(Cells) * DeviceKernel::ValuesPerPatch, 1.0, 0.001);
   const std::vector<double> faces = exahype2::dg::tests::getRamp(
-    static_cast<std::size_t>(Cells) * peano4::FacesPerCell * DeviceKernel::ValuesPerFace,
+    static_cast<std::size_t>(Cells) * peano4::FacesPerCell * DeviceKernel::UnknownsPerFace,
+    1.5,
+    0.002
+  );
+  const std::vector<double> facesAuxVars = exahype2::dg::tests::getRamp(
+    static_cast<std::size_t>(Cells) * peano4::FacesPerCell * DeviceKernel::AuxVarsPerFace,
     1.5,
     0.002
   );
 
   std::vector<double>       deviceUpdated(patches.size(), 0.0);
+
+  // const std::vector<double> deviceEigenvalues = updateOnDevice(patches, faces, facesAuxVars, geometry, deviceUpdated);
   const std::vector<double> deviceEigenvalues = updateOnDevice(patches, faces, geometry, deviceUpdated);
 
   std::vector<double> hostUpdated(patches.size(), 0.0);
   std::vector<double> hostEigenvalues(Cells, 0.0);
   for (int cell = 0; cell < Cells; cell++) {
     const double* facesOfCell[peano4::FacesPerCell];
+    const double* facesAuxVarsOfCell[peano4::FacesPerCell];
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       facesOfCell[faceNumber] = faces.data()
-        + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * DeviceKernel::ValuesPerFace;
+        + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * DeviceKernel::UnknownsPerFace;
+      facesAuxVarsOfCell[faceNumber] = facesAuxVars.data()
+        + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * DeviceKernel::AuxVarsPerFace;
     }
     const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
     const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
@@ -2786,6 +2912,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryCellOfADeviceRangeUpdatesL
       patches.data() + static_cast<std::ptrdiff_t>(cell) * DeviceKernel::ValuesPerPatch,
       hostUpdated.data() + static_cast<std::ptrdiff_t>(cell) * DeviceKernel::ValuesPerPatch,
       facesOfCell,
+      facesAuxVarsOfCell,
       cellCentre,
       cellSize,
       exahype2::dg::tests::KernelTestSetup::TimeStamp,
@@ -2812,12 +2939,13 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryTeamOfADeviceUpdatesInPlac
                                                                           const auto                 kernel,
                                                                           std::vector<double>        hostPatches,
                                                                           const std::vector<double>& faces,
+                                                                          const std::vector<double>& auxVarsFaces,
                                                                           const double               timeStepSize
                                                                         ) {
     using Kernel = typename decltype(kernel)::type;
     std::vector<double> devicePatches(hostPatches);
-    const double        deviceEigenvalue = updateInTeamsOnDevice<Kernel>(devicePatches, faces, geometry, timeStepSize);
-    const double        hostEigenvalue   = updateInPlaceOnHost<Kernel>(hostPatches, faces, geometry, timeStepSize);
+    const double        deviceEigenvalue = updateInTeamsOnDevice<Kernel>(devicePatches, faces, auxVarsFaces, geometry, timeStepSize);
+    const double        hostEigenvalue   = updateInPlaceOnHost<Kernel>(hostPatches, faces, auxVarsFaces, geometry, timeStepSize);
     validateNumericalBuffersEquals(devicePatches, hostPatches);
     validateNumericalEquals(deviceEigenvalue, hostEigenvalue);
   };
@@ -2826,22 +2954,28 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryTeamOfADeviceUpdatesInPlac
     std::type_identity<DeviceKernel>{},
     exahype2::dg::tests::getRamp(static_cast<std::size_t>(Cells) * DeviceKernel::ValuesPerPatch, 1.0, 0.001),
     exahype2::dg::tests::getRamp(
-      static_cast<std::size_t>(Cells) * peano4::FacesPerCell * DeviceKernel::ValuesPerFace,
+      static_cast<std::size_t>(Cells) * peano4::FacesPerCell * DeviceKernel::UnknownsPerFace,
+      1.5,
+      0.002
+    ),
+    exahype2::dg::tests::getRamp(
+      static_cast<std::size_t>(Cells) * peano4::FacesPerCell * DeviceKernel::AuxVarsPerFace,
       1.5,
       0.002
     ),
     exahype2::dg::tests::KernelTestSetup::TimeStepSize
   );
-
   const auto validateSodTeamsUpdateLikeTheHost = [&](const auto solver) {
     using Solver = typename decltype(solver)::type;
     std::vector<double> patches;
     std::vector<double> faces;
-    fillSmoothEulerPatchesAndFacesOfChain<Solver>(patches, faces);
+    std::vector<double> auxVarsFaces;
+    fillSmoothEulerPatchesAndFacesOfChain<Solver>(patches, faces, auxVarsFaces);
     validateTeamsUpdateLikeTheHost(
       std::type_identity<exahype2::fv::FiniteVolumeScheme<Solver, double>>{},
       patches,
       faces,
+      auxVarsFaces,
       EulerTimeStepSize
     );
   };

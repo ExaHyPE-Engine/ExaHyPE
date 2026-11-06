@@ -561,10 +561,10 @@ exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution()
   solver.initialise(cellConnectivity, requests);
   finishStep(solver);
   solver.performTimeStep(cellConnectivity, requests);
+
   finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
-
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize / peano4::SubdivisionFactor);
   validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(cellConnectivity, Depth + 1)) > 0);
@@ -574,7 +574,6 @@ exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution()
     CoarseWidth / (peano4::SubdivisionFactor * PatchSize)
   );
   validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth / PatchSize);
-
   requests.clear(cellConnectivity.getNumberOfSlots());
   solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
@@ -583,7 +582,6 @@ exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution()
     coarseTimeStepSize / peano4::SubdivisionFactor
   );
   validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, cellConnectivity, Depth), 0);
-
   regridWithLiveData(solver, peano4::tests::getErasureOfEveryCell(Depth), requests);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize);
   validateEquals(cellConnectivity.getMaximumLevel(), Depth);

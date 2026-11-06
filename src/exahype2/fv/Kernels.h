@@ -31,13 +31,25 @@ namespace exahype2::fv {
   struct InterpolateHaloHalves;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct InterpolateAuxVarsHaloHalves;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct InjectHaloHalves;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct InjectAuxVarsHaloHalves;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct RestrictHaloHalves;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-  struct ProjectPatchesOntoFaces;
+  struct RestrictAuxVarsHaloHalves;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct ProjectUnknownsOntoFaces;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct ProjectAuxVarsOntoFaces;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct UpdatePatches;
@@ -64,6 +76,7 @@ struct exahype2::fv::ApplyBoundaryConditions final {
   peano4::CellConnectivity cellConnectivity{};
   tarch::Span<const int>   boundaryFaces{};
   typename FacePool::View  halo{};
+  typename FacePool::View  auxVarsHalo{};
   double                   timeStamp{0.0};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
@@ -84,6 +97,20 @@ struct exahype2::fv::InterpolateHaloHalves final {
 };
 
 /**
+ * Fills the coarse-side halves of the fine faces of a level jump from its coarse face.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::fv::InterpolateAuxVarsHaloHalves final {
+  using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::CellConnectivity cellConnectivity{};
+  typename FacePool::View  auxVarsHalo{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
  * Fills the coarse-side halves of the fine faces of a level jump with copies of its coarse face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -93,6 +120,20 @@ struct exahype2::fv::InjectHaloHalves final {
 
   peano4::CellConnectivity cellConnectivity{};
   typename FacePool::View  halo{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
+ * Fills the coarse-side halves of the fine faces of a level jump with copies of its coarse face.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::fv::InjectAuxVarsHaloHalves final {
+  using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::CellConnectivity cellConnectivity{};
+  typename FacePool::View  auxVarsHalo{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
@@ -112,11 +153,42 @@ struct exahype2::fv::RestrictHaloHalves final {
 };
 
 /**
+ * Fills the fine-side half of the coarse face of a level jump from its fine faces.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::fv::RestrictAuxVarsHaloHalves final {
+  using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::CellConnectivity cellConnectivity{};
+  typename FacePool::View  auxVarsHalo{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
  * Copies the boundary layers of the patch of every cell into the halves of its faces that the
  * cell writes. The launch runs one team per cell and one thread per value of one half.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-struct exahype2::fv::ProjectPatchesOntoFaces final {
+struct exahype2::fv::ProjectUnknownsOntoFaces final {
+  using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+  using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::CellConnectivity     cellConnectivity{};
+  typename CellPool::ConstView solution{};
+  typename FacePool::View      halo{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, tarch::accelerator::TeamHandle team) const;
+};
+
+/**
+ * Copies the boundary layers of the patch of every cell into the halves of its faces that the
+ * cell writes. The launch runs one team per cell and one thread per value of one half.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::fv::ProjectAuxVarsOntoFaces final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
@@ -142,6 +214,7 @@ struct exahype2::fv::UpdatePatches final {
   tarch::Span<const int>       cells{};
   typename CellPool::View      solution{};
   typename FacePool::ConstView halo{};
+  typename FacePool::ConstView auxVarsHalo{};
   double                       timeStamp{0.0};
   double                       timeStepSize{0.0};
 

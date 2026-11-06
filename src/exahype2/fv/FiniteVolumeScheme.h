@@ -172,8 +172,10 @@ public:
   static constexpr int  VolumesPerPatch            = peano4::power(PatchSize, DIMENSIONS);
   static constexpr int  VolumesPerLayer            = peano4::power(PatchSize, DIMENSIONS - 1);
   static constexpr int  ValuesPerPatch             = VolumesPerPatch * NumberOfData;
-  static constexpr int  ValuesPerHalfFace          = HaloSize * VolumesPerLayer * NumberOfData;
-  static constexpr int  ValuesPerFace              = 2 * ValuesPerHalfFace;
+  static constexpr int  UnknownsPerHalfFace        = HaloSize * VolumesPerLayer * NumberOfUnknowns;
+  static constexpr int  UnknownsPerFace            = 2 * UnknownsPerHalfFace;
+  static constexpr int  AuxVarsPerHalfFace         = HaloSize * VolumesPerLayer * NumberOfAuxiliaryVariables;
+  static constexpr int  AuxVarsPerFace             = 2 * AuxVarsPerHalfFace;
   static constexpr bool ReportEigenvalues = Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive;
 
   template <typename StoragePrecision>
@@ -186,6 +188,7 @@ public:
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void applyBoundaryConditions(
     StoragePrecision* NOALIAS                    face,
+    StoragePrecision* NOALIAS                    auxVarsFace,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -194,13 +197,26 @@ public:
   );
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void projectOntoFaces(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectUnknownsOntoFaces(
     const StoragePrecision* NOALIAS patch,
     StoragePrecision* NOALIAS const faces[peano4::FacesPerCell]
   );
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void projectOntoFacesInTeam(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectUnknownsOntoFacesInTeam(
+    tarch::accelerator::TeamHandle  team,
+    const StoragePrecision* NOALIAS patch,
+    StoragePrecision* NOALIAS const faces[peano4::FacesPerCell]
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectAuxVarsOntoFaces(
+    const StoragePrecision* NOALIAS patch,
+    StoragePrecision* NOALIAS const faces[peano4::FacesPerCell]
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectAuxVarsOntoFacesInTeam(
     tarch::accelerator::TeamHandle  team,
     const StoragePrecision* NOALIAS patch,
     StoragePrecision* NOALIAS const faces[peano4::FacesPerCell]
@@ -208,6 +224,15 @@ public:
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void interpolateHalo(
+    const StoragePrecision* NOALIAS coarseFace,
+    StoragePrecision* NOALIAS       fineFace,
+    int                             side,
+    int                             normal,
+    int                             subface
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void interpolateAuxVarsHalo(
     const StoragePrecision* NOALIAS coarseFace,
     StoragePrecision* NOALIAS       fineFace,
     int                             side,
@@ -225,7 +250,24 @@ public:
   );
 
   template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void injectAuxVarsHalo(
+    const StoragePrecision* NOALIAS coarseFace,
+    StoragePrecision* NOALIAS       fineFace,
+    int                             side,
+    int                             normal,
+    int                             subface
+  );
+
+  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void restrictHalo(
+    const StoragePrecision* const NOALIAS fineFaces[peano4::SubfacesPerFace],
+    StoragePrecision* NOALIAS             coarseFace,
+    int                                   side,
+    int                                   normal
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void restrictAuxVarsHalo(
     const StoragePrecision* const NOALIAS fineFaces[peano4::SubfacesPerFace],
     StoragePrecision* NOALIAS             coarseFace,
     int                                   side,
@@ -252,6 +294,7 @@ public:
     const StoragePrecision*                      patch,
     StoragePrecision*                            updated,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -269,6 +312,7 @@ public:
     tarch::accelerator::TeamHandle               team,
     StoragePrecision*                            patch,
     const StoragePrecision* const                faces[peano4::FacesPerCell],
+    const StoragePrecision* const                auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -281,6 +325,7 @@ public:
     int                                          volume,
     const StoragePrecision* NOALIAS              patch,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -294,6 +339,7 @@ public:
     int                                          volume,
     const StoragePrecision* NOALIAS              patch,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -348,6 +394,7 @@ private:
     const StoragePrecision*                      patch,
     StoragePrecision*                            updated,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -360,6 +407,7 @@ private:
     const StoragePrecision* NOALIAS              patch,
     StoragePrecision* NOALIAS                    updated,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -368,7 +416,14 @@ private:
   );
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void projectOntoFacesWithThreadsOfTeam(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectUnknownsOntoFacesWithThreadsOfTeam(
+    tarch::accelerator::TeamHandle  team,
+    const StoragePrecision* NOALIAS patch,
+    StoragePrecision* NOALIAS const faces[peano4::FacesPerCell]
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectAuxVarsOntoFacesWithThreadsOfTeam(
     tarch::accelerator::TeamHandle  team,
     const StoragePrecision* NOALIAS patch,
     StoragePrecision* NOALIAS const faces[peano4::FacesPerCell]
@@ -379,6 +434,7 @@ private:
     tarch::accelerator::TeamHandle               team,
     StoragePrecision*                            patch,
     const StoragePrecision* const                faces[peano4::FacesPerCell],
+    const StoragePrecision* const                auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -461,6 +517,7 @@ private:
     const StoragePrecision*                      patch,
     StoragePrecision*                            updated,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -474,6 +531,7 @@ private:
     int                                          state,
     const StoragePrecision* NOALIAS              patch,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        auxVarsFaces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,

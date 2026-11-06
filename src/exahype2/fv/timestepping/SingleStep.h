@@ -38,6 +38,7 @@ struct exahype2::fv::timestepping::SingleStep final {
     int                                          volume,
     const StoragePrecision* NOALIAS              inputPatch,
     const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        faceAuxVarsPatches[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
     const tarch::la::Vector<DIMENSIONS, double>& patchSize,
     double                                       timeStamp,

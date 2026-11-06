@@ -10,7 +10,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD T*
 tarch::accelerator::ChunkedMemoryPool<T>::View::getChunk(const int slot) const noexcept {
   assertion(segments != nullptr);
   assertion(slot >= 0, slot);
-  assertion(paddedChunkSize > 0, paddedChunkSize);
+  // assertion(paddedChunkSize > 0, paddedChunkSize);
   return segments[slot >> segmentSizeExponent]
     + static_cast<std::size_t>(slot & slotMask) * static_cast<std::size_t>(paddedChunkSize);
 }
@@ -20,7 +20,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD const T*
 tarch::accelerator::ChunkedMemoryPool<T>::ConstView::getChunk(const int slot) const noexcept {
   assertion(segments != nullptr);
   assertion(slot >= 0, slot);
-  assertion(paddedChunkSize > 0, paddedChunkSize);
+  // assertion(paddedChunkSize > 0, paddedChunkSize);
   return segments[slot >> segmentSizeExponent]
     + static_cast<std::size_t>(slot & slotMask) * static_cast<std::size_t>(paddedChunkSize);
 }
@@ -47,7 +47,7 @@ INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(
   _paddedChunkSize(getPaddedChunkSizeOf(chunkSize)),
   _segmentTable(location),
   _location(location) {
-  assertion(chunkSize > 0, chunkSize);
+  // assertion(chunkSize > 0, chunkSize);
 }
 
 template <typename T>

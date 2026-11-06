@@ -62,6 +62,7 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     INLINE_METHOD void evaluate(
       const StoragePrecision* NOALIAS              patch,
       const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+      const StoragePrecision* NOALIAS const        auxVarsFaces[peano4::FacesPerCell],
       const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
       int                                          centreOffset,
       const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
@@ -137,6 +138,7 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
   INLINE_METHOD GPU_CALLABLE_METHOD static void accumulateFluxDivergence(
     const StoragePrecision* NOALIAS              inputPatch,
     const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const        faceAuxVarsPatches[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
     int                                          centreOffset,
     const StoragePrecision* NOALIAS              centreState,

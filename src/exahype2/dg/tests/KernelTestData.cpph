@@ -128,8 +128,10 @@ TARGET_DECLARE_END
 template <typename T>
 INLINE_METHOD exahype2::dg::tests::DeviceBuffer<T>::DeviceBuffer(const std::vector<T>& hostData) :
   _count(hostData.size()),
-  _data(tarch::allocateMemory<T>(_count, tarch::MemoryLocation::Device)) {
-  tarch::copyTo(_data.get(), hostData.data(), _count, tarch::MemoryLocation::Device);
+  _data(_count==0 ? nullptr : tarch::allocateMemory<T>(_count, tarch::MemoryLocation::Device)) {
+  if(_count!=0){
+    tarch::copyTo(_data.get(), hostData.data(), _count, tarch::MemoryLocation::Device);
+  }
 }
 
 template <typename T>

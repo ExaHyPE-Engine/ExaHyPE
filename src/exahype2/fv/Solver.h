@@ -105,7 +105,8 @@ public:
 
 private:
   INLINE_METHOD void applyBoundaryConditions(const peano4::CellConnectivity& cellConnectivity);
-  INLINE_METHOD void projectOntoFaces(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void projectUnknownsOntoFaces(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void projectAuxVarsOntoFaces(const peano4::CellConnectivity& cellConnectivity);
   [[nodiscard]] INLINE_METHOD double updatePatches(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
@@ -119,9 +120,11 @@ private:
   [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;
 
   Patches _solution{FiniteVolumeScheme::ValuesPerPatch};
-  Faces   _halo{FiniteVolumeScheme::ValuesPerFace};
+  Faces   _halo{FiniteVolumeScheme::UnknownsPerFace};
+  Faces   _auxVarsHalo{FiniteVolumeScheme::AuxVarsPerFace};
 
   peano4::HaloExchange<StoragePrecision>      _haloExchange{_halo};
+  peano4::HaloExchange<StoragePrecision>      _auxVarsHaloExchange{_auxVarsHalo};
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 
   exahype2::TimeStepping    _timeStepping;

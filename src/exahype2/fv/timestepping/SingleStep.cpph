@@ -33,6 +33,7 @@ exahype2::fv::timestepping::SingleStep::applyToVolume(
   const int                                    volume,
   const StoragePrecision* NOALIAS const        inputPatch,
   const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const        faceAuxVarsPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>& patchSize,
   const double                                 timeStamp,
@@ -110,6 +111,7 @@ exahype2::fv::timestepping::SingleStep::applyToVolume(
     ComputePrecision
   >(inputPatch,
     faceInputPatches,
+    faceAuxVarsPatches,
     volumeIndex,
     centreOffset,
     centreState,

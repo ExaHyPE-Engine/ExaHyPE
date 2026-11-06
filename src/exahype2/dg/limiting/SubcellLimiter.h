@@ -39,6 +39,7 @@ public:
   using Detector      = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using SubcellScheme = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
   using CellPool      = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+  using FacePool      = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool    = tarch::accelerator::ChunkedMemoryPool<int>;
 
   SubcellLimiter()                                       = delete;
@@ -116,13 +117,15 @@ private:
 
   CellPool   _previousSolution{SubcellScheme::ValuesPerCell};
   CellPool   _subcells{SubcellScheme::SubcellValuesPerCell};
-  CellPool   _subcellHalo{SubcellScheme::HaloValuesPerFace};
+  FacePool   _subcellHalo{SubcellScheme::HaloUnknownsPerFace};
+  FacePool   _subcellAuxVarsHalo{SubcellScheme::HaloAuxVarsPerFace};
   StatusPool _statuses{exahype2::dg::limiting::NumberOfStatusEntries};
   StatusPool _faceStatuses{Detector::StatusValuesPerFace};
   CellPool   _referenceExtrema{Detector::ExtremaPerCell};
   CellPool   _extremaFaces{Detector::ExtremaValuesPerFace};
 
   peano4::HaloExchange<StoragePrecision>      _haloExchange{_subcellHalo};
+  peano4::HaloExchange<StoragePrecision>      _auxVarsHaloExchange{_subcellAuxVarsHalo};
   peano4::HaloExchange<int>                   _statusExchange{_faceStatuses};
   peano4::HaloExchange<StoragePrecision>      _extremaExchange{_extremaFaces};
   peano4::MigrationExchange<StoragePrecision> _subcellMigration{_subcells.getLocation()};

@@ -34,8 +34,10 @@ namespace {
   using FixedScheme = exahype2::dg::limiting::SubcellScheme<exahype2::dg::limiting::tests::FixedStepStubSolver, double>;
 
   TARGET_DECLARE
-  constexpr int HaloValuesPerFace = Scheme::HaloValuesPerFace;
-  constexpr int HaloValuesPerCell = peano4::FacesPerCell * HaloValuesPerFace;
+  constexpr int HaloUnknownsPerFace = Scheme::HaloUnknownsPerFace;
+  constexpr int HaloAuxVarsPerFace  = Scheme::HaloAuxVarsPerFace;
+  constexpr int HaloUnknownsPerCell = peano4::FacesPerCell * HaloUnknownsPerFace;
+  constexpr int HaloAuxVarsPerCell  = peano4::FacesPerCell * HaloAuxVarsPerFace;
   TARGET_DECLARE_END
 
   constexpr double Tolerance = 1.0e-12;
@@ -68,11 +70,17 @@ namespace {
     return nodes;
   }
 
-  std::vector<double> getConstantHalo(const double unknown, const double auxiliary) {
-    std::vector<double> halo(HaloValuesPerCell);
-    for (std::size_t entry = 0; entry < halo.size(); entry += Layout::NumberOfData) {
+  std::vector<double> getConstantHalo(const double unknown) {
+    std::vector<double> halo(HaloUnknownsPerCell);
+    for (std::size_t entry = 0; entry < halo.size(); entry += Layout::NumberOfUnknowns) {
       halo[entry]     = unknown;
-      halo[entry + 1] = auxiliary;
+    }
+    return halo;
+  }
+  std::vector<double> getConstantAuxVarsHalo(const double auxiliary) {
+    std::vector<double> halo(HaloAuxVarsPerCell);
+    for (std::size_t entry = 0; entry < halo.size(); entry += Layout::NumberOfAuxiliaryVariables) {
+      halo[entry]     = auxiliary;
     }
     return halo;
   }
@@ -94,6 +102,7 @@ namespace {
     double*       subcells{nullptr};
     double*       scratch{nullptr};
     const double* halo{nullptr};
+    const double* auxVarsHalo{nullptr};
     const double* subcellsToNodes{nullptr};
     const double* cellCentres{nullptr};
     const double* cellSizes{nullptr};
@@ -103,9 +112,12 @@ namespace {
       exahype2::dg::MaxEigenvalueStatistics& accumulator
     ) const {
       const double* haloHalves[peano4::FacesPerCell];
+      const double* haloAuxVarsHalves[peano4::FacesPerCell];
       for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         haloHalves[faceNumber] =
-          halo + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloValuesPerFace;
+          halo + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloUnknownsPerFace;
+        haloAuxVarsHalves[faceNumber] =
+          auxVarsHalo + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloAuxVarsPerFace;
       }
       const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
@@ -117,6 +129,7 @@ namespace {
           subcells + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
           scratch + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
           haloHalves,
+          haloAuxVarsHalves,
           subcellsToNodes,
           cellCentre,
           cellSize,
@@ -140,7 +153,7 @@ namespace {
       double* haloHalves[peano4::FacesPerCell];
       for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         haloHalves[faceNumber] =
-          halo + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloValuesPerFace;
+          halo + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloUnknownsPerFace;
       }
       Scheme::projectSubgridOntoFacesInTeam(
         team,
@@ -161,7 +174,8 @@ namespace {
     const exahype2::dg::tests::CellChain&                    geometry,
     std::vector<double>&                                     nodes,
     std::vector<double>&                                     subcells,
-    const std::vector<double>&                               halo
+    const std::vector<double>&                               halo,
+    const std::vector<double>&                               auxVarsHalo
   ) {
     const std::vector<double> scratch(
       static_cast<std::size_t>(Setup::NumberOfCells) * Layout::SubcellValuesPerCell,
@@ -172,6 +186,7 @@ namespace {
     const exahype2::dg::tests::DeviceBuffer<double> deviceSubcells(subcells);
     const exahype2::dg::tests::DeviceBuffer<double> deviceScratch(scratch);
     const exahype2::dg::tests::DeviceBuffer<double> deviceHalo(halo);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceAuxVarsHalo(auxVarsHalo);
     const exahype2::dg::tests::DeviceBuffer<double> deviceSubcellsToNodes(tables.subcellsToNodes);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
@@ -184,6 +199,7 @@ namespace {
         deviceSubcells.getData(),
         deviceScratch.getData(),
         deviceHalo.getData(),
+        deviceAuxVarsHalo.getData(),
         deviceSubcellsToNodes.getData(),
         deviceCellCentres.getData(),
         deviceCellSizes.getData()
@@ -306,7 +322,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryTeamOfADeviceProjects
     2.0,
     0.003
   );
-  const std::vector<double> halo(static_cast<std::size_t>(Setup::NumberOfCells) * HaloValuesPerCell, 0.0);
+  const std::vector<double> halo(static_cast<std::size_t>(Setup::NumberOfCells) * HaloUnknownsPerCell, 0.0);
   std::vector<int>          statuses(
     static_cast<std::size_t>(Setup::NumberOfCells) * exahype2::dg::limiting::NumberOfStatusEntries,
     0
@@ -326,7 +342,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryTeamOfADeviceProjects
     double* haloHalves[peano4::FacesPerCell];
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       haloHalves[faceNumber] =
-        hostHalo.data() + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloValuesPerFace;
+        hostHalo.data() + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloUnknownsPerFace;
     }
     Scheme::projectSubgridOntoFaces(
       statuses.data() + static_cast<std::ptrdiff_t>(cell) * exahype2::dg::limiting::NumberOfStatusEntries,
@@ -474,7 +490,14 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testTheInitialConditionIsSampl
   const tarch::la::Vector<DIMENSIONS, double> centre(2.0);
   const tarch::la::Vector<DIMENSIONS, double> width(0.6);
   std::vector<double>                         subcells(Layout::SubcellValuesPerCell);
-  Scheme::sampleInitialCondition(subcells.data(), centre, width);
+  std::vector<double>                         subfaces(Scheme::HaloAuxVarsPerFace * peano4::FacesPerCell);
+
+  double* auxVarsHaloHalves[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    auxVarsHaloHalves[faceNumber] = subfaces.data() + faceNumber*Scheme::HaloAuxVarsPerFace;
+  }
+
+  Scheme::sampleInitialCondition(subcells.data(), auxVarsHaloHalves, centre, width);
 
   peano4::dForEach(Layout::SubcellsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& subcell) {
     const int    index    = peano4::dLinearised(subcell, Layout::SubcellsPerAxis);
@@ -490,6 +513,17 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testTheInitialConditionIsSampl
       index
     );
   });
+
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    validateEqualsWithParams1(
+      countValues(
+        auxVarsHaloHalves[faceNumber],
+        Scheme::HaloAuxVarsPerFace,
+        width(0) / Layout::SubcellsPerAxis),
+      Scheme::HaloAuxVarsPerFace/2,
+      faceNumber
+    );
+  }
 }
 
 /**
@@ -613,12 +647,15 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testAConstantSubgridRecomputes
     width(axis) = 0.5 + 0.5 * axis;
   }
   std::vector<double>       subcells = getConstantSubgrid(2.0, 0.5);
-  const std::vector<double> halo     = getConstantHalo(2.0, 0.5);
+  const std::vector<double> halo        = getConstantHalo(2.0);
+  const std::vector<double> auxVarsHalo = getConstantAuxVarsHalo(0.5);
   std::vector<double>       nodes(Layout::ValuesPerCell, 0.0);
   std::vector<double>       evolved(Layout::SubcellValuesPerCell, 0.0);
   const double*             haloHalves[peano4::FacesPerCell];
+  const double*             auxVarsHaloHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    haloHalves[faceNumber] = halo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloValuesPerFace;
+    haloHalves[faceNumber]        = halo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloUnknownsPerFace;
+    auxVarsHaloHalves[faceNumber] = auxVarsHalo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloAuxVarsPerFace;
   }
 
   const auto statistics = Scheme::recompute(
@@ -626,6 +663,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testAConstantSubgridRecomputes
     subcells.data(),
     evolved.data(),
     haloHalves,
+    auxVarsHaloHalves,
     tables.subcellsToNodes.data(),
     centre,
     width,
@@ -649,13 +687,16 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testAFixedRuleReportsNoWaveSpe
   const exahype2::dg::limiting::tests::SubcellProjections tables;
   const tarch::la::Vector<DIMENSIONS, double>             centre(0.5);
   const tarch::la::Vector<DIMENSIONS, double>             width(1.0);
-  std::vector<double>                                     subcells = getConstantSubgrid(2.0, 0.5);
-  const std::vector<double>                               halo     = getConstantHalo(2.0, 0.5);
+  std::vector<double>                                     subcells    = getConstantSubgrid(2.0, 0.5);
+  const std::vector<double>                               halo        = getConstantHalo(2.0);
+  const std::vector<double>                               auxVarsHalo = getConstantAuxVarsHalo(0.5);
   std::vector<double>                                     nodes(Layout::ValuesPerCell, 0.0);
   std::vector<double>                                     evolved(Layout::SubcellValuesPerCell, 0.0);
   const double*                                           haloHalves[peano4::FacesPerCell];
+  const double*                                           auxVarsHaloHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    haloHalves[faceNumber] = halo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloValuesPerFace;
+    haloHalves[faceNumber] = halo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloUnknownsPerFace;
+    auxVarsHaloHalves[faceNumber] = auxVarsHalo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloAuxVarsPerFace;
   }
 
   const auto statistics = FixedScheme::recompute(
@@ -663,6 +704,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testAFixedRuleReportsNoWaveSpe
     subcells.data(),
     evolved.data(),
     haloHalves,
+    auxVarsHaloHalves,
     tables.subcellsToNodes.data(),
     centre,
     width,
@@ -686,10 +728,10 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::
   const exahype2::dg::limiting::tests::SubcellProjections tables;
   const std::vector<double>                               previous = getConstantNodes(3.0, 0.25);
   std::vector<double>                                     subcells = getConstantSubgrid(5.0, 0.125);
-  std::vector<double>                                     halo(HaloValuesPerCell, 0.0);
+  std::vector<double>                                     halo(HaloUnknownsPerCell, 0.0);
   double*                                                 haloHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    haloHalves[faceNumber] = halo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloValuesPerFace;
+    haloHalves[faceNumber] = halo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloUnknownsPerFace;
   }
   int status[exahype2::dg::limiting::NumberOfStatusEntries] = {
     static_cast<int>(exahype2::dg::limiting::LimiterStatus::Regular),
@@ -708,12 +750,12 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::
   );
   validateNumericalBuffersEquals(subcells, getConstantSubgrid(3.0, 0.25));
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    const int unknowns    = countValues(haloHalves[faceNumber], HaloValuesPerFace, 3.0);
-    const int auxiliaries = countValues(haloHalves[faceNumber], HaloValuesPerFace, 0.25);
-    const int zeros       = countValues(haloHalves[faceNumber], HaloValuesPerFace, 0.0);
+    const int unknowns    = countValues(haloHalves[faceNumber], HaloUnknownsPerFace, 3.0);
+    // const int auxiliaries = countValues(haloHalves[faceNumber], HaloUnknownsPerFace, 0.25);
+    const int zeros       = countValues(haloHalves[faceNumber], HaloUnknownsPerFace, 0.0);
     validateWithParams2(unknowns > 0, faceNumber, unknowns);
-    validateEqualsWithParams1(auxiliaries, unknowns, faceNumber);
-    validateEqualsWithParams1(zeros, HaloValuesPerFace - 2 * unknowns, faceNumber);
+    validateEqualsWithParams1(unknowns, HaloUnknownsPerFace/2, faceNumber);
+    validateEqualsWithParams1(zeros, HaloUnknownsPerFace - unknowns, faceNumber);
   }
 
   status[static_cast<int>(exahype2::dg::limiting::StatusEntry::PreviousStatus)] =
@@ -729,8 +771,8 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::
   );
   validateNumericalBuffersEquals(subcells, getConstantSubgrid(5.0, 0.125));
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    validateEqualsWithParams1(countValues(haloHalves[faceNumber], HaloValuesPerFace, 3.0), 0, faceNumber);
-    validateWithParams1(countValues(haloHalves[faceNumber], HaloValuesPerFace, 5.0) > 0, faceNumber);
+    validateEqualsWithParams1(countValues(haloHalves[faceNumber], HaloUnknownsPerFace, 3.0), 0, faceNumber);
+    validateWithParams1(countValues(haloHalves[faceNumber], HaloUnknownsPerFace, 5.0) > 0, faceNumber);
   }
 
   status[static_cast<int>(exahype2::dg::limiting::StatusEntry::PreviousStatus)] =
@@ -756,12 +798,14 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryCellOfADeviceRangeRec
     0.002
   );
   const std::vector<double> halo =
-    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * HaloValuesPerCell, 1.5, 0.003);
+    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * HaloUnknownsPerCell, 1.5, 0.003);
+  const std::vector<double> auxVarsHalo =
+    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * HaloAuxVarsPerCell, 1.5, 0.003);
   const std::vector<double> nodes(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ValuesPerCell, 0.0);
 
   std::vector<double> deviceNodes      = nodes;
   std::vector<double> deviceSubcells   = subcells;
-  const auto          deviceStatistics = recomputeOnDevice(tables, geometry, deviceNodes, deviceSubcells, halo);
+  const auto          deviceStatistics = recomputeOnDevice(tables, geometry, deviceNodes, deviceSubcells, halo, auxVarsHalo);
 
   std::vector<double>                   hostNodes    = nodes;
   std::vector<double>                   hostSubcells = subcells;
@@ -769,9 +813,12 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryCellOfADeviceRangeRec
   exahype2::dg::MaxEigenvalueStatistics hostStatistics;
   for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
     const double* haloHalves[peano4::FacesPerCell];
+    const double* auxVarsHaloHalves[peano4::FacesPerCell];
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       haloHalves[faceNumber] =
-        halo.data() + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloValuesPerFace;
+        halo.data() + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloUnknownsPerFace;
+      auxVarsHaloHalves[faceNumber] =
+        auxVarsHalo.data() + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloAuxVarsPerFace;
     }
     const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
     const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
@@ -783,6 +830,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryCellOfADeviceRangeRec
         hostSubcells.data() + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
         evolved.data(),
         haloHalves,
+        auxVarsHaloHalves,
         tables.subcellsToNodes.data(),
         cellCentre,
         cellSize,

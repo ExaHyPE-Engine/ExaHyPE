@@ -526,24 +526,34 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::run() {
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditionsSkipTheCellsOffTheScheme() {
   using Scheme                      = exahype2::dg::limiting::SubcellScheme<CornerSolver, double>;
-  constexpr int    ValuesPerHalf    = Scheme::HaloValuesPerFace / 2;
+  constexpr int    ValuesPerHalf    = Scheme::HaloUnknownsPerFace / 2;
   constexpr double LowerHalfValue   = 1.0;
   constexpr double UpperHalfValue   = 2.0;
   constexpr int    StatusEntryIndex = static_cast<int>(exahype2::dg::limiting::StatusEntry::Status);
   const auto&      cellConnectivity = buildGrid();
 
-  tarch::accelerator::ChunkedMemoryPool<double> halo(Scheme::HaloValuesPerFace, tarch::MemoryLocation::Device);
+  tarch::accelerator::ChunkedMemoryPool<double> halo(Scheme::HaloUnknownsPerFace, tarch::MemoryLocation::Device);
+  tarch::accelerator::ChunkedMemoryPool<double> auxVarsHalo(Scheme::HaloAuxVarsPerFace, tarch::MemoryLocation::Device);
   halo.reserve(cellConnectivity.getNumberOfFaces());
+  auxVarsHalo.reserve(cellConnectivity.getNumberOfFaces());
   std::vector<double> haloOnHost;
+  std::vector<double> auxVarsHaloOnHost;
   halo.copyToHost(haloOnHost);
+  auxVarsHalo.copyToHost(auxVarsHaloOnHost);
   const auto paddedFace = static_cast<std::size_t>(halo.getPaddedChunkSize());
+  const auto paddedAuxVarsFace = static_cast<std::size_t>(auxVarsHalo.getPaddedChunkSize());
   for (int face = 0; face < cellConnectivity.getNumberOfFaces(); face++) {
-    for (int value = 0; value < Scheme::HaloValuesPerFace; value++) {
+    for (int value = 0; value < Scheme::HaloUnknownsPerFace; value++) {
       haloOnHost[static_cast<std::size_t>(face) * paddedFace + static_cast<std::size_t>(value)] =
         value < ValuesPerHalf ? LowerHalfValue : UpperHalfValue;
     }
+    for (int value = 0; value < Scheme::HaloAuxVarsPerFace; value++) {
+      auxVarsHaloOnHost[static_cast<std::size_t>(face) * paddedAuxVarsFace + static_cast<std::size_t>(value)] =
+        (value + Scheme::NumberOfUnknowns) < ValuesPerHalf ? LowerHalfValue : UpperHalfValue;
+    }
   }
   halo.copyFromHost(haloOnHost);
+  auxVarsHalo.copyFromHost(auxVarsHaloOnHost);
 
   tarch::accelerator::ChunkedMemoryPool<int> statuses(exahype2::dg::limiting::NumberOfStatusEntries);
   statuses.reserve(cellConnectivity.getNumberOfSlots());
@@ -564,11 +574,12 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditi
       boundaryFaces.size * exahype2::fv::FiniteVolumeScheme<CornerSolver, double>::VolumesPerLayer
     ),
     exahype2::dg::limiting::ApplySubgridBoundaryConditions<CornerSolver, double, double>{
-      {cellConnectivity.onDevice(), boundaryFaces, halo.getView(), 0.0},
+      {cellConnectivity.onDevice(), boundaryFaces, halo.getView(), auxVarsHalo.getView(), 0.0},
       std::as_const(statuses).getView()
     }
   );
   halo.copyToHost(haloOnHost);
+  auxVarsHalo.copyToHost(auxVarsHaloOnHost);
 
   for (const int face : cellConnectivity.getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary)) {
     const int  lowerCell = cellConnectivity.getFaceCell(face, 0);
