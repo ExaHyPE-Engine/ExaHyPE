@@ -55,19 +55,35 @@ public:
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
-  INLINE_METHOD void initialise(const peano4::CellConnectivity& cellConnectivity, const CellPool& solution);
-  INLINE_METHOD void openTimeStep(const peano4::CellConnectivity& cellConnectivity, const CellPool& solution);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void initialise(
+    const peano4::CellConnectivity& cellConnectivity,
+    const CellPool&                 solution,
+    const RuntimeParameters&        parameters
+  );
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void openTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    const CellPool&                 solution,
+    const RuntimeParameters&        parameters
+  );
+
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics closeTimeStep(
     const peano4::CellConnectivity& cellConnectivity,
     CellPool&                       solution,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+
   INLINE_METHOD void regrid(
     const peano4::CellConnectivity& cellConnectivity,
     const peano4::Regrid&           regrid,
     const CellPool&                 solution
   );
+
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
@@ -82,25 +98,45 @@ public:
 private:
   INLINE_METHOD void rebuild(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void projectNodesOfFreedCells(const std::vector<int>& freedSlots, const CellPool& solution);
-  INLINE_METHOD void sampleSubcells(const peano4::CellConnectivity& cellConnectivity);
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void sampleSubcells(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
   INLINE_METHOD void clearFaces(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void openStep(const peano4::CellConnectivity& cellConnectivity, const CellPool& solution);
-  INLINE_METHOD void reduceExtrema(tarch::Span<const int> cells, const CellPool& solution);
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void reduceExtrema(
+    tarch::Span<const int>   cells,
+    const CellPool&          solution,
+    const RuntimeParameters& parameters
+  );
+
   INLINE_METHOD void reserveDetectorScratch(int numberOfTeams, int scratchValuesPerTeam);
   INLINE_METHOD void mergeNeighbourExtrema(const peano4::CellConnectivity& cellConnectivity, bool mergeLastRound);
+
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD exahype2::dg::limiting::JudgedCells judgeCandidates(
     const peano4::CellConnectivity& cellConnectivity,
     const CellPool&                 solution,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+
   INLINE_METHOD void spreadStatuses(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void listCellsOnSubcellScheme(const peano4::CellConnectivity& cellConnectivity);
+
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics recompute(
     const peano4::CellConnectivity& cellConnectivity,
     CellPool&                       solution,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
 
   template <typename Interpolate, typename Restrict, typename Exchange, typename Work>

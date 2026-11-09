@@ -184,7 +184,7 @@ cmake .. -DCMAKE_CXX_COMPILER=mpiicpc
 
 Clang offers OpenMP GPU offloading through the OMPT backend. The backend
 derives the `-fopenmp-targets=nvptx64-nvidia-cuda --offload-arch=...` flags from
-the requested architecture, so you only have to name the backend and the GPU
+the requested architecture, so you only have to set the backend and the GPU
 architecture.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~

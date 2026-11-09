@@ -1,30 +1,47 @@
 spack:
   specs:
-    - intel-oneapi-compilers@2025.3.1
-    - intel-oneapi-mpi@2021.17.0
-    - intel-oneapi-mkl@2024.2.2
-    - intel-oneapi-tbb@2022.3.0
-    - intel-oneapi-vtune@2025.7.0
-    - intel-oneapi-advisor@2025.4.0
-    - python@3.14.0
-    - py-pip@25.1.1
-    - memkind@1.14.0
-    - papi@7.2.0
-    - likwid@5.4.1
-    - metis@5.1.0
-    - parmetis@4.0.3
-    - boost@1.88.0 +filesystem +fiber +context
-    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp
-    - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
-    - netcdf-c@4.9.2 +mpi +shared
-    - parallel-netcdf@1.14.1 +cxx -fortran +pic +shared
+    - group: compiler
+      specs:
+        - intel-oneapi-compilers@2026.1.1
+    - group: main
+      needs: [compiler]
+      specs:
+        - intel-oneapi-mpi@2021.18.0
+        - intel-oneapi-mkl@2026.1.0
+        - intel-oneapi-tbb@2023.1.0
+        - intel-oneapi-vtune@2026.2.0
+        - intel-oneapi-advisor@2026.0.0
+        - python@3.14.5
+        - py-pip@26.2.1
+        - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
+        - netcdf-c@4.9.3 +mpi +shared
+        - kokkos@5.2.2 +serial ~openmp +sycl ~wrapper %cxx=intel-oneapi-compilers@2026.1.1
+    - group: acpp
+      needs: [main]
+      specs:
+        - llvm@19.1.7 +clang ~libomptarget ~offload ~lldb ~polly libcxx=none libunwind=none targets=x86
+        - adaptivecpp@25.10.0 +level_zero ^llvm@19.1.7 +clang ~libomptarget ~offload ~lldb ~polly libcxx=none libunwind=none targets=x86
   packages:
     all:
       target: [x86_64]
+  repos:
+    builtin::
+      git: https://github.com/spack/spack-packages.git
+      commit: 093bed090925a0c327ba4fd927f1f1d5e36f2b3e
   concretizer:
     unify: true
     reuse: true
   config:
     install_tree:
       root: /opt/software
-  view: /opt/views/view
+  view:
+    default:
+      root: /opt/views/view
+      group: [compiler, main]
+    acpp:
+      root: /opt/views/acpp
+      group: [acpp]
+      link: roots
+  env_vars:
+    append_path:
+      CMAKE_PREFIX_PATH: /opt/views/acpp

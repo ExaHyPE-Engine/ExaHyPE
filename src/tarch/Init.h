@@ -5,7 +5,8 @@
 /**
  * @namespace tarch
  *
- * tarch denotes the technical architecture. It calls no layer above it.
+ * tarch denotes the technical architecture. It calls only its own functions and third-party
+ * libraries.
  */
 namespace tarch {
   struct InitConfiguration {

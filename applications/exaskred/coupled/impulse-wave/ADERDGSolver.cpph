@@ -38,7 +38,8 @@ INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   double* const NOALIAS                                         Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
@@ -63,7 +64,8 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const int                                    normal
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   Qoutside[Shortcuts::h]        = Qinside[Shortcuts::h];
   Qoutside[Shortcuts::hu]       = -Qinside[Shortcuts::hu];
@@ -79,7 +81,8 @@ applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   [[maybe_unused]] const double* const NOALIAS                  Q,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   return ::exahype2::RefinementCommand::Keep;
 }
@@ -92,7 +95,8 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   applications::exahype2::exaskred::coupled::flux<Shortcuts, NumberOfUnknowns>(
     Q,
@@ -114,7 +118,8 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  const int                                    normal
+  const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   return applications::exahype2::exaskred::coupled::maxEigenvalue<Shortcuts>(
     Q,
@@ -138,7 +143,8 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  double* const NOALIAS                        BTimesDeltaQ
+  double* const NOALIAS                        BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   applications::exahype2::exaskred::coupled::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
@@ -162,7 +168,8 @@ applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  double* const NOALIAS                        S
+  double* const NOALIAS                        S,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   applications::exahype2::exaskred::coupled::diffusiveSourceTerm<
     Shortcuts,
@@ -183,7 +190,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   return applications::exahype2::exaskred::coupled::solveRiemannProblem<
     Shortcuts,
@@ -205,7 +213,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   return applications::exahype2::exaskred::coupled::solveSubcellRiemannProblem<
     Shortcuts,
@@ -223,7 +232,8 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                                   Q,
   const int                                                     numberOfStates,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>&                  h
+  const tarch::la::Vector<DIMENSIONS, double>&                  h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   using SlideLayer = applications::exahype2::exaskred::coupled::SlideLayer<Shortcuts>;
   if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
@@ -240,7 +250,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
       >(Q, numberOfStates, h, getSlidePhysics(), maxFrictionStiffnessRatio)) {
     return false;
   }
-  const int nodesPerAxis = static_cast<int>(std::lround(std::sqrt(static_cast<double>(numberOfStates))));
+  const int nodesPerAxis = static_cast<int>(std::sqrt(static_cast<double>(numberOfStates)) + 0.5);
   if (numberOfStates > 1 and nodesPerAxis * nodesPerAxis == numberOfStates) {
     return applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
       SlideLayer,
@@ -253,8 +263,9 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
-  double* const NOALIAS       observables,
-  const double* const NOALIAS Q
+  double* const NOALIAS                     observables,
+  const double* const NOALIAS               Q,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   static_assert(
     NumberOfObservables <= NumberOfUnknowns,
@@ -270,8 +281,9 @@ applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
-  const int    observable,
-  const double specifiedRelaxationParameter
+  const int                                 observable,
+  const double                              specifiedRelaxationParameter,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   if (observable < 3) {
     return std::max(specifiedRelaxationParameter, waterDmpRelaxation);

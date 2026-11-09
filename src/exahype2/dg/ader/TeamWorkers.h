@@ -13,8 +13,8 @@ namespace exahype2::dg::ader {
 TARGET_DECLARE
 /**
  * The threads that run the predictor of one cell. A team of teamThreads threads runs groups
- * cells at once, threads threads per cell. hasCell is false on a thread whose group received no
- * cell and that thread takes part in every barrier and computes nothing.
+ * cells at once, threads threads per cell. hasCell is false on a thread whose group lies beyond the
+ * last cell. Such a thread takes part in every barrier and computes nothing.
  */
 struct exahype2::dg::ader::TeamWorkers final {
   int                                   thread{0};

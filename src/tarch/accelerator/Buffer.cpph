@@ -68,7 +68,7 @@ tarch::accelerator::Buffer<T>::release() noexcept {
 template <typename T>
 INLINE_METHOD void
 tarch::accelerator::Buffer<T>::copyFromHost(const T* const source, const std::size_t count) {
-  assertion(count <= _size, count, _size);
+  ASSERTION(count <= _size, count, _size);
   if (count == 0) {
     return;
   }
@@ -78,7 +78,7 @@ tarch::accelerator::Buffer<T>::copyFromHost(const T* const source, const std::si
 template <typename T>
 INLINE_METHOD void
 tarch::accelerator::Buffer<T>::copyToHost(T* const target, const std::size_t count) const {
-  assertion(count <= _size, count, _size);
+  ASSERTION(count <= _size, count, _size);
   if (count == 0) {
     return;
   }

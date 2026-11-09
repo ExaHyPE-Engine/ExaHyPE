@@ -18,9 +18,10 @@
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD void
 exahype2::RefinementVotes::voteOnGridConstruction(
-  const peano4::CellConnectivity& cellConnectivity,
-  const exahype2::Limits&         limits,
-  exahype2::RefinementRequests&   requests
+  const peano4::CellConnectivity&            cellConnectivity,
+  const exahype2::Limits&                    limits,
+  exahype2::RefinementRequests&              requests,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   reserve(cellConnectivity.getNumberOfSlots());
   int votes = 0;
@@ -30,7 +31,8 @@ exahype2::RefinementVotes::voteOnGridConstruction(
       cellConnectivity.onDevice(),
       _commands.getData(),
       limits.maxAdmissiblePatchSize,
-      limits.minAdmissiblePatchSize
+      limits.minAdmissiblePatchSize,
+      parameters
     },
     tarch::accelerator::Sum<int>{votes}
   );
@@ -65,17 +67,19 @@ exahype2::RefinementVotes::canRefineOrErase(
 }
 
 /**
- * Votes on every cell of cellConnectivity from its patch in solution and merges the votes. If the
- * limits let no cell refine or erase, the function launches no kernel and merges Keep for every cell.
+ * Votes on every cell of cellConnectivity from its patch in solution and merges the votes. The
+ * function launches the vote kernel only if the limits let a cell refine or erase. Otherwise it
+ * merges Keep for every cell.
  */
 template <typename Derived, typename SolutionView>
 INLINE_METHOD void
 exahype2::RefinementVotes::voteOnEveryCell(
-  const peano4::CellConnectivity& cellConnectivity,
-  const SolutionView&             solution,
-  const exahype2::Limits&         limits,
-  const double                    timeStamp,
-  exahype2::RefinementRequests&   requests
+  const peano4::CellConnectivity&            cellConnectivity,
+  const SolutionView&                        solution,
+  const exahype2::Limits&                    limits,
+  const double                               timeStamp,
+  exahype2::RefinementRequests&              requests,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   reserve(cellConnectivity.getNumberOfSlots());
   int votes = 0;
@@ -89,7 +93,8 @@ exahype2::RefinementVotes::voteOnEveryCell(
         _commands.getData(),
         limits.maxAdmissiblePatchSize,
         limits.minAdmissiblePatchSize,
-        timeStamp
+        timeStamp,
+        parameters
       },
       tarch::accelerator::Sum<int>{votes}
     );
@@ -100,12 +105,13 @@ exahype2::RefinementVotes::voteOnEveryCell(
 template <typename Derived, typename SolutionView>
 INLINE_METHOD void
 exahype2::RefinementVotes::voteOnCells(
-  const peano4::CellConnectivity& cellConnectivity,
-  const std::vector<int>&         cells,
-  const SolutionView&             solution,
-  const exahype2::Limits&         limits,
-  const double                    timeStamp,
-  exahype2::RefinementRequests&   requests
+  const peano4::CellConnectivity&            cellConnectivity,
+  const std::vector<int>&                    cells,
+  const SolutionView&                        solution,
+  const exahype2::Limits&                    limits,
+  const double                               timeStamp,
+  exahype2::RefinementRequests&              requests,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   reserve(cellConnectivity.getNumberOfSlots());
   _listedCells.setValues(cells);
@@ -121,7 +127,8 @@ exahype2::RefinementVotes::voteOnCells(
       _commands.getData(),
       limits.maxAdmissiblePatchSize,
       limits.minAdmissiblePatchSize,
-      timeStamp
+      timeStamp,
+      parameters
     },
     tarch::accelerator::Sum<int>{votes}
   );
@@ -143,7 +150,7 @@ exahype2::RefinementVotes::getAllocatedBytes() const {
 
 INLINE_METHOD void
 exahype2::RefinementVotes::reserve(const int numberOfSlots) {
-  assertion(numberOfSlots >= 0, numberOfSlots);
+  ASSERTION(numberOfSlots >= 0, numberOfSlots);
   if (_commands.getSize() < static_cast<std::size_t>(numberOfSlots)) {
     _commands.allocate(static_cast<std::size_t>(numberOfSlots));
   }
@@ -160,12 +167,12 @@ exahype2::RefinementVotes::merge(
   const tarch::Span<const int>    cellsOnHost,
   exahype2::RefinementRequests&   requests
 ) {
-  assertion(
+  ASSERTION(
     _commands.getSize() >= static_cast<std::size_t>(cellConnectivity.getNumberOfSlots()),
     _commands.getSize(),
     cellConnectivity.getNumberOfSlots()
   );
-  assertion(votes >= 0 and votes <= cellsOnHost.size, votes, cellsOnHost.size);
+  ASSERTION(votes >= 0 and votes <= cellsOnHost.size, votes, cellsOnHost.size);
   if (votes == 0) {
     requests.merge(exahype2::RefinementCommand::Keep, cellsOnHost);
     return;
@@ -191,7 +198,8 @@ exahype2::VoteOnGridConstruction<Derived, StoragePrecision>::operator()(const in
       static_cast<const StoragePrecision*>(nullptr),
       cellConnectivity.getCellCentre(slot),
       width,
-      0.0
+      0.0,
+      parameters
     );
   }
   commands[slot] = command;
@@ -210,7 +218,8 @@ exahype2::voteWithinAdmissibleSizes(
   const tarch::la::Vector<DIMENSIONS, double>& width,
   const double                                 maxAdmissibleSize,
   const double                                 minAdmissibleSize,
-  const double                                 timeStamp
+  const double                                 timeStamp,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   const double                largestWidth = tarch::la::max(width);
   exahype2::RefinementCommand command      = exahype2::RefinementCommand::Keep;
@@ -219,7 +228,7 @@ exahype2::voteWithinAdmissibleSizes(
   } else if (
     tarch::la::greater(largestWidth, minAdmissibleSize) or peano4::SubdivisionFactor * largestWidth <= maxAdmissibleSize
   ) {
-    command = Derived::refinementCriterion(Q, centre, width, timeStamp);
+    command = Derived::refinementCriterion(Q, centre, width, timeStamp, parameters);
     if (command == exahype2::RefinementCommand::Refine and tarch::la::smallerEquals(largestWidth, minAdmissibleSize)) {
       command = exahype2::RefinementCommand::Keep;
     } else if (
@@ -241,7 +250,8 @@ exahype2::VoteOnRefinement<Derived, SolutionView>::operator()(const int entry, i
     cellConnectivity.getCellWidth(slot),
     maxAdmissibleSize,
     minAdmissibleSize,
-    timeStamp
+    timeStamp,
+    parameters
   );
   commands[slot] = command;
   accumulator += command == exahype2::RefinementCommand::Keep ? 0 : 1;

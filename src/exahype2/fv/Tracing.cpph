@@ -24,10 +24,10 @@ exahype2::fv::interpolatePiecewiseConstant(
   const int                                    unknown
 ) {
   static_assert(PatchSize > 0);
-  assertion(unknown >= 0 and unknown < NumberOfData, unknown);
+  ASSERTION(unknown >= 0 and unknown < NumberOfData, unknown);
   tarch::la::Vector<DIMENSIONS, int> volume;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(std::isfinite(width(axis)) and width(axis) > 0.0, axis, width);
+    ASSERTION(std::isfinite(width(axis)) and width(axis) > 0.0, axis, width);
     const double volumeWidth         = width(axis) / PatchSize;
     const double positionWithinPatch = position(axis) - (centre(axis) - 0.5 * width(axis));
     volume(axis)                     = static_cast<int>(std::floor(positionWithinPatch / volumeWidth));
@@ -53,14 +53,14 @@ exahype2::fv::interpolatePiecewiseLinear(
   const int                                    unknown
 ) {
   static_assert(PatchSize > 0);
-  assertion(unknown >= 0 and unknown < NumberOfData, unknown);
+  ASSERTION(unknown >= 0 and unknown < NumberOfData, unknown);
   if constexpr (PatchSize == 1) {
     return exahype2::fv::interpolatePiecewiseConstant<PatchSize, NumberOfData>(centre, width, Q, position, unknown);
   }
   tarch::la::Vector<DIMENSIONS, double> volumeSize;
   tarch::la::Vector<DIMENSIONS, int>    lowerVolume;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(std::isfinite(width(axis)) and width(axis) > 0.0, axis, width);
+    ASSERTION(std::isfinite(width(axis)) and width(axis) > 0.0, axis, width);
     volumeSize(axis)                   = width(axis) / PatchSize;
     const double biasedPositionInPatch = position(axis) - (centre(axis) - 0.5 * width(axis)) - volumeSize(axis) / 2.0;
     lowerVolume(axis)                  = static_cast<int>(std::floor(biasedPositionInPatch / volumeSize(axis)));
@@ -69,7 +69,7 @@ exahype2::fv::interpolatePiecewiseLinear(
 
   double contributions[peano4::VerticesPerCell]{};
   peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& corner, const int linearisedCorner) {
-    assertion(linearisedCorner >= 0 and linearisedCorner < peano4::VerticesPerCell, linearisedCorner);
+    ASSERTION(linearisedCorner >= 0 and linearisedCorner < peano4::VerticesPerCell, linearisedCorner);
     const tarch::la::Vector<DIMENSIONS, int>    currentVolume = lowerVolume + corner;
     const tarch::la::Vector<DIMENSIONS, double> volumeCentre =
       exahype2::fv::getVolumeCentre(centre, width, PatchSize, currentVolume);
@@ -85,7 +85,7 @@ exahype2::fv::interpolatePiecewiseLinear(
 #else
     const double weight = tarch::la::productInOrderOfMagnitude(axisWeights[0], axisWeights[1], axisWeights[2]);
 #endif
-    assertion(weight >= 0.0 and weight <= 1.0, weight, corner);
+    ASSERTION(weight >= 0.0 and weight <= 1.0, weight, corner);
     contributions[linearisedCorner] = tarch::la::productRoundedOnce(
       weight,
       static_cast<double>(Q[peano4::dLinearised(currentVolume, PatchSize) * NumberOfData + unknown])
@@ -150,7 +150,7 @@ exahype2::fv::clampIntoPatch(
 }
 
 /**
- * Interpolates the fields the list names as a type.
+ * Interpolates the fields that FieldIndices lists.
  */
 template <int PatchSize, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -193,7 +193,7 @@ exahype2::fv::traceParticles(
   const tarch::la::Vector<DIMENSIONS, double>&            domainWidth,
   const int                                               periodicAxes
 ) {
-  assertion(timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(timeStepSize >= 0.0, timeStepSize);
   int numberOfMovedParticles = 0;
   if (particles.getSize() > 0) {
     particles.upload();
@@ -245,7 +245,7 @@ exahype2::fv::traceParticles(
         true},
       tarch::accelerator::Sum<int>{movedParticlesAfterSampling}
     );
-    assertion(movedParticlesAfterSampling == 0, movedParticlesAfterSampling);
+    ASSERTION(movedParticlesAfterSampling == 0, movedParticlesAfterSampling);
   }
 }
 
@@ -261,7 +261,7 @@ exahype2::fv::TraceParticles<PatchSize, NumberOfData, NumberOfParticleData, Fiel
   constexpr double              WallDamping = 0.8;
   exahype2::particles::Particle particle    = particles.getParticle(index);
   const int                     slot        = particles.getSlot(index);
-  assertion(slot >= 0, slot, index);
+  ASSERTION(slot >= 0, slot, index);
   tarch::la::Vector<DIMENSIONS, double> centre;
   tarch::la::Vector<DIMENSIONS, double> width;
   for (int axis = 0; axis < DIMENSIONS; axis++) {

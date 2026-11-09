@@ -12,7 +12,7 @@ COPY benchmarks/ /exahype2/benchmarks
 RUN . /opt/spack/share/spack/setup-env.sh && \
     spack config add config:install_tree:root:/opt/software && \
     spack repo add . && \
-    spack install --fail-fast exahype2 && \
+    spack install --fail-fast --concurrent-packages 1 exahype2 && \
     spack gc -y && \
     spack clean -a
 

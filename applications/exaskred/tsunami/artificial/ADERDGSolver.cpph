@@ -11,27 +11,28 @@ INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   double* const NOALIAS                                         Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
 ) {
-  const auto bathymetrySize   = applications::exahype2::exaskred::RuntimeParameters::bathymetrySize();
-  const auto bathymetryOffset = applications::exahype2::exaskred::RuntimeParameters::bathymetryOffset();
+  const auto&                                       bathymetrySize   = parameters.bathymetrySize;
+  const auto&                                       bathymetryOffset = parameters.bathymetryOffset;
   static const tarch::reader::NetCDFFieldSampler<2> bathymetrySampler(
-    {{"bathymetry", applications::exahype2::exaskred::RuntimeParameters::bathymetryFile()}},
+    {{"bathymetry", std::string(parameters.bathymetryFile)}},
     {bathymetrySize(0), bathymetrySize(1)},
     {bathymetryOffset(0), bathymetryOffset(1)}
   );
 
-  const auto displacementSize   = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
-  const auto displacementOffset = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
+  const auto&                                       displacementSize   = parameters.displacementSize;
+  const auto&                                       displacementOffset = parameters.displacementOffset;
   static const tarch::reader::NetCDFFieldSampler<2> displacementSampler(
-    {{"displacement", applications::exahype2::exaskred::RuntimeParameters::displacementFile()}},
+    {{"displacement", std::string(parameters.displacementFile)}},
     {displacementSize(0), displacementSize(1)},
     {displacementOffset(0), displacementOffset(1)}
   );
 
-  const auto displacementPosition       = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
-  const auto bathymetryBeforeEarthquake = bathymetrySampler.sampleBilinear("bathymetry", {x(0), x(1)});
-  const auto displacement               = displacementSampler.sampleBilinear(
+  const auto& displacementPosition       = parameters.displacementPosition;
+  const auto  bathymetryBeforeEarthquake = bathymetrySampler.sampleBilinear("bathymetry", {x(0), x(1)});
+  const auto  displacement               = displacementSampler.sampleBilinear(
     "displacement",
     {x(0) - displacementPosition(0), x(1) - displacementPosition(1)}
   );
@@ -50,7 +51,8 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const int                                    normal
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   Qoutside[Shortcuts::h]      = Qinside[Shortcuts::h];
   Qoutside[Shortcuts::hu]     = 0.0;
@@ -63,7 +65,8 @@ applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   [[maybe_unused]] const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   return x[0] >= 4500.0 and x[1] >= 4500.0 and x[0] <= 5500.0 and x[1] <= 5500.0 ? ::exahype2::RefinementCommand::Refine
                                                                                  : ::exahype2::RefinementCommand::Keep;
@@ -77,7 +80,8 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   ::applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
     Q,
@@ -98,7 +102,8 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  const int                                    normal
+  const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
     Q,
@@ -121,7 +126,8 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  double* const NOALIAS                        BTimesDeltaQ
+  double* const NOALIAS                        BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   ::applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
@@ -149,7 +155,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   return ::applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
     QL,
@@ -171,7 +178,8 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                                   Q,
   const int                                                     numberOfStates,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   if (numberOfStates == 1) {
     return ::applications::exahype2::exaskred::limiting::isAdmissibleState<
@@ -199,7 +207,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   const auto maxEigenvalue = [](
                                const double* const NOALIAS                  Q,

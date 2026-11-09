@@ -53,10 +53,10 @@ peano4::grid::AutomatonState::refineState(
   const peano4::grid::AutomatonState& coarseGrid,
   peano4::grid::AutomatonState        fineGridStates[peano4::sfc::ActiveCurve::ChildrenPerCell]
 ) {
-  assertion(coarseGrid.level >= 0, coarseGrid.toString());
+  ASSERTION(coarseGrid.level >= 0, coarseGrid.toString());
   constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
   for (const auto& child : peano4::sfc::ActiveCurve::getChildren(coarseGrid.curveState)) {
-    assertion(
+    ASSERTION(
       child.linearisedPosition < peano4::sfc::ActiveCurve::ChildrenPerCell,
       static_cast<int>(child.linearisedPosition),
       coarseGrid.toString()
@@ -65,7 +65,7 @@ peano4::grid::AutomatonState::refineState(
     fineGridState.level      = coarseGrid.level + 1;
     fineGridState.curveState = child.state;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      assertion(coarseGrid.h(axis) > 0.0, coarseGrid.toString(), axis);
+      ASSERTION(coarseGrid.h(axis) > 0.0, coarseGrid.toString(), axis);
       fineGridState.h(axis) = coarseGrid.h(axis) / SubdivisionFactor;
       fineGridState.x(axis) = coarseGrid.x(axis) + child.position[axis] * coarseGrid.h(axis) / SubdivisionFactor;
     }

@@ -22,7 +22,7 @@ def generate_radial_particles(
 ):
     """
     Generates a .dat file with particle positions on rays around (centre_x, centre_y).
-    No ray lies on an axis. A tracer on an axis of a Hilbert grid reads only the
+    Every ray lies between two axes. A tracer on an axis of a Hilbert grid reads only the
     cell below its face.
     """
     with open(file_path, "w") as file:

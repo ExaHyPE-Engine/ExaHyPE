@@ -15,7 +15,7 @@ namespace {
   void forEachRange(const std::size_t numberOfEntries, const Body& body) {
     constexpr std::size_t EntriesPerRange = tarch::plotter::FileWriter::EntriesPerRange;
     const std::size_t     numberOfRanges  = (numberOfEntries + EntriesPerRange - 1) / EntriesPerRange;
-    assertion(numberOfRanges <= static_cast<std::size_t>(std::numeric_limits<int>::max()), numberOfRanges);
+    ASSERTION(numberOfRanges <= static_cast<std::size_t>(std::numeric_limits<int>::max()), numberOfRanges);
     tarch::accelerator::parallelForOnHost(
       tarch::accelerator::Range(static_cast<int>(numberOfRanges)),
       [&](const int range) {
@@ -47,9 +47,9 @@ namespace {
     const std::size_t   numberOfTuples,
     Target* const       target
   ) {
-    assertion(copiedComponents > 0 and copiedComponents <= sourceStride, copiedComponents, sourceStride);
-    assertion(copiedComponents <= targetStride, copiedComponents, targetStride);
-    assertion(numberOfTuples == 0 or (source != nullptr and target != nullptr), numberOfTuples);
+    ASSERTION(copiedComponents > 0 and copiedComponents <= sourceStride, copiedComponents, sourceStride);
+    ASSERTION(copiedComponents <= targetStride, copiedComponents, targetStride);
+    ASSERTION(numberOfTuples == 0 or (source != nullptr and target != nullptr), numberOfTuples);
     forEachRange(numberOfTuples, [=](const std::size_t firstTuple, const std::size_t endTuple) {
       for (std::size_t tuple = firstTuple; tuple < endTuple; tuple++) {
         const double* const tupleSource = source + tuple * static_cast<std::size_t>(sourceStride);
@@ -99,7 +99,7 @@ std::string
 tarch::plotter::getExactTimeStamp(const double time) {
   std::array<char, 32> buffer{};
   const auto [end, error] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), time);
-  assertion(error == std::errc(), time);
+  ASSERTION(error == std::errc(), time);
   return std::string(buffer.data(), end);
 }
 
@@ -125,19 +125,19 @@ tarch::plotter::FileWriter::validateMesh(const Mesh& mesh) {
 
   [[maybe_unused]] const std::size_t numberOfPoints = mesh.pointsXYZ.size() / 3;
   const std::size_t                  numberOfCells  = mesh.types.size();
-  assertion(mesh.pointsXYZ.size() % 3 == 0, mesh.pointsXYZ.size());
-  assertion(mesh.offsets.size() == numberOfCells, mesh.offsets.size(), numberOfCells);
-  assertion(
+  ASSERTION(mesh.pointsXYZ.size() % 3 == 0, mesh.pointsXYZ.size());
+  ASSERTION(mesh.offsets.size() == numberOfCells, mesh.offsets.size(), numberOfCells);
+  ASSERTION(
     numberOfCells == 0 ? mesh.connectivity.empty()
                        : static_cast<std::size_t>(mesh.offsets.back()) == mesh.connectivity.size(),
     numberOfCells,
     mesh.connectivity.size()
   );
   for (std::size_t cell = 1; cell < numberOfCells; cell++) {
-    assertion(mesh.offsets[cell - 1] <= mesh.offsets[cell], cell, mesh.offsets[cell - 1], mesh.offsets[cell]);
+    ASSERTION(mesh.offsets[cell - 1] <= mesh.offsets[cell], cell, mesh.offsets[cell - 1], mesh.offsets[cell]);
   }
   for ([[maybe_unused]] const auto& field : mesh.pointFields) {
-    assertion(
+    ASSERTION(
       field.values.size() == numberOfPoints * field.components,
       field.name,
       field.values.size(),
@@ -145,7 +145,7 @@ tarch::plotter::FileWriter::validateMesh(const Mesh& mesh) {
     );
   }
   for ([[maybe_unused]] const auto& field : mesh.cellFields) {
-    assertion(field.values.size() == numberOfCells * field.components, field.name, field.values.size(), numberOfCells);
+    ASSERTION(field.values.size() == numberOfCells * field.components, field.name, field.values.size(), numberOfCells);
   }
 }
 

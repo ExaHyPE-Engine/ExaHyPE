@@ -44,8 +44,8 @@ on this machine.
 
 
 All builds use CMake. Create a build directory and configure with the Intel
-compilers and the machine-specific flags. The ExaHyPE 2
-extension is always built, so there is no need to enable it individually.
+compilers and the machine-specific flags. The build always includes the ExaHyPE 2
+extension.
 
 - Single-node runs, i.e. one rank with all cores as OpenMP threads
 ~~~~~~~~~~~~~~~~~~~~~~

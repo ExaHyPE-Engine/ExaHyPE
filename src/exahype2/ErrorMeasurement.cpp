@@ -13,7 +13,7 @@
  */
 void
 exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeDeltaBetweenSnapshots) {
-  assertion(std::isfinite(timeDeltaBetweenSnapshots) and timeDeltaBetweenSnapshots >= 0.0, timeDeltaBetweenSnapshots);
+  ASSERTION(std::isfinite(timeDeltaBetweenSnapshots) and timeDeltaBetweenSnapshots >= 0.0, timeDeltaBetweenSnapshots);
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _database.setOutputFileName(fileName);
   }
@@ -41,7 +41,7 @@ exahype2::ErrorMeasurement::isSnapshotDue(const double timeStamp) {
  */
 double*
 exahype2::ErrorMeasurement::getErrorsPerCell(const int numberOfCells) {
-  assertion(numberOfCells >= 0, numberOfCells);
+  ASSERTION(numberOfCells >= 0, numberOfCells);
   const auto numberOfErrors = static_cast<std::size_t>(numberOfCells) * NumberOfNorms;
   if (_errorsPerCell.getSize() < numberOfErrors) {
     _errorsPerCell.allocate(numberOfErrors);
@@ -55,7 +55,7 @@ exahype2::ErrorMeasurement::getErrorsPerCell(const int numberOfCells) {
  */
 std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
 exahype2::ErrorMeasurement::record(const ErrorSums& localSums, const double timeStamp) {
-  assertion(_open);
+  ASSERTION(_open);
   static_assert(std::is_trivially_copyable_v<ErrorSums>);
 
   const auto&            rank          = tarch::mpi::Rank::getInstance();

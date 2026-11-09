@@ -11,8 +11,8 @@ fWave = r"""
   double sourceRight[NumberOfUnknowns] {0.0};
   double sourceLeft[NumberOfUnknowns] {0.0};
 
-  flux(QL, x, h, t, dt, normal, fluxLeft);
-  flux(QR, x, h, t, dt, normal, fluxRight);
+  flux(QL, x, h, t, dt, normal, fluxLeft, parameters);
+  flux(QR, x, h, t, dt, normal, fluxRight, parameters);
 
   if (normal == 1) {
     sourceLeft[Shortcuts::rhoU + 1] = -GRAVITY * QL[Shortcuts::rho];
@@ -42,9 +42,9 @@ fWave = r"""
   const auto EL                     = QL[Shortcuts::rhoE];
   const auto pL                     = (GAMMA - 1.0) * (EL - 0.5 * rhoL * uSqL);
 
-  assertion(rhoL > 0, rhoL);
-  assertion(EL > 0, EL);
-  assertion(pL > 0, pL);
+  ASSERTION(rhoL > 0, rhoL);
+  ASSERTION(EL > 0, EL);
+  ASSERTION(pL > 0, pL);
 
   const auto rhoR                   = QR[Shortcuts::rho];
   const auto sqrtRhoR               = sqrt(rhoR);
@@ -59,9 +59,9 @@ fWave = r"""
   const auto ER                     = QR[Shortcuts::rhoE];
   const auto pR                     = (GAMMA - 1.0) * (ER - 0.5 * rhoR * uSqR);
 
-  assertion(rhoR > 0, rhoR);
-  assertion(ER > 0, ER);
-  assertion(pR > 0, pR);
+  ASSERTION(rhoR > 0, rhoR);
+  ASSERTION(ER > 0, ER);
+  ASSERTION(pR > 0, pR);
 
   /********************************************
    * Roe averages from LeVeque Chapter 15.3.4 *
@@ -89,7 +89,6 @@ fWave = r"""
    * Roe Eigenvalues from LeVeque Chapter 18.8, Equation 18.47 *
    ************************************************************/
 
-  // In x-direction, these are uRoe - speedOfSoundRoe, DIMENSIONS x uRoe, and uRoe + speedOfSoundRoe
   tarch::la::Vector<NumberOfUnknowns, double> roeEigenvalues(0.0);
 
   roeEigenvalues(0) = roeAveragedVelocities(normal) - speedOfSoundRoe;
@@ -111,78 +110,59 @@ fWave = r"""
     delta(unknown) -= 0.5 * h(normal) * (sourceLeft[unknown] + sourceRight[unknown]);
   }
 
-  /****************************************************************
-   * Right Eigenvectors from LeVeque Chapter 18.8, Equation 18.48 *
-   ***************************************************************/
+  /************************************************************************************
+   * Wave strengths following Bale et al. Equation 1.14 with the inverted eigenvectors *
+   * of https://github.com/clawpack/riemann/blob/master/src/rpn3_euler.f90             *
+   ***********************************************************************************/
 
-  // @todo figure out for 3D
-  // => github.com/clawpack/riemann/blob/master/src/rpn3_euler.f90
+  constexpr int Energy = DIMENSIONS + 1;
+  const auto normalVelocity = roeAveragedVelocities(normal);
 
-  const int transverse = normal == 0 ? 1 : 0;
+  auto entropyStrength = (HRoe - 2 * qSquared) * delta(0) + normalVelocity * delta(1 + normal);
+  for (int axis = 1; axis < DIMENSIONS; axis++) {
+    const int transverse = (normal + axis) % DIMENSIONS;
+    entropyStrength += roeAveragedVelocities(transverse) * delta(1 + transverse);
+  }
+  entropyStrength = (entropyStrength - delta(Energy)) / (HRoe - qSquared);
 
-  // First right eigenvector
-  tarch::la::Vector<NumberOfUnknowns, double> r1(0.0);
-  r1(0)               = 1.0;
-  r1(1 + normal)      = roeAveragedVelocities(normal) - speedOfSoundRoe;
-  r1(1 + transverse)  = roeAveragedVelocities(transverse);
-  r1(3)               = HRoe - roeAveragedVelocities(normal) * speedOfSoundRoe;
+  const auto rightAcousticStrength = (
+                                       delta(1 + normal)
+                                       + (speedOfSoundRoe - normalVelocity) * delta(0)
+                                       - speedOfSoundRoe * entropyStrength
+                                     ) / (2 * speedOfSoundRoe);
+  const auto leftAcousticStrength = delta(0) - entropyStrength - rightAcousticStrength;
 
-  // Second right eigenvector
-  tarch::la::Vector<NumberOfUnknowns, double> r2(0.0);
-  r2(0)               = 0.0;
-  r2(1 + normal)      = 0.0;
-  r2(1 + transverse)  = 1.0;
-  r2(3)               = roeAveragedVelocities(transverse);
+  /****************************************************************************************
+   * fWaves from the right eigenvectors of LeVeque Chapter 18.8, Equation 18.48. The waves *
+   * follow roeEigenvalues: The left acoustic wave, one shear wave per transverse axis, the *
+   * entropy wave and the right acoustic wave.                                              *
+   ***************************************************************************************/
 
-  // Third right eigenvector
-  tarch::la::Vector<NumberOfUnknowns, double> r3(0.0);
-  r3(0) = 1.0;
-  r3(1) = roeAveragedVelocities(0);
-  r3(2) = roeAveragedVelocities(1);
-  r3(3) = qSquared;
+  tarch::la::Vector<NumberOfUnknowns, double> fWaves[NumberOfUnknowns];
+  for (int wave = 0; wave < NumberOfUnknowns; ++wave) {
+    fWaves[wave] = tarch::la::Vector<NumberOfUnknowns, double>(0.0);
+  }
 
-  // Fourth right eigenvector
-  tarch::la::Vector<NumberOfUnknowns, double> r4(0.0);
-  r4(0)               = 1.0;
-  r4(1 + normal)      = roeAveragedVelocities(normal) + speedOfSoundRoe;
-  r4(1 + transverse)  = roeAveragedVelocities(transverse);
-  r4(3)               = HRoe + roeAveragedVelocities(normal) * speedOfSoundRoe;
+  fWaves[0](0)              = leftAcousticStrength;
+  fWaves[DIMENSIONS](0)     = entropyStrength;
+  fWaves[DIMENSIONS + 1](0) = rightAcousticStrength;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    fWaves[0](1 + axis)              = leftAcousticStrength * roeAveragedVelocities(axis);
+    fWaves[DIMENSIONS](1 + axis)     = entropyStrength * roeAveragedVelocities(axis);
+    fWaves[DIMENSIONS + 1](1 + axis) = rightAcousticStrength * roeAveragedVelocities(axis);
+  }
+  fWaves[0](1 + normal)              = leftAcousticStrength * (normalVelocity - speedOfSoundRoe);
+  fWaves[DIMENSIONS + 1](1 + normal) = rightAcousticStrength * (normalVelocity + speedOfSoundRoe);
+  fWaves[0](Energy)                  = leftAcousticStrength * (HRoe - normalVelocity * speedOfSoundRoe);
+  fWaves[DIMENSIONS](Energy)         = entropyStrength * qSquared;
+  fWaves[DIMENSIONS + 1](Energy)     = rightAcousticStrength * (HRoe + normalVelocity * speedOfSoundRoe);
 
-  /***************************************************
-   * Beta values following Bale et al. Equation 1.14 *
-   **************************************************/
-  // Inverted eigenvectors taken from https://github.com/clawpack/riemann/blob/master/src/rpn2_euler_4wave.f90
-
-  // @todo figure out for 3D
-  tarch::la::Vector<NumberOfUnknowns, double> beta(0.0);
-
-  beta(2) = (
-              (HRoe - 2 * qSquared) * delta(0)
-              + roeAveragedVelocities(normal) * delta(1 + normal)
-              + roeAveragedVelocities(transverse) * delta(1 + transverse)
-              - delta(3)
-              ) / (HRoe - qSquared);
-
-  beta(1) = delta(1 + transverse) - roeAveragedVelocities(transverse) * delta(0);
-
-  beta(3) = (
-              delta(1 + normal)
-              + (speedOfSoundRoe - roeAveragedVelocities(normal)) * delta(0)
-              - speedOfSoundRoe * beta(2)
-              ) / (2 * speedOfSoundRoe);
-
-  beta(0) = delta(0) - beta(2) - beta(3);
-
-  /****************
-   * fWave fluxes *
-   ***************/
-
-  const tarch::la::Vector<NumberOfUnknowns, double> fWaves[NumberOfUnknowns] = {
-                                                                                  beta(0) * r1,
-                                                                                  beta(1) * r2,
-                                                                                  beta(2) * r3,
-                                                                                  beta(3) * r4
-                                                                                };
+  for (int axis = 1; axis < DIMENSIONS; axis++) {
+    const int  transverse    = (normal + axis) % DIMENSIONS;
+    const auto shearStrength = delta(1 + transverse) - roeAveragedVelocities(transverse) * delta(0);
+    fWaves[axis](1 + transverse) = shearStrength;
+    fWaves[axis](Energy)         = shearStrength * roeAveragedVelocities(transverse);
+  }
 
   for (int wave = 0; wave < NumberOfUnknowns; ++wave) {
     const auto eigenvalue = roeEigenvalues(wave);

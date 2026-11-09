@@ -6,8 +6,8 @@
 
 Peano orders its spacetree along a space-filling curve. The curve decides in
 which order a refined cell's children are visited and which curve pattern each
-child continues with. Nothing else in the grid depends on it: the entity data
-live in slot-addressed pools, and the mesh assigns its slots in curve order.
+child continues with. The grid uses the curve for this order only. The entity
+data live in slot-addressed pools and the mesh assigns its slots in curve order.
 Any curve that is a depth-first visit of every child once therefore yields a
 correct mesh, and the curve is a compile-time choice of the library.
 
@@ -94,7 +94,7 @@ level and geometry. peano4::grid::AutomatonState::refineState() reads the
 children of that state from the active curve and derives every child's
 geometry and curve state from its table entry. The cell connectivity build in
 peano4::Spacetree and the rank partition in peano4::topology::Tree loop over
-the same child sequence. The alias peano4::sfc::ActiveCurve names the active
+the same child sequence. The alias peano4::sfc::ActiveCurve selects the active
 curve. CMake configures it from PEANO_WITH_SPACE_FILLING_CURVE:
 
     cmake .. -DPEANO_WITH_SPACE_FILLING_CURVE=Hilbert
@@ -113,12 +113,12 @@ peano4::CellsPerNeighbourhood names it.
 
 # Adding a curve
 
-Add a header under src/peano4/sfc/curves that defines the grammar and name its
-non-terminals as textbook readers know them. peano4::sfc::ActiveCurve builds
+Add a header under src/peano4/sfc/curves that defines the grammar and gives its
+non-terminals the names of the textbooks. peano4::sfc::ActiveCurve builds
 both the header name and the struct name from the curve name and the suffix
 Grammar. Add the curve name to the PEANO_WITH_SPACE_FILLING_CURVE option in
 cmake/PeanoOptions.cmake and instantiate peano4::sfc::SpaceFillingCurve with
-the grammar in src/peano4/sfc/tests/SpaceFillingCurveTest.cpp. The static
+the grammar in src/unittests/peano4/sfc/SpaceFillingCurveTest.cpp. The static
 assertions of peano4::sfc::SpaceFillingCurve report a grammar that does not
 describe a continuous space-filling curve at compile time.
 

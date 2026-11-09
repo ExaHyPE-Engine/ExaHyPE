@@ -47,7 +47,7 @@ tarch::la::operator*=(tarch::la::Vector<4, Scalar>& vector, const Scalar& scalar
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>
 tarch::la::remainder(const tarch::la::Vector<Size, Scalar>& vector, const double h) {
-  assertion(h > 0.0, h);
+  ASSERTION(h > 0.0, h);
   tarch::la::Vector<Size, Scalar> result;
   for (int i = 0; i < Size; i++) {
     result(i) = vector(i) - std::floor(vector(i) / h) * h;
@@ -58,7 +58,7 @@ tarch::la::remainder(const tarch::la::Vector<Size, Scalar>& vector, const double
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>&
 tarch::la::operator/=(tarch::la::Vector<Size, Scalar>& vector, const Scalar& scalar) {
-  assertion(scalar != Scalar{0});
+  ASSERTION(scalar != Scalar{0});
   for (int i = 0; i < Size; i++) {
     vector(i) /= scalar;
   }
@@ -68,7 +68,7 @@ tarch::la::operator/=(tarch::la::Vector<Size, Scalar>& vector, const Scalar& sca
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>&
 tarch::la::operator/=(tarch::la::Vector<2, Scalar>& vector, const Scalar& scalar) {
-  assertion(scalar != Scalar{0});
+  ASSERTION(scalar != Scalar{0});
   vector._values[0] /= scalar;
   vector._values[1] /= scalar;
   return vector;
@@ -77,7 +77,7 @@ tarch::la::operator/=(tarch::la::Vector<2, Scalar>& vector, const Scalar& scalar
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>&
 tarch::la::operator/=(tarch::la::Vector<3, Scalar>& vector, const Scalar& scalar) {
-  assertion(scalar != Scalar{0});
+  ASSERTION(scalar != Scalar{0});
   vector._values[0] /= scalar;
   vector._values[1] /= scalar;
   vector._values[2] /= scalar;
@@ -87,7 +87,7 @@ tarch::la::operator/=(tarch::la::Vector<3, Scalar>& vector, const Scalar& scalar
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>&
 tarch::la::operator/=(tarch::la::Vector<4, Scalar>& vector, const Scalar& scalar) {
-  assertion(scalar != Scalar{0});
+  ASSERTION(scalar != Scalar{0});
   vector._values[0] /= scalar;
   vector._values[1] /= scalar;
   vector._values[2] /= scalar;
@@ -170,7 +170,7 @@ tarch::la::operator-=(tarch::la::Vector<4, Scalar>& vector, const Scalar& scalar
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>
 tarch::la::operator/(const tarch::la::Vector<Size, Scalar>& vector, const Scalar& scalar) {
-  assertion(scalar != Scalar{0});
+  ASSERTION(scalar != Scalar{0});
   tarch::la::Vector<Size, Scalar> result;
   for (int i = 0; i < Size; i++) {
     result(i) = vector(i) / scalar;
@@ -181,14 +181,14 @@ tarch::la::operator/(const tarch::la::Vector<Size, Scalar>& vector, const Scalar
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>
 tarch::la::operator/(const tarch::la::Vector<2, Scalar>& vector, const Scalar& scalar) {
-  assertion(scalar != Scalar{0});
+  ASSERTION(scalar != Scalar{0});
   return tarch::la::makeVector<Scalar>(vector._values[0] / scalar, vector._values[1] / scalar);
 }
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>
 tarch::la::operator/(const tarch::la::Vector<3, Scalar>& vector, const Scalar& scalar) {
-  assertion(scalar != Scalar{0});
+  ASSERTION(scalar != Scalar{0});
   return tarch::la::makeVector<Scalar>(
     vector._values[0] / scalar,
     vector._values[1] / scalar,
@@ -199,7 +199,7 @@ tarch::la::operator/(const tarch::la::Vector<3, Scalar>& vector, const Scalar& s
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>
 tarch::la::operator/(const tarch::la::Vector<4, Scalar>& vector, const Scalar& scalar) {
-  assertion(scalar != Scalar{0});
+  ASSERTION(scalar != Scalar{0});
   return tarch::la::makeVector<Scalar>(
     vector._values[0] / scalar,
     vector._values[1] / scalar,

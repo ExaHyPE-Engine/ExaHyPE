@@ -57,7 +57,7 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
 }
 
 /**
- * Returns std::nullopt. The MPI query is vendor-specific and OpenMP does not name the vendor of
+ * Returns std::nullopt. The MPI query is vendor-specific and OpenMP does not report the vendor of
  * the device.
  */
 std::optional<bool>

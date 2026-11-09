@@ -14,7 +14,7 @@ INLINE_METHOD void
 tarch::plotter::DefaultInitialisingAllocator<T>::construct(
   U* const pointer
 ) noexcept(std::is_nothrow_default_constructible_v<U>) {
-  assertion(pointer != nullptr);
+  ASSERTION(pointer != nullptr);
   ::new (static_cast<void*>(pointer)) U;
 }
 
@@ -22,6 +22,6 @@ template <typename T>
 template <typename U, typename... Arguments>
 INLINE_METHOD void
 tarch::plotter::DefaultInitialisingAllocator<T>::construct(U* const pointer, Arguments&&... arguments) {
-  assertion(pointer != nullptr);
+  ASSERTION(pointer != nullptr);
   ::new (static_cast<void*>(pointer)) U(std::forward<Arguments>(arguments)...);
 }

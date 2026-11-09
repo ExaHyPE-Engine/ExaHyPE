@@ -26,7 +26,7 @@ exahype2::fv::getBoundaryFaceMask(const peano4::CellConnectivity& cellConnectivi
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
-  assertion(entry >= 0 and entry < boundaryFaces.size * Kernel::VolumesPerLayer, entry, boundaryFaces.size);
+  ASSERTION(entry >= 0 and entry < boundaryFaces.size * Kernel::VolumesPerLayer, entry, boundaryFaces.size);
   const int face      = boundaryFaces[entry / Kernel::VolumesPerLayer];
   const int lowerCell = cellConnectivity.getFaceCell(face, 0);
   const int slot      = lowerCell >= 0 ? lowerCell : cellConnectivity.getFaceCell(face, 1);
@@ -40,7 +40,8 @@ exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecisio
     cellConnectivity.getCellWidth(slot),
     timeStamp,
     faceNumber,
-    entry % Kernel::VolumesPerLayer
+    entry % Kernel::VolumesPerLayer,
+    parameters
   );
 }
 
@@ -174,7 +175,7 @@ exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::operat
   const double                                stepSize      = timeStepSize;
 
   const double partial =
-    Kernel::updateInTeam(team, patch, faces, auxVarsFaces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces);
+    Kernel::updateInTeam(team, patch, faces, auxVarsFaces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces, parameters);
   COMPILE_IF_ON_HOST(accumulator = exahype2::MaxEigenvalueReduction::combine(accumulator, partial);)
   COMPILE_IF_ON_DEVICE(
     reduceWaveSpeedsWithThreadsOfTeam(team, partial, patch, cellCentre, cellSize, stepStart, stepSize, accumulator);
@@ -198,12 +199,13 @@ exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::reduce
   const double                                 stepSize,
   double&                                      accumulator
 ) const {
+  const typename Derived::RuntimeParameters&                         runtimeParameters = parameters;
   const tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction> reducer{accumulator};
   tarch::accelerator::reduceOverTeam(team, partial, reducer);
   if constexpr (exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>) {
     tarch::accelerator::teamBarrier(team);
     tarch::accelerator::parallelFor(team, tarch::accelerator::Range(1), [=]([[maybe_unused]] const int single) {
-      Kernel::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
+      Kernel::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize, runtimeParameters);
     });
     tarch::accelerator::teamBarrier(team);
     tarch::accelerator::parallelReduce(
@@ -212,7 +214,15 @@ exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::reduce
       [=](const int volume, double& eigenvalue) {
         eigenvalue = exahype2::MaxEigenvalueReduction::combine(
           eigenvalue,
-          Kernel::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, stepStart + stepSize, stepSize)
+          Kernel::getMaxEigenvalueOfVolume(
+            volume,
+            patch,
+            cellCentre,
+            cellSize,
+            stepStart + stepSize,
+            stepSize,
+            runtimeParameters
+          )
         );
       },
       reducer
@@ -233,7 +243,8 @@ exahype2::fv::MeasurePatchEigenvalues<Derived, StoragePrecision, ComputePrecisio
       solution.getChunk(slot),
       cellConnectivity.getCellCentre(slot),
       cellConnectivity.getCellWidth(slot),
-      timeStamp
+      timeStamp,
+      parameters
     )
   );
 }
@@ -248,7 +259,8 @@ exahype2::fv::MeasurePatchErrors<Derived, StoragePrecision, ComputePrecision>::o
     cellConnectivity.getCellWidth(slot),
     timeStamp,
     timeStepSize,
-    errorsPerCell + static_cast<std::ptrdiff_t>(entry) * NumberOfNorms
+    errorsPerCell + static_cast<std::ptrdiff_t>(entry) * NumberOfNorms,
+    parameters
   );
 }
 
@@ -259,7 +271,7 @@ exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::copy(
   StoragePrecision* const target,
   const int               itemOfChunk
 ) const {
-  assertion(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
+  ASSERTION(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
   const StoragePrecision* const kept = source.getChunk(slot);
   for (int value = itemOfChunk * Kernel::NumberOfData; value < (itemOfChunk + 1) * Kernel::NumberOfData; value++) {
     target[value] = kept[value];

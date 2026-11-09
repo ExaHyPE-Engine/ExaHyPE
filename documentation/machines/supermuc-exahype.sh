@@ -7,9 +7,9 @@ set -eu
 # ==============================================================================================
 # USER PARAMETERS
 # ==============================================================================================
-REPO_URL="https://gitlab.lrz.de/hpcsoftware/Peano.git"
-BRANCH="muc/exahype"
-DIR_NAME="Peano"
+REPO_URL="https://github.com/ExaHyPE-Engine/ExaHyPE.git"
+BRANCH="main"
+DIR_NAME="ExaHyPE"
 
 # Change to the application you want to build and run
 EXAHYPE_APPLICATION=""

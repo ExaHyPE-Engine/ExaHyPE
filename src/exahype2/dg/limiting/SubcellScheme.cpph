@@ -25,17 +25,18 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::sampleInitialC
   StoragePrecision* NOALIAS const              subcells,
   StoragePrecision* const                      auxVarsHaloHalves[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   forEachSubcell(
     cellCentre,
     cellSize,
     subcells,
-    [](
+    [&parameters](
       StoragePrecision* const                      values,
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h
-    ) { Derived::initialCondition(values, x, h); }
+    ) { Derived::initialCondition(values, x, h, parameters); }
   );
   if constexpr (NumberOfAuxiliaryVariables>0){
     Subgrid::projectAuxVarsOntoFaces(subcells, auxVarsHaloHalves);
@@ -54,9 +55,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOn
   StoragePrecision* NOALIAS const       subcells,
   const StoragePrecision* NOALIAS const nodesToSubcells
 ) {
-  assertion(nodes != nullptr);
-  assertion(subcells != nullptr);
-  assertion(nodesToSubcells != nullptr);
+  ASSERTION(nodes != nullptr);
+  ASSERTION(subcells != nullptr);
+  ASSERTION(nodesToSubcells != nullptr);
   exahype2::dg::projectTensorProduct<
     DIMENSIONS,
     NodesPerAxis,
@@ -200,7 +201,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int                                    boundaryFaces,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   using FallbackReconstruction = typename Derived::FallbackReconstruction;
   advanceSubcells<typename Derived::Reconstruction>(
@@ -212,7 +214,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
     cellSize,
     boundaryFaces,
     timeStamp,
-    timeStepSize
+    timeStepSize,
+    parameters
   );
   if constexpr (
     exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision> and not std::is_void_v<FallbackReconstruction>
@@ -223,7 +226,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
         evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData,
         1,
         cellCentre,
-        cellSize
+        cellSize,
+        parameters
       );
     }
     if (needsFallback) {
@@ -236,7 +240,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
         cellSize,
         boundaryFaces,
         timeStamp,
-        timeStepSize
+        timeStepSize,
+        parameters
       );
     }
   }
@@ -245,7 +250,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
   }
   projectSubcellsOntoNodes(subcells, nodes, subcellsToNodes);
   if constexpr (ReportEigenvalues) {
-    return reduceMaxEigenvalues(subcells, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize);
+    return reduceMaxEigenvalues(subcells, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize, parameters);
   } else {
     return exahype2::dg::MaxEigenvalueStatistics{};
   }
@@ -269,7 +274,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeInTea
   const tarch::la::Vector<DIMENSIONS, double>&          cellSize,
   const int                                             boundaryFaces,
   const double                                          timeStamp,
-  const double                                          timeStepSize
+  const double                                          timeStepSize,
+  const typename Derived::RuntimeParameters&            parameters
 ) {
   exahype2::dg::MaxEigenvalueStatistics statistics;
   COMPILE_IF_ON_HOST(
@@ -284,7 +290,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeInTea
       cellSize,
       boundaryFaces,
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      parameters
     );
   )
   COMPILE_IF_ON_DEVICE(
@@ -300,7 +307,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeInTea
       cellSize,
       boundaryFaces,
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      parameters
     );
   )
   return statistics;
@@ -326,7 +334,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithT
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int                                    boundaryFaces,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   exahype2::dg::MaxEigenvalueStatistics statistics;
 
@@ -345,7 +354,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithT
       timeStamp,
       timeStepSize,
       boundaryFaces,
-      evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * SubgridScheme<Reconstruction>::NumberOfData
+      evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * SubgridScheme<Reconstruction>::NumberOfData,
+      parameters
     ));
   }
   if constexpr (
@@ -358,7 +368,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithT
                 evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData,
                 1,
                 cellCentre,
-                cellSize
+                cellSize,
+                parameters
         );
     }
     if (tarch::accelerator::isTrueInAnyThreadOfTeam(team, fails)) {
@@ -373,7 +384,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithT
           timeStamp,
           timeStepSize,
           boundaryFaces,
-          evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * SubgridScheme<FallbackReconstruction>::NumberOfData
+          evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * SubgridScheme<FallbackReconstruction>::NumberOfData,
+          parameters
         ));
       }
     }
@@ -390,7 +402,15 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithT
     for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
       statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
         statistics,
-        reduceMaxEigenvaluesOfSubcell(subcells, subcell, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+        reduceMaxEigenvaluesOfSubcell(
+          subcells,
+          subcell,
+          cellCentre,
+          cellSize,
+          timeStamp + timeStepSize,
+          timeStepSize,
+          parameters
+        )
       );
     }
   }
@@ -409,9 +429,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigen
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
-  assertion(subcell >= 0 and subcell < SubcellsPerCell, subcell);
+  ASSERTION(subcell >= 0 and subcell < SubcellsPerCell, subcell);
   tarch::la::Vector<DIMENSIONS, int> index;
   int                                remainder = subcell;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -423,7 +444,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigen
   const StoragePrecision* const         values = subcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData;
   exahype2::dg::MaxEigenvalueStatistics result;
   result.template accumulate<DIMENSIONS>(cellSize, [&](const int normal) {
-    return Derived::maxEigenvalue(values, subcellCentre, subcellSize, timeStamp, timeStepSize, normal);
+    return Derived::maxEigenvalue(values, subcellCentre, subcellSize, timeStamp, timeStepSize, normal, parameters);
   });
   return result;
 }
@@ -440,9 +461,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigen
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
-  assertion(subcells != nullptr);
+  ASSERTION(subcells != nullptr);
   exahype2::dg::MaxEigenvalueStatistics result;
   forEachSubcell(
     cellCentre,
@@ -454,7 +476,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigen
       const tarch::la::Vector<DIMENSIONS, double>& h
     ) {
       result.template accumulate<DIMENSIONS>(cellSize, [&](const int normal) {
-        return Derived::maxEigenvalue(values, x, h, timeStamp, timeStepSize, normal);
+        return Derived::maxEigenvalue(values, x, h, timeStamp, timeStepSize, normal, parameters);
       });
     }
   );
@@ -474,10 +496,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::forEachSubcell
   Value* const                                 values,
   Functor&&                                    functor
 ) {
-  assertion(values != nullptr);
+  ASSERTION(values != nullptr);
   const auto subcellSize = exahype2::fv::getVolumeSize(cellSize, SubcellsPerAxis);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(subcellSize(axis) > 0.0, subcellSize, axis);
+    ASSERTION(subcellSize(axis) > 0.0, subcellSize, axis);
   }
   peano4::dForEach(SubcellsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& subcell) {
     const int  index         = peano4::dLinearised(subcell, SubcellsPerAxis);
@@ -501,7 +523,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::advanceSubcell
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int                                    boundaryFaces,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   static_assert(
     Reconstruct::HaloSize == Derived::Reconstruction::HaloSize,
@@ -516,7 +539,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::advanceSubcell
     cellSize,
     timeStamp,
     timeStepSize,
-    boundaryFaces
+    boundaryFaces,
+    parameters
   ));
 }
 
@@ -532,9 +556,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcell
   StoragePrecision* NOALIAS const       nodes,
   const StoragePrecision* NOALIAS const subcellsToNodes
 ) {
-  assertion(subcells != nullptr);
-  assertion(nodes != nullptr);
-  assertion(subcellsToNodes != nullptr);
+  ASSERTION(subcells != nullptr);
+  ASSERTION(nodes != nullptr);
+  ASSERTION(subcellsToNodes != nullptr);
   exahype2::dg::projectTensorProduct<
     DIMENSIONS,
     SubcellsPerAxis,
@@ -586,10 +610,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcell
   const int                                                                                         firstItem,
   const int                                                                                         itemStride
 ) {
-  assertion(subcells != nullptr);
-  assertion(nodes != nullptr);
-  assertion(subcellsToNodes != nullptr);
-  assertion(scratch != nullptr);
+  ASSERTION(subcells != nullptr);
+  ASSERTION(nodes != nullptr);
+  ASSERTION(subcellsToNodes != nullptr);
+  ASSERTION(scratch != nullptr);
   exahype2::dg::projectTensorProductStage<
     DIMENSIONS,
     SubcellsPerAxis,
@@ -618,10 +642,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOn
   const int                                                                                         firstItem,
   const int                                                                                         itemStride
 ) {
-  assertion(nodes != nullptr);
-  assertion(subcells != nullptr);
-  assertion(nodesToSubcells != nullptr);
-  assertion(scratch != nullptr);
+  ASSERTION(nodes != nullptr);
+  ASSERTION(subcells != nullptr);
+  ASSERTION(nodesToSubcells != nullptr);
+  ASSERTION(scratch != nullptr);
   exahype2::dg::projectTensorProductStage<
     DIMENSIONS,
     NodesPerAxis,
@@ -643,11 +667,12 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  Precision* const                             F
+  Precision* const                             F,
+  const RuntimeParameters&                     parameters
 )
   requires exahype2::terms::HasFlux<Derived, Precision>
 {
-  Derived::flux(Q, x, h, t, dt, normal, F);
+  Derived::flux(Q, x, h, t, dt, normal, F, parameters);
 }
 
 template <typename Derived, typename ComputePrecision>
@@ -662,11 +687,12 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  Precision* const                             BTimesDeltaQ
+  Precision* const                             BTimesDeltaQ,
+  const RuntimeParameters&                     parameters
 )
   requires exahype2::terms::HasNonconservativeProduct<Derived, Precision>
 {
-  Derived::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
+  Derived::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ, parameters);
 }
 
 template <typename Derived, typename ComputePrecision>
@@ -679,11 +705,12 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  Precision* const                             S
+  Precision* const                             S,
+  const RuntimeParameters&                     parameters
 )
   requires exahype2::terms::HasSourceTerm<Derived, Precision>
 {
-  Derived::sourceTerm(Q, x, h, t, dt, S);
+  Derived::sourceTerm(Q, x, h, t, dt, S, parameters);
 }
 
 template <typename Derived, typename ComputePrecision>
@@ -697,11 +724,12 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  Precision* const                             S
+  Precision* const                             S,
+  const RuntimeParameters&                     parameters
 )
   requires exahype2::terms::HasDiffusiveSourceTerm<Derived, Precision>
 {
-  Derived::diffusiveSourceTerm(Q, deltaQ, x, h, t, dt, S);
+  Derived::diffusiveSourceTerm(Q, deltaQ, x, h, t, dt, S, parameters);
 }
 
 template <typename Derived, typename ComputePrecision>
@@ -714,11 +742,12 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 )
   requires exahype2::terms::HasMaxEigenvalue<Derived, Precision>
 {
-  return Derived::maxEigenvalue(Q, x, h, t, dt, normal);
+  return Derived::maxEigenvalue(Q, x, h, t, dt, normal, parameters);
 }
 
 template <typename Derived, typename ComputePrecision>
@@ -736,11 +765,25 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
   const bool                                   isBoundaryFace,
   const int                                    faceIndex,
   Precision* const                             FL,
-  Precision* const                             FR
+  Precision* const                             FR,
+  const RuntimeParameters&                     parameters
 )
   requires exahype2::terms::HasSubcellRiemannSolver<Derived, Precision>
 {
-  return Derived::solveSubcellRiemannProblem(QL, QR, x, h, t, dt, normal, isBoundaryFace, faceIndex, FL, FR);
+  return Derived::solveSubcellRiemannProblem(
+    QL,
+    QR,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    isBoundaryFace,
+    faceIndex,
+    FL,
+    FR,
+    parameters
+  );
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -772,7 +815,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int entry
 ) const {
-  assertion(
+  ASSERTION(
     entry >= 0 and entry < boundaryConditions.boundaryFaces.size * Kernel::Subgrid::VolumesPerLayer,
     entry,
     boundaryConditions.boundaryFaces.size
@@ -818,7 +861,8 @@ exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrec
     width,
     exahype2::fv::getBoundaryFaceMask(cellConnectivity, slot),
     timeStamp,
-    timeStepSize
+    timeStepSize,
+    parameters
   );
   COMPILE_IF_ON_HOST(accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(accumulator, statistics);)
   COMPILE_IF_ON_DEVICE(
@@ -836,8 +880,8 @@ exahype2::dg::limiting::ProjectNodesOntoSubgrids<Derived, StoragePrecision, Comp
   const int                            entry,
   const tarch::accelerator::TeamHandle team
 ) const {
-  assertion(numberOfTeams > 0, numberOfTeams);
-  assertion(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
+  ASSERTION(numberOfTeams > 0, numberOfTeams);
+  ASSERTION(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
   StoragePrecision* const chunk = scratch
     + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::SubcellProjectionScratchValues;
   for (int cell = entry; cell < cells.size; cell += numberOfTeams) {

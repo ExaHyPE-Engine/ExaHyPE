@@ -328,7 +328,7 @@ namespace tarch::accelerator {
 
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Max<T> reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -343,7 +343,7 @@ namespace tarch::accelerator {
   }
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Min<T> reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -358,7 +358,7 @@ namespace tarch::accelerator {
   }
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Sum<T> reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -373,7 +373,7 @@ namespace tarch::accelerator {
   }
   template <typename Op, typename Functor>
   INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Custom<Op> reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -392,8 +392,8 @@ namespace tarch::accelerator {
 
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Max<T> reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
@@ -412,8 +412,8 @@ namespace tarch::accelerator {
   }
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Min<T> reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
@@ -432,8 +432,8 @@ namespace tarch::accelerator {
   }
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Sum<T> reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
@@ -452,8 +452,8 @@ namespace tarch::accelerator {
   }
   template <typename Op, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Custom<Op> reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
@@ -469,9 +469,9 @@ namespace tarch::accelerator {
 
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Max<T> reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
@@ -493,9 +493,9 @@ namespace tarch::accelerator {
   }
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Min<T> reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
@@ -517,9 +517,9 @@ namespace tarch::accelerator {
   }
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Sum<T> reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
@@ -541,9 +541,9 @@ namespace tarch::accelerator {
   }
   template <typename Op, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Custom<Op> reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
@@ -559,8 +559,15 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+#if defined(__INTEL_LLVM_COMPILER)
+  // The OpenMP outlining pass of the Intel compiler icpx crashes on a host function that contains a
+  // forcibly inlined team launch and a host parallel region.
+  inline
+#else
+  INLINE_METHOD
+#endif
+    void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -570,26 +577,37 @@ namespace tarch::accelerator {
     const int        threads       = tarch::accelerator::getTeamThreads(range.threads);
     const auto       resultBytes   = static_cast<std::size_t>(range.n) * sizeof(ValueType);
     ValueType* const teamResults   = static_cast<ValueType*>(tarch::accelerator::lockReductionScratch(resultBytes));
+    // The Intel compiler icpx places a static with omp_pteam_mem_alloc in global memory for all
+    // teams. Clang moves a local of the teams region onto the stack of every thread.
 #pragma omp target teams num_teams(numberOfTeams) thread_limit(threads) is_device_ptr(teamResults) \
   firstprivate(functor) device(device)
-#pragma omp parallel num_threads(threads)
     {
-      // A static of a class type with default member initialisers needs an initialisation at run
-      // time. teamAccumulatorBytes therefore stores the accumulator of the team as raw bytes.
-      alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
-      static int                                         teamVotes[OmptThreadsPerTeam];
-      alignas(ValueType) static unsigned char            teamAccumulatorBytes[sizeof(ValueType)];
+#if defined(__INTEL_LLVM_COMPILER)
+      alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
+      int                                         teamVotes[OmptThreadsPerTeam];
+      ValueType                                   teamAccumulator = Reducer::identity();
+#endif
+#pragma omp parallel num_threads(threads)
+      {
+#if not defined(__INTEL_LLVM_COMPILER)
+        // A static of a class type with default member initialisers needs an initialisation at run
+        // time. teamAccumulatorBytes therefore stores the accumulator of the team as raw bytes.
+        alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
+        static int                                         teamVotes[OmptThreadsPerTeam];
+        alignas(ValueType) static unsigned char            teamAccumulatorBytes[sizeof(ValueType)];
 #pragma omp allocate(teamScratch, teamVotes, teamAccumulatorBytes) allocator(omp_pteam_mem_alloc)
-      ValueType& teamAccumulator = *std::launder(reinterpret_cast<ValueType*>(teamAccumulatorBytes));
-      for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
-        if (omp_get_thread_num() == 0) {
-          teamAccumulator = Reducer::identity();
-        }
+        ValueType& teamAccumulator = *std::launder(reinterpret_cast<ValueType*>(teamAccumulatorBytes));
+#endif
+        for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
+          if (omp_get_thread_num() == 0) {
+            teamAccumulator = Reducer::identity();
+          }
 #pragma omp barrier
-        functor(team, tarch::accelerator::OmptTeam{teamScratch, teamVotes}, teamAccumulator);
+          functor(team, tarch::accelerator::OmptTeam{teamScratch, teamVotes}, teamAccumulator);
 #pragma omp barrier
-        if (omp_get_thread_num() == 0) {
-          teamResults[team] = teamAccumulator;
+          if (omp_get_thread_num() == 0) {
+            teamResults[team] = teamAccumulator;
+          }
         }
       }
     }

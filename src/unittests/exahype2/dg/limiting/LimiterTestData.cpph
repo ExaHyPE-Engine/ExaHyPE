@@ -1,0 +1,81 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+template <exahype2::TimeStepping::Rule Rule>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::unittests::StubSolverOf<Rule>::initialCondition(
+  double* const                                Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  Q[0] = x(0);
+  Q[1] = h(0);
+}
+
+template <exahype2::TimeStepping::Rule Rule>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::unittests::StubSolverOf<Rule>::mapDmpObservables(
+  double* const                             observables,
+  const double* const                       Q,
+  [[maybe_unused]] const RuntimeParameters& parameters
+) {
+  observables[0] = Q[0];
+}
+
+template <exahype2::TimeStepping::Rule Rule>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::dg::limiting::unittests::StubSolverOf<Rule>::isPhysicallyAdmissible(
+  const double* const                                           Q,
+  const int                                                     numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  for (int state = 0; state < numberOfStates; state++) {
+    if (Q[static_cast<std::ptrdiff_t>(state) * StubLayout::NumberOfData] <= 0.0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <exahype2::TimeStepping::Rule Rule>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::dg::limiting::unittests::StubSolverOf<Rule>::maxEigenvalue(
+  const double* const                                           Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  return Q[0];
+}
+
+template <exahype2::TimeStepping::Rule Rule>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::unittests::StubSolverOf<Rule>::flux(
+  const double* const                                           Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  double* const                                                 F,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  F[0] = Q[0] * static_cast<double>(normal + 1);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::dg::limiting::unittests::RelaxedStubSolver::dmpRelaxationParameter(
+  [[maybe_unused]] const int                observable,
+  const double                              specifiedRelaxationParameter,
+  [[maybe_unused]] const RuntimeParameters& parameters
+) {
+  return 2.0 * specifiedRelaxationParameter;
+}
+TARGET_DECLARE_END

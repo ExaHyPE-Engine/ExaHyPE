@@ -103,7 +103,7 @@ exahype2::runner::Format::getGroupedNumber(const unsigned long value) {
  */
 std::string
 exahype2::runner::Format::getDuration(const double seconds) {
-  // The clamp precedes the integer cast. A huge or infinite duration then neither overflows nor widens the field.
+  // The clamp precedes the integer cast. A huge or infinite duration fits into long and into the field width.
   constexpr long SecondsPerHour = 3600L;
   constexpr long SecondsPerDay  = 24L * SecondsPerHour;
   const auto     capSeconds     = static_cast<double>((MaxDurationDays + 1) * SecondsPerDay);
@@ -166,7 +166,7 @@ exahype2::runner::padToWidth(const std::string& text, const std::size_t columns)
 
 /**
  * Breaks a line wider than columns into lines of at most columns. Every continuation starts at
- * continuationColumn, or at the first column when continuationColumn leaves no room for text.
+ * continuationColumn if continuationColumn is less than columns and at the first column otherwise.
  */
 std::vector<std::string>
 exahype2::runner::wrapToDisplayWidth(
@@ -185,7 +185,7 @@ exahype2::runner::wrapToDisplayWidth(
     const auto firstNonSpace    = remaining.find_first_not_of(' ');
     const auto indentationBytes = firstNonSpace == std::string::npos ? std::size_t{0} : firstNonSpace;
     const auto lineBreak        = getLineBreak(prefix, indentationBytes);
-    assertion(lineBreak.skippedBytes > indentationBytes, text, columns);
+    ASSERTION(lineBreak.skippedBytes > indentationBytes, text, columns);
     lines.push_back(remaining.substr(0, lineBreak.keptBytes));
     remaining.erase(0, lineBreak.skippedBytes);
     const auto nextNonSpace = remaining.find_first_not_of(' ');
@@ -242,12 +242,12 @@ exahype2::runner::Table::render() const {
 
 void
 exahype2::runner::writeToLog(const std::string& line) {
-  logInfo(line);
+  LOG_INFO(line);
 }
 
 exahype2::runner::Report::Report(const Writer& writer) :
   _writer(writer) {
-  assertion(_writer != nullptr);
+  ASSERTION(_writer != nullptr);
 }
 
 /**
@@ -281,7 +281,7 @@ exahype2::runner::Report::line(const std::string& text, const std::size_t contin
     rule();
   }
   for (const auto& wrappedLine : exahype2::runner::wrapToDisplayWidth(text, ReportWidth, continuationColumn)) {
-    assertion(exahype2::runner::getDisplayWidth(wrappedLine) <= ReportWidth, wrappedLine);
+    ASSERTION(exahype2::runner::getDisplayWidth(wrappedLine) <= ReportWidth, wrappedLine);
     _writer("│ " + exahype2::runner::padToWidth(wrappedLine, ReportWidth) + " │");
   }
   _lastWasRule = false;

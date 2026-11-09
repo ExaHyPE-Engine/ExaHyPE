@@ -58,21 +58,36 @@ class RepositoryTreeTest(unittest.TestCase):
                 with self.assertRaises(FileNotFoundError):
                     find_repository_root(other)
 
-    def test_build_generated_and_cache_directories_are_excluded(self):
-        for name in (
+    def assert_excluded(self, *names):
+        for name in names:
+            with self.subTest(name=name):
+                self.assertTrue(is_excluded_directory(os.path.join(self.root, name)))
+
+    def assert_walked(self, *names):
+        for name in names:
+            with self.subTest(name=name):
+                self.assertFalse(is_excluded_directory(os.path.join(self.root, name)))
+
+    def test_build_trees_and_application_output_are_excluded(self):
+        self.assert_excluded(
             "build",
             "build-gcc",
             "install",
+            "install-Debug",
             "Euler.build",
             "Euler.generated",
             "Euler.output",
-            "__pycache__",
-            ".git",
-            ".claude",
-        ):
-            self.assertTrue(is_excluded_directory(os.path.join(self.root, name)), name)
-        for name in ("src", "api", "tests", "buildings"):
-            self.assertFalse(is_excluded_directory(os.path.join(self.root, name)), name)
+        )
+
+    def test_caches_and_external_code_are_excluded(self):
+        self.assert_excluded("CMakeFiles", "__pycache__", "node_modules", "submodules")
+
+    def test_hidden_directories_except_the_ci_directory_are_excluded(self):
+        self.assert_excluded(".git", ".ipynb_checkpoints", ".ruff_cache", ".vscode")
+        self.assert_walked(".gitlab")
+
+    def test_source_directories_are_walked(self):
+        self.assert_walked("src", "api", "tests", "buildings", "installation")
 
     def test_a_virtual_environment_is_excluded(self):
         environment = os.path.join(self.root, "tools")
@@ -85,9 +100,12 @@ class RepositoryTreeTest(unittest.TestCase):
         write(os.path.join(self.root, "src", "notes.txt"))
         write(os.path.join(self.root, "build", "src", "c.cpp"))
         write(os.path.join(self.root, "tests", "Euler.generated", "d.cpp"))
+        write(os.path.join(self.root, ".cache", "e.cpp"))
+        write(os.path.join(self.root, ".gitlab", "f.h"))
         self.assertEqual(
             source_files(self.root, (".cpp", ".h")),
             [
+                os.path.join(self.root, ".gitlab", "f.h"),
                 os.path.join(self.root, "src", "a.h"),
                 os.path.join(self.root, "src", "b.cpp"),
             ],
@@ -99,6 +117,9 @@ class RepositoryTreeTest(unittest.TestCase):
         )
         self.assertFalse(
             is_source_path(self.root, os.path.join(self.root, "build", "a.cpp"))
+        )
+        self.assertFalse(
+            is_source_path(self.root, os.path.join(self.root, ".cache", "a.cpp"))
         )
         self.assertFalse(
             is_source_path(self.root, os.path.join(os.path.dirname(self.root), "a.cpp"))

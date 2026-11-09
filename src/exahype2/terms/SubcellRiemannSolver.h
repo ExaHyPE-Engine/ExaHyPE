@@ -11,20 +11,21 @@ namespace exahype2::terms {
    */
   template <typename SolverType, typename Precision>
   concept HasSubcellRiemannSolver = requires(
-    const Precision* const                       QL,
-    const Precision* const                       QR,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
-    const bool                                   isBoundaryFace,
-    const int                                    faceIndex,
-    Precision* const                             FL,
-    Precision* const                             FR
+    const Precision* const                        QL,
+    const Precision* const                        QR,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const double                                  t,
+    const double                                  dt,
+    const int                                     normal,
+    const bool                                    isBoundaryFace,
+    const int                                     faceIndex,
+    Precision* const                              FL,
+    Precision* const                              FR,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
     {
-      SolverType::solveSubcellRiemannProblem(QL, QR, x, h, t, dt, normal, isBoundaryFace, faceIndex, FL, FR)
+      SolverType::solveSubcellRiemannProblem(QL, QR, x, h, t, dt, normal, isBoundaryFace, faceIndex, FL, FR, parameters)
     } -> std::same_as<double>;
   };
 } // namespace exahype2::terms

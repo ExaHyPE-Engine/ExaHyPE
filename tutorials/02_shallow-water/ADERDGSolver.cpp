@@ -13,7 +13,8 @@ void
 tutorials::exahype2::swe::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 1: Set up the dam-break initial state.
   // For now we start from flat water at rest so the code runs.
@@ -30,7 +31,8 @@ tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 1: Prescribe the outside state. As a safe default we mirror
   // the inside state (a crude outflow condition).
@@ -45,7 +47,8 @@ tutorials::exahype2::swe::ADERDGSolver::refinementCriterion(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time
+  const double                                 time,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 2: Refine near the moving front. Keep the mesh as is for now.
   return ::exahype2::RefinementCommand::Keep;
@@ -58,7 +61,8 @@ tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
   const double                                 timeStepSize,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 1: Return max(|u_n + sqrt(g h)|, |u_n - sqrt(g h)|),
   // where u_n = hu[normal] / h and g = 9.81. A positive placeholder keeps the
@@ -74,7 +78,8 @@ tutorials::exahype2::swe::ADERDGSolver::flux(
   const double                                 time,
   const double                                 timeStepSize,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 1: Implement the shallow-water flux in direction `normal`.
   F[Shortcuts::h]      = 0.0;
@@ -92,7 +97,8 @@ tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
   const double                                 time,
   const double                                 timeStepSize,
   const int                                    normal,
-  double* const NOALIAS                        BTimesDeltaQ
+  double* const NOALIAS                        BTimesDeltaQ,
+  const RuntimeParameters&                     parameters
 ) {
   // TODO Exercise 2: Implement the bathymetry term B(Q)·∇Q. Zero for now.
   BTimesDeltaQ[Shortcuts::h]      = 0.0;

@@ -111,11 +111,11 @@ tarch::database::GlobalTimeSeriesDatabase::addGlobalSnapshot(
   const int           numberOfDataEntries,
   const double* const data
 ) {
-  assertion(data != nullptr);
-  assertion(numberOfDataEntries > 0, numberOfDataEntries);
+  ASSERTION(data != nullptr);
+  ASSERTION(numberOfDataEntries > 0, numberOfDataEntries);
   {
     const std::scoped_lock lock(_mutex);
-    assertion(_numberOfGlobalDataPoints == numberOfDataEntries or _data.empty());
+    ASSERTION(_numberOfGlobalDataPoints == numberOfDataEntries or _data.empty());
     _numberOfGlobalDataPoints = std::max(_numberOfGlobalDataPoints, numberOfDataEntries);
     switch (getAction(timestamp)) {
     case AddSnapshotAction::Ignore:

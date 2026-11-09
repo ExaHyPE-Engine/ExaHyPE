@@ -24,21 +24,29 @@ tarch::accelerator::Device::init() {
 
   syclQueues.clear();
 
+  auto selectedType = sycl::info::device_type::cpu;
+  for (const auto& platform : platforms) {
+    if (not platform.get_devices(sycl::info::device_type::gpu).empty()) {
+      selectedType = sycl::info::device_type::gpu;
+    }
+  }
+  const std::string selectedTypeName = selectedType == sycl::info::device_type::gpu ? "GPU" : "CPU";
+
   for (const auto& platform : platforms) {
     std::string platformName = platform.get_info<sycl::info::platform::name>();
     for (const auto& device : platform.get_devices()) {
       std::string deviceName = device.get_info<sycl::info::device::name>();
 
-      if (device.get_info<sycl::info::device::device_type>() != sycl::info::device_type::gpu) {
-        logInfo(
+      if (device.get_info<sycl::info::device::device_type>() != selectedType) {
+        LOG_INFO(
           "Skipping physical device #" + std::to_string(physicalDeviceIndex) + " (" + platformName + " / " + deviceName
-          + ") because it is not an accelerator"
+          + ") because it is not a " + selectedTypeName
         );
         ++physicalDeviceIndex;
         continue;
       }
 
-      logInfo(
+      LOG_INFO(
         "Initialising physical device #" + std::to_string(physicalDeviceIndex) + " (" + platformName + " / "
         + deviceName + ") as logical device #" + std::to_string(logicalDeviceIndex)
       );
@@ -49,7 +57,7 @@ tarch::accelerator::Device::init() {
   }
 
   if (syclQueues.empty()) {
-    tarch::terminateWithError("The SYCL runtime needs an accelerator device with a working driver.");
+    tarch::terminateWithError("The SYCL runtime needs a GPU or CPU device with a working driver.");
   }
 
   return isInitialised();
@@ -87,7 +95,7 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
 }
 
 /**
- * Returns std::nullopt. The MPI query is vendor-specific and SYCL does not name the vendor of the
+ * Returns std::nullopt. The MPI query is vendor-specific and SYCL does not report the vendor of the
  * device.
  */
 std::optional<bool>
@@ -104,12 +112,12 @@ tarch::accelerator::Device::getIdOfCurrentDevice() const {
 }
 
 /**
- * Returns the queue of a logical device number. The logical number counts the GPUs only and
- * differs from the physical device number.
+ * Returns the queue of a logical device number. The logical number counts the devices of the
+ * selected type only and differs from the physical device number.
  */
 void*
 tarch::accelerator::getSYCLQueue(int number) {
-  assertion(syclQueues.count(number) == 1, number);
+  ASSERTION(syclQueues.count(number) == 1, number);
   return &syclQueues[number];
 }
 

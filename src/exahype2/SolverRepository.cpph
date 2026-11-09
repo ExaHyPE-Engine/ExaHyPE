@@ -5,44 +5,50 @@
 #include "tarch/Assertions.h"
 #include "tarch/mpi/ReductionRecord.h"
 
-template <typename... Solvers>
-INLINE_METHOD exahype2::SolverRepository<Solvers...>::SolverRepository(Solvers&... solvers) :
+template <typename RuntimeParameters, typename... Solvers>
+INLINE_METHOD exahype2::SolverRepository<RuntimeParameters, Solvers...>::SolverRepository(Solvers&... solvers) :
   _solvers{solvers...} {}
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::setParameters(const RuntimeParameters& parameters) {
+  _parameters = parameters;
+}
+
+template <typename RuntimeParameters, typename... Solvers>
 template <typename Operation>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::forEachSolver(const Operation& operation) {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::forEachSolver(const Operation& operation) {
   std::apply([&operation](Solvers&... solvers) { (operation(solvers), ...); }, _solvers);
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 template <typename Operation>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::forEachSolver(const Operation& operation) const {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::forEachSolver(const Operation& operation) const {
   std::apply([&operation](const Solvers&... solvers) { (operation(solvers), ...); }, _solvers);
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD double
-exahype2::SolverRepository<Solvers...>::getMinTimeStamp() const {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::getMinTimeStamp() const {
   double result = std::numeric_limits<double>::max();
   forEachSolver([&result](const auto& solver) { result = std::min(result, solver.getTimeStepping().getTimeStamp()); });
   return result;
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD double
-exahype2::SolverRepository<Solvers...>::getMaxTimeStamp() const {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::getMaxTimeStamp() const {
   double result = 0.0;
   forEachSolver([&result](const auto& solver) { result = std::max(result, solver.getTimeStepping().getTimeStamp()); });
   return result;
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 template <typename Solver>
 INLINE_METHOD int
-exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::getNumberOfCellsOf(
   const Solver&                   solver,
   const peano4::CellConnectivity& cellConnectivity
 ) {
@@ -50,16 +56,18 @@ exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(
   if constexpr (requires { solver.getNumberOfCells(cellConnectivity); }) {
     numberOfCells = solver.getNumberOfCells(cellConnectivity);
   }
-  assertion(numberOfCells >= 0, numberOfCells);
+  ASSERTION(numberOfCells >= 0, numberOfCells);
   return numberOfCells;
 }
 
 /**
  * Returns the number of cell updates of one time step of all solvers on this rank.
  */
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD std::uint64_t
-exahype2::SolverRepository<Solvers...>::getNumberOfSolverCells(const peano4::CellConnectivity& cellConnectivity) const {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::getNumberOfSolverCells(
+  const peano4::CellConnectivity& cellConnectivity
+) const {
   std::uint64_t result = 0;
   forEachSolver([&result, &cellConnectivity](const auto& solver) {
     result += static_cast<std::uint64_t>(getNumberOfCellsOf(solver, cellConnectivity));
@@ -67,43 +75,51 @@ exahype2::SolverRepository<Solvers...>::getNumberOfSolverCells(const peano4::Cel
   return result;
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD std::uint64_t
-exahype2::SolverRepository<Solvers...>::getNumberOfCellDoFs(const peano4::CellConnectivity& cellConnectivity) const {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::getNumberOfCellDoFs(
+  const peano4::CellConnectivity& cellConnectivity
+) const {
   std::uint64_t result = 0;
   forEachSolver([&result, &cellConnectivity](const auto& solver) {
     const int numberOfDoFs = solver.getNumberOfDoFs();
-    assertion(numberOfDoFs >= 0, numberOfDoFs);
+    ASSERTION(numberOfDoFs >= 0, numberOfDoFs);
     result += static_cast<std::uint64_t>(getNumberOfCellsOf(solver, cellConnectivity))
       * static_cast<std::uint64_t>(numberOfDoFs);
   });
   return result;
 }
 
-template <typename... Solvers>
+/**
+ * Starts every solver in turn. A solver may overwrite the runtime parameters at its start. Every
+ * later solver and phase reads the overwritten values.
+ */
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::startSimulation() {
-  forEachSolver([](auto& solver) { solver.startSimulation(); });
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::startSimulation() {
+  forEachSolver([this](auto& solver) { solver.startSimulation(_parameters); });
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::finishSimulation() {
-  forEachSolver([](auto& solver) {
-    solver.finishSimulation();
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::finishSimulation() {
+  forEachSolver([this](auto& solver) {
+    solver.finishSimulation(std::as_const(_parameters));
     solver.release();
   });
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::allocate(const peano4::CellConnectivity& cellConnectivity) {
-  forEachSolver([&cellConnectivity](auto& solver) { solver.allocate(cellConnectivity); });
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::allocate(const peano4::CellConnectivity& cellConnectivity) {
+  forEachSolver([this, &cellConnectivity](auto& solver) {
+    solver.allocate(cellConnectivity, std::as_const(_parameters));
+  });
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD tarch::AllocatedBytes
-exahype2::SolverRepository<Solvers...>::getAllocatedBytes() const {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::getAllocatedBytes() const {
   tarch::AllocatedBytes result{};
   forEachSolver([&result](const auto& solver) { result += solver.getAllocatedBytes(); });
   return result;
@@ -113,74 +129,88 @@ exahype2::SolverRepository<Solvers...>::getAllocatedBytes() const {
  * Gathers the requests of all ranks at once. The grid construction applies them in the same step.
  * Every rank calls this function collectively.
  */
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::requestRefinementForGridConstruction(
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::requestRefinementForGridConstruction(
   const peano4::CellConnectivity& cellConnectivity
 ) {
   _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
   forEachSolver([this, &cellConnectivity](auto& solver) {
-    solver.requestRefinementForGridConstruction(cellConnectivity, _refinementRequests);
+    solver.requestRefinementForGridConstruction(cellConnectivity, _refinementRequests, _parameters);
   });
   _requestsOfTheRun     = _refinementRequests.getRefinementRequests(cellConnectivity);
   _localRequestsPending = false;
 }
 
-template <typename... Solvers>
+/**
+ * Initialises every solver in turn. A solver may overwrite the runtime parameters during its
+ * initialisation. Every later solver and phase reads the overwritten values.
+ */
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::initialise(const peano4::CellConnectivity& cellConnectivity) {
-  _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
-  forEachSolver([this, &cellConnectivity](auto& solver) { solver.initialise(cellConnectivity, _refinementRequests); });
-  commitRefinementRequests(cellConnectivity);
-  _refinementsOfTheRegrid.clear();
-}
-
-template <typename... Solvers>
-INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::performTimeStep(const peano4::CellConnectivity& cellConnectivity) {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::initialise(
+  const peano4::CellConnectivity& cellConnectivity
+) {
   _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
   forEachSolver([this, &cellConnectivity](auto& solver) {
-    solver.performTimeStep(cellConnectivity, _refinementRequests);
+    solver.initialise(cellConnectivity, _refinementRequests, _parameters);
   });
   commitRefinementRequests(cellConnectivity);
   _refinementsOfTheRegrid.clear();
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::regrid(
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::performTimeStep(
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
+  forEachSolver([this, &cellConnectivity](auto& solver) {
+    solver.performTimeStep(cellConnectivity, _refinementRequests, std::as_const(_parameters));
+  });
+  commitRefinementRequests(cellConnectivity);
+  _refinementsOfTheRegrid.clear();
+}
+
+template <typename RuntimeParameters, typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::regrid(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Regrid&           regrid
 ) {
   _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
   forEachSolver([this, &cellConnectivity, &regrid](auto& solver) {
-    solver.regrid(cellConnectivity, regrid, _refinementRequests);
+    solver.regrid(cellConnectivity, regrid, _refinementRequests, std::as_const(_parameters));
   });
   commitRefinementRequests(cellConnectivity);
   deleteEraseRequestsOfRepeatedRefinements();
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::plot(
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::plot(
   const peano4::CellConnectivity& cellConnectivity,
   const tarch::plotter::Format    format,
   const std::string&              outputDirectory
 ) {
-  forEachSolver([&cellConnectivity, format, &outputDirectory](auto& solver) {
-    solver.plot(cellConnectivity, format, outputDirectory);
+  forEachSolver([this, &cellConnectivity, format, &outputDirectory](auto& solver) {
+    solver.plot(cellConnectivity, format, outputDirectory, std::as_const(_parameters));
   });
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity) {
-  forEachSolver([&cellConnectivity](auto& solver) { solver.recordLastTimeStamp(cellConnectivity); });
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::recordLastTimeStamp(
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  forEachSolver([this, &cellConnectivity](auto& solver) {
+    solver.recordLastTimeStamp(cellConnectivity, std::as_const(_parameters));
+  });
 }
 
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD const std::vector<peano4::RefinementRequest>&
-exahype2::SolverRepository<Solvers...>::getRefinementRequests() const {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::getRefinementRequests() const {
   return _requestsOfTheRun;
 }
 
@@ -188,9 +218,11 @@ exahype2::SolverRepository<Solvers...>::getRefinementRequests() const {
  * Collects the refinement requests of this rank. readValuesFromGlobalReduction() gathers them over
  * all ranks.
  */
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::commitRefinementRequests(const peano4::CellConnectivity& cellConnectivity) {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::commitRefinementRequests(
+  const peano4::CellConnectivity& cellConnectivity
+) {
   _localRequests        = _refinementRequests.getLocalRefinementRequests(cellConnectivity);
   _localRequestsPending = true;
 }
@@ -200,13 +232,13 @@ exahype2::SolverRepository<Solvers...>::commitRefinementRequests(const peano4::C
  * in _refinementsOfTheRegrid. Then adds the refine requests of _requestsOfTheRun to
  * _refinementsOfTheRegrid. A cell refines on its own request at most twice in one regrid.
  */
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::deleteEraseRequestsOfRepeatedRefinements() {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::deleteEraseRequestsOfRepeatedRefinements() {
   using Control = peano4::RefinementRequest::RefinementControl;
-  assertion(_localRequestsPending);
-  assertion(std::is_sorted(_requestsOfTheRun.begin(), _requestsOfTheRun.end()));
-  assertion(std::is_sorted(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end()));
+  ASSERTION(_localRequestsPending);
+  ASSERTION(std::is_sorted(_requestsOfTheRun.begin(), _requestsOfTheRun.end()));
+  ASSERTION(std::is_sorted(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end()));
   std::erase_if(_localRequests, [this](const peano4::RefinementRequest& request) {
     if (request.getRefinementControl() != Control::Erase) {
       return false;
@@ -214,7 +246,7 @@ exahype2::SolverRepository<Solvers...>::deleteEraseRequestsOfRepeatedRefinements
     peano4::RefinementRequest refinement = request;
     refinement.setRefinementControl(Control::Refine);
     return std::binary_search(_requestsOfTheRun.begin(), _requestsOfTheRun.end(), refinement)
-       and std::binary_search(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end(), refinement);
+      and std::binary_search(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end(), refinement);
   });
 
   const auto firstErase = std::partition_point(
@@ -223,7 +255,9 @@ exahype2::SolverRepository<Solvers...>::deleteEraseRequestsOfRepeatedRefinements
     [](const peano4::RefinementRequest& request) { return request.getRefinementControl() == Control::Refine; }
   );
   std::vector<peano4::RefinementRequest> refinements;
-  refinements.reserve(_refinementsOfTheRegrid.size() + static_cast<std::size_t>(firstErase - _requestsOfTheRun.begin()));
+  refinements.reserve(
+    _refinementsOfTheRegrid.size() + static_cast<std::size_t>(firstErase - _requestsOfTheRun.begin())
+  );
   std::set_union(
     _refinementsOfTheRegrid.begin(),
     _refinementsOfTheRegrid.end(),
@@ -238,9 +272,11 @@ exahype2::SolverRepository<Solvers...>::deleteEraseRequestsOfRepeatedRefinements
  * Adds the values of every solver and the number of committed refinement requests of this rank to
  * record.
  */
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record) {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::addLocalValuesToGlobalReduction(
+  tarch::mpi::ReductionRecord& record
+) {
   forEachSolver([&record](auto& solver) { solver.addLocalValuesToGlobalReduction(record); });
   _numberOfRequestsSlot = record.addSum(_localRequestsPending ? _localRequests.size() : 0U);
 }
@@ -249,9 +285,11 @@ exahype2::SolverRepository<Solvers...>::addLocalValuesToGlobalReduction(tarch::m
  * Passes the reduced values to every solver and gathers the requests over all ranks in a step in
  * which some rank requests a change. Every rank calls this function collectively.
  */
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record) {
+exahype2::SolverRepository<RuntimeParameters, Solvers...>::readValuesFromGlobalReduction(
+  const tarch::mpi::ReductionRecord& record
+) {
   forEachSolver([&record](auto& solver) { solver.readValuesFromGlobalReduction(record); });
   if (not _localRequestsPending) {
     return;

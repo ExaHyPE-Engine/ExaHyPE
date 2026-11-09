@@ -73,11 +73,12 @@ struct exahype2::fv::ApplyBoundaryConditions final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::CellConnectivity cellConnectivity{};
-  tarch::Span<const int>   boundaryFaces{};
-  typename FacePool::View  halo{};
-  typename FacePool::View  auxVarsHalo{};
-  double                   timeStamp{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              boundaryFaces{};
+  typename FacePool::View             halo{};
+  typename FacePool::View             auxVarsHalo{};
+  double                              timeStamp{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -210,13 +211,14 @@ struct exahype2::fv::UpdatePatches final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  typename CellPool::View      solution{};
-  typename FacePool::ConstView halo{};
-  typename FacePool::ConstView auxVarsHalo{};
-  double                       timeStamp{0.0};
-  double                       timeStepSize{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              cells{};
+  typename CellPool::View             solution{};
+  typename FacePool::ConstView        halo{};
+  typename FacePool::ConstView        auxVarsHalo{};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,
@@ -242,9 +244,10 @@ struct exahype2::fv::MeasurePatchEigenvalues final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  typename CellPool::ConstView solution{};
-  double                       timeStamp{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  typename CellPool::ConstView        solution{};
+  double                              timeStamp{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, double& accumulator) const;
 };
@@ -256,11 +259,12 @@ struct exahype2::fv::MeasurePatchErrors final {
 
   static constexpr int NumberOfNorms = exahype2::ErrorMeasurement::NumberOfNorms;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  typename CellPool::ConstView solution{};
-  double*                      errorsPerCell{nullptr};
-  double                       timeStamp{0.0};
-  double                       timeStepSize{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  typename CellPool::ConstView        solution{};
+  double*                             errorsPerCell{nullptr};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -280,6 +284,7 @@ struct exahype2::fv::PatchTransfer final {
   typename CellPool::ConstView source{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void copy(int slot, StoragePrecision* target, int itemOfChunk) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void interpolateFromParent(
     int               parentSlot,
     StoragePrecision* target,
@@ -287,6 +292,7 @@ struct exahype2::fv::PatchTransfer final {
     int               itemOfChunk,
     const double*     prepared
   ) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(
     const int*        childSlots,
     StoragePrecision* target,

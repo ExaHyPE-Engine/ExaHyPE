@@ -137,7 +137,6 @@ cmake .. -DCMAKE_CXX_COMPILER=$NVCPP -DCMAKE_C_COMPILER=$NVCPP ...
   We have seen this with Intel compiler when you use the Clang LLVM OpenMP
   runtime, i.e. use -fopenmp. Switch to -fiopenmp instead.
 
-
 # Linking
 
 - ***The linking fails for the tutorials even though I've followed all instructions***
@@ -185,16 +184,7 @@ undefined reference to for_write_seq_list
 
 # Runtime
 
-  - ***My unit tests fail in the StackTopologyTest***. We have found that GCC's
-    STL is buggy (confirmed in version 9.3.0), although we do not know if this bug
-    is found within the unordered_set, the bitset or the
-    pair implementation. Anyway, a newer version of GCC (12 for example)
-    seem to fix this issue. If you use Intel's toolchain or literally any LLVM,
-    you might have to manually load a newer GNU version after you've loaded your
-    core compiler.
-
-  - ***sycl-ls shows OpenCL devices and no Level Zero device (Intel PVC)*** This can happen if the following environment variable was set ZET_ENABLE_PROGRAM_DEBUGGING=1. Unset it to fix the issue.
-
+  - ***sycl-ls lists OpenCL devices only (Intel PVC)*** This can happen if the following environment variable was set ZET_ENABLE_PROGRAM_DEBUGGING=1. Unset it to fix the issue.
 
 # Python API
 
@@ -231,7 +221,6 @@ undefined reference to for_write_seq_list
   \ref page_compiler_specific_settings_home "vendor-specific toolchain" fitting to your system/compiler. After that,
   amend your log filter. See \ref tarch_logging for more info.
 
-
 # Debugging
 
 - ***I can't see my log/trace statements.*** There's a whole set of
@@ -241,7 +230,6 @@ undefined reference to for_write_seq_list
       `-DPEANO_DEBUG=1`.
   -   Link to libraries which are built with a reasonable
       diagnostic switch.
-
 
 # MPI troubleshooting
 
@@ -255,7 +243,6 @@ undefined reference to for_write_seq_list
   built-in deadlock detector with a default threshold of 600 seconds inside one
   wait. Use `--deadlockTimeout` to raise the threshold or disable it.
 
-
 C++ core
 --------
 
@@ -265,12 +252,11 @@ C++ core
     boundary. A solver supplies its own geometry predicate for an embedded
     boundary inside the Cartesian domain.
 
-
 Parallelisation
 ---------------
 
 -   **Why does adaptive refinement need several regrids?** A refinement
-    request names a cell that already exists and can expose one additional
+    request selects a cell that already exists and can expose one additional
     level. The next criterion evaluation can then request cells on that new
     level. Each regrid rebuilds the tree and the cell connectivity, then transfers
     the solution through `peano4::Regrid` into the target rank ownership.
@@ -305,8 +291,8 @@ Parallelisation
     for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++)
       Q[i] = 0.0;
 
-    as a first step within `initialCondition()`. This leaves no garbage
-    in the data. Further to that,
+    as a first step within `initialCondition()`. This initialises every
+    entry of the data. Further to that,
     also set proper boundary data for any auxiliary value. You might not
     need these data, as you do not use the auxiliary variables to
     exchange information between patches, but you have to set proper
@@ -325,7 +311,7 @@ Parallelisation
     maximum function:
 
     // Naive code leading into problems:
-    assertion(tarch::la::greaterEquals(p,0.0), p);
+    ASSERTION(tarch::la::greaterEquals(p,0.0), p);
     const double c = std::sqrt( gamma * p * irho );
 
     // working code:

@@ -7,8 +7,8 @@
 /**
  * Creates, queries and frees MPI communicators, info objects, datatypes and reduction operations.
  * Every call checks the return value of MPI and terminates with the operation and the source
- * location of its caller where MPI fails. MPI offers no non-blocking split and a split that a rank
- * never joins blocks without a report.
+ * location of its caller where MPI fails. MPI splits a communicator only in a blocking call. A split
+ * that a rank never joins blocks without a report.
  */
 namespace tarch::mpi {
   int splitCommunicator(

@@ -93,7 +93,7 @@ namespace tarch::accelerator {
     if (requested == tarch::accelerator::TeamRange::BackendDefault) {
       return tarch::accelerator::OmptThreadsPerTeam;
     }
-    assertion(requested > 0, requested);
+    ASSERTION(requested > 0, requested);
     const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
     return std::min(tarch::accelerator::OmptThreadsPerTeam, warps * tarch::accelerator::ThreadsPerWarp);
   }
@@ -103,7 +103,7 @@ namespace tarch::accelerator {
    * TeamScratchBytes.
    */
   INLINE_METHOD int getTeamScratchBytes(const int requested) {
-    assertion(
+    ASSERTION(
       requested == tarch::accelerator::TeamRange::BackendDefault
         or (requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes),
       requested
@@ -113,7 +113,7 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -127,8 +127,8 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
@@ -145,9 +145,9 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
@@ -166,23 +166,40 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
-    assertion(range.n >= 0, range.n);
+#if defined(__INTEL_LLVM_COMPILER)
+  // The OpenMP outlining pass of the Intel compiler icpx crashes on a host function that contains a
+  // forcibly inlined team launch and a host parallel region.
+  inline
+#else
+  INLINE_METHOD
+#endif
+    void parallelFor(const TeamRange& range, const Functor functor) {
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
     const int device        = tarch::accelerator::getCurrentDevice();
     const int numberOfTeams = range.n;
     const int threads       = tarch::accelerator::getTeamThreads(range.threads);
+    // The Intel compiler icpx places a static with omp_pteam_mem_alloc in global memory for all
+    // teams. Clang moves a local of the teams region onto the stack of every thread.
 #pragma omp target teams num_teams(numberOfTeams) thread_limit(threads) firstprivate(functor) device(device)
-#pragma omp parallel num_threads(threads)
     {
-      alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
-      static int                                         teamVotes[OmptThreadsPerTeam];
+#if defined(__INTEL_LLVM_COMPILER)
+      alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
+      int                                         teamVotes[OmptThreadsPerTeam];
+#endif
+#pragma omp parallel num_threads(threads)
+      {
+#if not defined(__INTEL_LLVM_COMPILER)
+        alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
+        static int                                         teamVotes[OmptThreadsPerTeam];
 #pragma omp allocate(teamScratch, teamVotes) allocator(omp_pteam_mem_alloc)
-      for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
-        functor(team, tarch::accelerator::OmptTeam{teamScratch, teamVotes});
+#endif
+        for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
+          functor(team, tarch::accelerator::OmptTeam{teamScratch, teamVotes});
 #pragma omp barrier
+        }
       }
     }
   }

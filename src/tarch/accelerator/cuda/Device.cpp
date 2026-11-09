@@ -23,28 +23,28 @@ namespace {
 
 bool
 tarch::accelerator::Device::init() {
-  logDebug("-----------------------------------------");
+  LOG_DEBUG("-----------------------------------------");
   CHECK_CUDA_ERROR(cudaGetDeviceCount(&numberOfDevices));
   for (int device = 0; device < numberOfDevices; device++) {
     cudaDeviceProp properties{};
     CHECK_CUDA_ERROR(cudaGetDeviceProperties(&properties, device));
 
-    logInfo("[" << device << "]: " << properties.name);
-    logDebug("  " << properties.major << "." << properties.minor << " CC");
-    logDebug("  " << properties.totalGlobalMem / (1024 * 1024) << " MB global memory");
-    logDebug("  " << properties.totalConstMem << " bytes constant memory");
-    logDebug("  " << properties.multiProcessorCount << " SMs");
-    logDebug("  " << properties.maxBlocksPerMultiProcessor << " blocks per SM");
-    logDebug("  " << properties.maxThreadsPerMultiProcessor << " threads per SM");
-    logDebug("  " << properties.regsPerMultiprocessor << " registers per SM");
-    logDebug("  " << properties.sharedMemPerMultiprocessor << " bytes shared memory per SM");
-    logDebug("  " << properties.maxThreadsPerBlock << " threads per block");
-    logDebug("  " << properties.regsPerBlock << " registers per block");
-    logDebug("  " << properties.sharedMemPerBlock << " bytes shared memory per block");
-    logDebug("  " << properties.warpSize << " threads per warp");
-    logDebug("  " << properties.asyncEngineCount << " asynchronous engines");
+    LOG_INFO("[" << device << "]: " << properties.name);
+    LOG_DEBUG("  " << properties.major << "." << properties.minor << " CC");
+    LOG_DEBUG("  " << properties.totalGlobalMem / (1024 * 1024) << " MB global memory");
+    LOG_DEBUG("  " << properties.totalConstMem << " bytes constant memory");
+    LOG_DEBUG("  " << properties.multiProcessorCount << " SMs");
+    LOG_DEBUG("  " << properties.maxBlocksPerMultiProcessor << " blocks per SM");
+    LOG_DEBUG("  " << properties.maxThreadsPerMultiProcessor << " threads per SM");
+    LOG_DEBUG("  " << properties.regsPerMultiprocessor << " registers per SM");
+    LOG_DEBUG("  " << properties.sharedMemPerMultiprocessor << " bytes shared memory per SM");
+    LOG_DEBUG("  " << properties.maxThreadsPerBlock << " threads per block");
+    LOG_DEBUG("  " << properties.regsPerBlock << " registers per block");
+    LOG_DEBUG("  " << properties.sharedMemPerBlock << " bytes shared memory per block");
+    LOG_DEBUG("  " << properties.warpSize << " threads per warp");
+    LOG_DEBUG("  " << properties.asyncEngineCount << " asynchronous engines");
   }
-  logDebug("-----------------------------------------");
+  LOG_DEBUG("-----------------------------------------");
 
   return isInitialised();
 }
@@ -54,7 +54,7 @@ tarch::accelerator::Device::init() {
  */
 void
 tarch::accelerator::Device::shutdown() {
-  assertion(
+  ASSERTION(
     tarch::accelerator::getCurrentDevice() < numberOfDevices,
     tarch::accelerator::getCurrentDevice(),
     numberOfDevices
@@ -90,7 +90,7 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
 
 /**
  * Returns whether the MPI library sends and receives CUDA device buffers, or std::nullopt for an
- * MPI library that answers no such query.
+ * MPI library that cannot answer this query.
  */
 std::optional<bool>
 tarch::accelerator::Device::isMPIGPUAware() const {

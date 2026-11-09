@@ -3,7 +3,7 @@
 
 /**
  * Returns the entry valueIndex, counted from zero, of row as the fundamental type T. The last entry
- * of row needs no trailing separator. A missing or unparsable entry throws std::runtime_error.
+ * of row may end without a trailing separator. A missing or unparsable entry throws std::runtime_error.
  */
 template <class T>
 INLINE_METHOD T

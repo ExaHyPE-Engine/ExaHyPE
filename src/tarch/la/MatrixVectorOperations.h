@@ -20,11 +20,13 @@ namespace tarch::la {
     const Matrix<2, 2, Scalar>& matrix,
     const Vector<2, Scalar>&    vector
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> multiply(
     const Matrix<3, 3, Scalar>& matrix,
     const Vector<3, Scalar>&    vector
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> multiply(
     const Matrix<4, 4, Scalar>& matrix,
@@ -46,6 +48,7 @@ namespace tarch::la {
     const Vector<2, Scalar>&    v,
     Vector<2, Scalar>&          r
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD void matVec(
     const Matrix<3, 3, Scalar>& matrix,
@@ -53,6 +56,7 @@ namespace tarch::la {
     const Vector<3, Scalar>&    v,
     Vector<3, Scalar>&          r
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD void matVec(
     const Matrix<4, 4, Scalar>& matrix,
@@ -72,11 +76,13 @@ namespace tarch::la {
     const Matrix<2, 2, Scalar>& matrix,
     const Vector<2, Scalar>&    vector
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> operator*(
     const Matrix<3, 3, Scalar>& matrix,
     const Vector<3, Scalar>&    vector
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> operator*(
     const Matrix<4, 4, Scalar>& matrix,

@@ -16,8 +16,8 @@
 
 namespace {
   /**
-   * Restricts thread to the logical processors of the OpenMP places that no thread of the team
-   * occupies. Inside a parallel region, without places, or with every place occupied, thread keeps
+   * Restricts thread to the logical processors of the OpenMP places outside the places of the team.
+   * Inside a parallel region, without places, or with every place occupied, thread keeps
    * the affinity that it inherits from the calling thread. The last case and a failed binding log a
    * warning.
    */
@@ -52,11 +52,11 @@ namespace {
     }
     if (numberOfProcessors > 0) {
       if (pthread_setaffinity_np(thread.native_handle(), sizeof(processors), &processors) != 0) {
-        logWarning("The communication thread cannot bind to the CPUs that no OpenMP thread uses.");
+        LOG_WARNING("The communication thread cannot bind to the CPUs outside the OpenMP threads.");
       }
     } else {
-      logWarning(
-        "The communication thread needs a CPU that no OpenMP thread uses. Set OMP_NUM_THREADS below "
+      LOG_WARNING(
+        "The communication thread needs a CPU beside the CPUs of the OpenMP threads. Set OMP_NUM_THREADS below "
         "the number of CPUs of a rank."
       );
     }
@@ -100,7 +100,7 @@ tarch::mpi::HelperThread::~HelperThread() { stop(); }
  */
 void
 tarch::mpi::HelperThread::start() {
-  assertion(not _thread.joinable());
+  ASSERTION(not _thread.joinable());
 
   _stopRequested.store(false, std::memory_order_relaxed);
   _hasFinished.store(false, std::memory_order_relaxed);

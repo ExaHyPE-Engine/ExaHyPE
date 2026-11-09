@@ -28,7 +28,8 @@ tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                  Q,
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
@@ -59,7 +60,8 @@ tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
 void
 tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
-  const double* const NOALIAS Q
+  const double* const NOALIAS Q,
+  const RuntimeParameters&    parameters
 ) {
   static_assert(
     NumberOfObservables == Pressure + 1,

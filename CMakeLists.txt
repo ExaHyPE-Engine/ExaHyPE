@@ -34,17 +34,17 @@ if(NOT GIT_BRANCH)
   elseif(DEFINED ENV{CI_COMMIT_REF_NAME} AND NOT "$ENV{CI_COMMIT_REF_NAME}" STREQUAL "")
     set(GIT_BRANCH "$ENV{CI_COMMIT_REF_NAME}")
   else()
-    set(GIT_BRANCH "unknown")
+    set(GIT_BRANCH "Unknown")
   endif()
 endif()
 if(NOT GIT_COMMIT_HASH)
-  set(GIT_COMMIT_HASH "unknown")
+  set(GIT_COMMIT_HASH "Unknown")
 endif()
 if(NOT GIT_COMMIT_MESSAGE)
-  set(GIT_COMMIT_MESSAGE "unknown")
+  set(GIT_COMMIT_MESSAGE "Unknown")
 endif()
 if(NOT GIT_COMMIT_TIMESTAMP)
-  set(GIT_COMMIT_TIMESTAMP "unknown")
+  set(GIT_COMMIT_TIMESTAMP "Unknown")
 endif()
 
 escape_for_cpp_string_literal("${GIT_BRANCH}" GIT_BRANCH_ESCAPED)
@@ -53,6 +53,8 @@ escape_for_cpp_string_literal("${GIT_COMMIT_MESSAGE}" GIT_COMMIT_MESSAGE_ESCAPED
 
 message(STATUS "Revision: ${GIT_BRANCH} -m \"${GIT_COMMIT_MESSAGE}\" (${GIT_COMMIT_HASH}) ${GIT_COMMIT_TIMESTAMP}")
 
+# CMAKE_NOT_USING_CONFIG_FLAGS stops CMake from caching flags for its predefined build types.
+set(CMAKE_NOT_USING_CONFIG_FLAGS TRUE)
 project(Peano
   DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes"
   LANGUAGES
@@ -86,8 +88,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+option(BUILD_TESTING "Build the unit tests" OFF)
 include(CTest)
-enable_testing()
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED)

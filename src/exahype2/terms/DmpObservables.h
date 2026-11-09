@@ -4,7 +4,11 @@
 
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
-  concept HasDmpObservables = requires(Precision* const observables, const Precision* const Q) {
-    { SolverType::mapDmpObservables(observables, Q) } -> std::same_as<void>;
+  concept HasDmpObservables = requires(
+    Precision* const                              observables,
+    const Precision* const                        Q,
+    const typename SolverType::RuntimeParameters& parameters
+  ) {
+    { SolverType::mapDmpObservables(observables, Q, parameters) } -> std::same_as<void>;
   };
 } // namespace exahype2::terms

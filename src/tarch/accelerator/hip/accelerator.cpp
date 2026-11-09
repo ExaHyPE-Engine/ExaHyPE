@@ -20,38 +20,38 @@ namespace {
 void*
 tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
   void* data = nullptr;
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   activateDevice(device);
   CHECK_HIP_ERROR(hipMalloc(&data, sizeInBytes));
-  assertion(data);
+  ASSERTION(data);
   return data;
 }
 
 void*
 tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int device) {
   void* data = nullptr;
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   CHECK_HIP_ERROR(hipHostMalloc(&data, sizeInBytes));
-  assertion(data);
+  ASSERTION(data);
   return data;
 }
 
 void
 tarch::accelerator::freeDeviceMemory(void* data, int device) {
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   activateDevice(device);
   CHECK_HIP_ERROR(hipFree(data));
 }
 
 void
 tarch::accelerator::freePinnedMemory(void* data, int device) {
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   CHECK_HIP_ERROR(hipHostFree(data));
 }
 
 void
 tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device) {
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   activateDevice(device);
   CHECK_HIP_ERROR(hipMemcpyAsync(target, source, sizeInBytes, hipMemcpyHostToDevice, getDeviceStream()));
   // A copy from pinned host memory returns before the transfer ends. The caller could then overwrite its source.
@@ -70,7 +70,7 @@ tarch::accelerator::copyToPinnedMemory(
 
 void
 tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device) {
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   activateDevice(device);
   CHECK_HIP_ERROR(hipMemcpyAsync(target, source, sizeInBytes, hipMemcpyDeviceToHost, getDeviceStream()));
   // A copy into pinned host memory returns before the transfer ends. The caller could then read stale values.

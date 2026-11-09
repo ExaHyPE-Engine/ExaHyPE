@@ -35,17 +35,18 @@ struct exahype2::fv::timestepping::SingleStep final {
     typename Terms
   >
   INLINE_METHOD GPU_CALLABLE_METHOD static double applyToVolume(
-    int                                          volume,
-    const StoragePrecision* NOALIAS              inputPatch,
-    const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-    const StoragePrecision* NOALIAS const        faceAuxVarsPatches[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          boundaryFaces,
-    Terms&                                       terms,
-    StoragePrecision* NOALIAS                    updatedState
+    int                                           volume,
+    const StoragePrecision* NOALIAS               inputPatch,
+    const StoragePrecision* NOALIAS const         faceInputPatches[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS const         faceAuxVarsPatches[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    int                                           boundaryFaces,
+    Terms&                                        terms,
+    StoragePrecision* NOALIAS                     updatedState,
+    const typename SolverType::RuntimeParameters& parameters
   );
 };
 TARGET_DECLARE_END

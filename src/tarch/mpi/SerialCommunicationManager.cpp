@@ -17,7 +17,7 @@ tarch::mpi::SerialCommunicationManager::progress() {
 }
 
 /**
- * Polls until every poller is idle. A caller re-arms no poller during the call.
+ * Polls until every poller is idle. A caller re-arms its pollers only after the call returns.
  */
 void
 tarch::mpi::SerialCommunicationManager::finishPendingWork() {

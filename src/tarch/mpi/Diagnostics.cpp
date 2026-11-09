@@ -38,7 +38,7 @@ tarch::mpi::mpiReturnValueToString(const int result) {
 
   switch (errorClass) {
   case MPI_SUCCESS:
-    out << "MPI_SUCCESS [no error]";
+    out << "MPI_SUCCESS [success]";
     break;
   case MPI_ERR_BUFFER:
     out << "MPI_ERR_BUFFER [invalid buffer pointer]";
@@ -114,13 +114,13 @@ tarch::mpi::checkReturnValue(const int result, const char* operation, const std:
 
 void
 tarch::mpi::Diagnostics::setTimeoutWarning(const double valueInSeconds) {
-  assertion(valueInSeconds >= 0.0, valueInSeconds);
+  ASSERTION(valueInSeconds >= 0.0, valueInSeconds);
   _timeoutWarning = std::chrono::duration<double>(valueInSeconds);
 }
 
 void
 tarch::mpi::Diagnostics::setDeadlockTimeout(const double valueInSeconds) {
-  assertion(valueInSeconds >= 0.0, valueInSeconds);
+  ASSERTION(valueInSeconds >= 0.0, valueInSeconds);
   _deadlockTimeout = std::chrono::duration<double>(valueInSeconds);
 }
 
@@ -160,9 +160,9 @@ tarch::mpi::Diagnostics::plotMessageQueues() {
   MPI_Status status;
   MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
   if (flag == 0) {
-    logError("The MPI queue is empty.");
+    LOG_ERROR("The MPI queue is empty.");
   } else {
-    logError(
+    LOG_ERROR(
       "The MPI queue still contains a message from rank " << status.MPI_SOURCE << " with tag " << status.MPI_TAG << "."
     );
   }
@@ -280,7 +280,7 @@ tarch::mpi::Diagnostics::reportRequest(
       (sequence % 2U) != 0U
       or not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)
     ) {
-      // The completion removes the entry at this moment and leaves nothing to report.
+      // The completion removes the entry at this moment.
       return true;
     }
     if (slot.key.load(std::memory_order_relaxed) != request) {
@@ -309,7 +309,7 @@ tarch::mpi::Diagnostics::reportRequest(
     slot.sequence.store(sequence + 2U, std::memory_order_release);
 
     if (warnNow) {
-      logWarning(
+      LOG_WARNING(
         waitOperation << " at " << locationToString(waitLocation) << " still waits for request from " << originOperation
                       << " posted at " << locationToString(originLocation) << " (partner=" << partner << ", tag=" << tag
                       << ")"

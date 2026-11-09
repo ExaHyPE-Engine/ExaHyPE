@@ -22,8 +22,8 @@ exahype2::dg::getQuadraturePoint(
 ) {
   tarch::la::Vector<DIMENSIONS, double> position;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(index(axis) >= 0, index);
-    assertion(cellSize(axis) > 0.0, cellSize);
+    ASSERTION(index(axis) >= 0, index);
+    ASSERTION(cellSize(axis) > 0.0, cellSize);
     const double offsetFromCentre = static_cast<double>(quadraturePoints[index(axis)]) - 0.5;
     position(axis)                = std::fma(offsetFromCentre, cellSize(axis), cellCentre(axis));
   }
@@ -44,7 +44,7 @@ exahype2::dg::getLagrangeBasisFunction1D(
   const double               offsetFromCentre
 ) {
   static_assert(NodesPerAxis > 0);
-  assertion(basisFunction >= 0 and basisFunction < NodesPerAxis, basisFunction);
+  ASSERTION(basisFunction >= 0 and basisFunction < NodesPerAxis, basisFunction);
 
   const double ownOffset = static_cast<double>(nodes[basisFunction]) - 0.5;
   const auto   getFactor = [&](const int node) {
@@ -77,13 +77,13 @@ exahype2::dg::forEachNode(
   Functor&&                                    functor
 ) {
   static_assert(NodesPerAxis > 0 and Values > 0);
-  assertion(quadraturePoints != nullptr);
-  assertion(quadratureWeights != nullptr);
-  assertion(values != nullptr);
+  ASSERTION(quadraturePoints != nullptr);
+  ASSERTION(quadratureWeights != nullptr);
+  ASSERTION(values != nullptr);
 
   double cellVolume = 1.0;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(cellSize(axis) > 0.0, cellSize, axis);
+    ASSERTION(cellSize(axis) > 0.0, cellSize, axis);
     cellVolume *= cellSize(axis);
   }
 
@@ -119,10 +119,10 @@ exahype2::dg::evaluatePolynomial(
   const tarch::la::Vector<DIMENSIONS, double>& position,
   const int                                    unknown
 ) {
-  assertion(order >= 0, order);
-  assertion(unknown >= 0 and unknown < unknownsPerNode, unknown, unknownsPerNode);
-  assertion(quadratureNodes != nullptr);
-  assertion(values != nullptr);
+  ASSERTION(order >= 0, order);
+  ASSERTION(unknown >= 0 and unknown < unknownsPerNode, unknown, unknownsPerNode);
+  ASSERTION(quadratureNodes != nullptr);
+  ASSERTION(values != nullptr);
 
   const tarch::la::Vector<DIMENSIONS, double> cellOffset = cellCentre - 0.5 * cellSize;
 
@@ -141,7 +141,7 @@ exahype2::dg::evaluatePolynomial(
         }
       }
     }
-    assertion(denominator != 0.0, denominator);
+    ASSERTION(denominator != 0.0, denominator);
     const int linearisedNode = peano4::dLinearised(node, order + 1);
     interpolatedValue += numerator / denominator * values[linearisedNode * unknownsPerNode + unknown];
   });
@@ -167,9 +167,9 @@ exahype2::dg::computeReferencesAndBoundsOfTransferTerms(
   const double           largestWeight
 ) {
   static_assert(Values > 0);
-  assertion(numberOfArrays > 0, numberOfArrays);
-  assertion(nodesPerArray > 0, nodesPerArray);
-  assertion(std::isfinite(largestWeight) and largestWeight >= 0.0, largestWeight);
+  ASSERTION(numberOfArrays > 0, numberOfArrays);
+  ASSERTION(nodesPerArray > 0, nodesPerArray);
+  ASSERTION(std::isfinite(largestWeight) and largestWeight >= 0.0, largestWeight);
   double smallest[Values];
   double largest[Values];
   for (int value = 0; value < Values; value++) {
@@ -177,11 +177,11 @@ exahype2::dg::computeReferencesAndBoundsOfTransferTerms(
     largest[value]  = smallest[value];
   }
   for (int array = 0; array < numberOfArrays; array++) {
-    assertion(arrays[array] != nullptr, array);
+    ASSERTION(arrays[array] != nullptr, array);
     for (int node = 0; node < nodesPerArray; node++) {
       for (int value = 0; value < Values; value++) {
         const auto candidate = static_cast<double>(arrays[array][node * Values + value]);
-        assertion(std::isfinite(candidate), array, node, value, candidate);
+        ASSERTION(std::isfinite(candidate), array, node, value, candidate);
         smallest[value] = candidate < smallest[value] ? candidate : smallest[value];
         largest[value]  = candidate > largest[value] ? candidate : largest[value];
       }
@@ -216,7 +216,7 @@ exahype2::dg::computeReferenceAndBound(
   reference = 0.5 * (smallest + largest);
   bound     = std::max(std::abs(reference), largestWeight * (largest - smallest));
   varies    = largest != smallest;
-  assertion(std::isfinite(bound), smallest, largest, largestWeight);
+  ASSERTION(std::isfinite(bound), smallest, largest, largestWeight);
 }
 
 /**
@@ -227,8 +227,8 @@ template <int Factors>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::dg::getLargestProductOfEntries(const double* NOALIAS const matrix, const int numberOfEntries) {
   static_assert(Factors >= 0);
-  assertion(matrix != nullptr);
-  assertion(numberOfEntries > 0, numberOfEntries);
+  ASSERTION(matrix != nullptr);
+  ASSERTION(numberOfEntries > 0, numberOfEntries);
   double largestMagnitude = 0.0;
   for (int entry = 0; entry < numberOfEntries; entry++) {
     largestMagnitude = std::max(largestMagnitude, std::abs(matrix[entry]));
@@ -334,11 +334,11 @@ template <int InputDofs, int OutputDofs, typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ProjectionWeightsOfDofPairs<InputDofs, OutputDofs, Value>
 exahype2::dg::getProjectionWeightsOfDofPairs(const Value* NOALIAS const matrix) {
   using Weights = exahype2::dg::ProjectionWeightsOfDofPairs<InputDofs, OutputDofs, Value>;
-  assertion(matrix != nullptr);
+  ASSERTION(matrix != nullptr);
 #if PEANO_ASSERTIONS
   for (int inputDof = 0; inputDof < InputDofs; inputDof++) {
     for (int outputDof = 0; outputDof < OutputDofs; outputDof++) {
-      assertion(
+      ASSERTION(
         matrix[inputDof * OutputDofs + outputDof]
           == matrix[(InputDofs - 1 - inputDof) * OutputDofs + OutputDofs - 1 - outputDof],
         inputDof,
@@ -393,17 +393,18 @@ exahype2::dg::differentiateAlongAxis(
     NumberOfEntries % PEANO_WITH_SIMDLEN == 0,
     "A derivative along an axis runs over a number of entries that fills whole vectors."
   );
-  assertion(resultStride >= NumberOfEntries and valueStride >= NumberOfEntries, resultStride, valueStride);
-  assertion(
+  ASSERTION(resultStride >= NumberOfEntries and valueStride >= NumberOfEntries, resultStride, valueStride);
+  ASSERTION(
     static_cast<const void*>(result) != static_cast<const void*>(values) or resultStride == valueStride,
     resultStride,
     valueStride
   );
 
-  // The vector loop keeps every node of the line in registers. A reflection of the axis maps the
-  // centre node onto itself. An even node count has two centre nodes that swap under the
-  // reflection. Their mean swaps its sign with the values. The difference of the centre node of an
-  // odd node count is zero.
+  // The vector loop keeps every node of the line in registers. A compiler vectorises the innermost
+  // loop only. The unroll hints unroll the loops over the nodes up to the node count of the highest
+  // ADER-DG order. A reflection of the axis maps the centre node onto itself. An even node count has two
+  // centre nodes that swap under the reflection. Their mean swaps its sign with the values. The
+  // difference of the centre node of an odd node count is zero.
   constexpr int CentreNode = NumberOfNodes / 2;
   SIMD()
   for (int entry = 0; entry < NumberOfEntries; entry++) {
@@ -414,6 +415,7 @@ exahype2::dg::differentiateAlongAxis(
 
     ComputePrecision pairSums[Weights::PairSlots];
     ComputePrecision pairDifferences[Weights::PairSlots];
+    UNROLL(16)
     for (int pair = 0; pair < Weights::Pairs; pair++) {
       // productRoundedOnce() rounds every scaled difference on its own. A device compiler then cannot
       // fuse the last scaling of one node of the pair into the sum.
@@ -426,11 +428,13 @@ exahype2::dg::differentiateAlongAxis(
       pairDifferences[pair] = lower - upper;
     }
 
+    UNROLL(16)
     for (int targetNode = 0; targetNode < NumberOfNodes; targetNode++) {
       AccumulatePrecision accumulator = static_cast<AccumulatePrecision>(0);
       if constexpr (not OverwriteResult) {
         accumulator = static_cast<AccumulatePrecision>(result[targetNode * resultStride + entry]);
       }
+      UNROLL(16)
       for (int pair = 0; pair < Weights::Pairs; pair++) {
         accumulator = accumulator
           + static_cast<AccumulatePrecision>(pairSums[pair] * derivativeWeights.sumWeights[targetNode][pair]);
@@ -472,7 +476,7 @@ exahype2::dg::computeNodalGradients(
   const auto derivativeWeights = exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator);
   UNROLL(DIMENSIONS)
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(cellSize(axis) > 0.0, cellSize);
+    ASSERTION(cellSize(axis) > 0.0, cellSize);
     const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
     for (int line = 0; line < NodesPerFace; line++) {
       const int firstCellNode = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, line);
@@ -533,8 +537,8 @@ exahype2::dg::extrapolateLineToFacePair(
 
   using AccumulatePrecision = std::common_type_t<FieldPrecision, FacePrecision, CoefficientPrecision>;
 
-  assertion(direction >= 0 and direction < DIMENSIONS, direction);
-  assertion(faceNode >= 0 and faceNode < exahype2::dg::getNodesPerFace(NodesPerAxis), faceNode);
+  ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
+  ASSERTION(faceNode >= 0 and faceNode < exahype2::dg::getNodesPerFace(NodesPerAxis), faceNode);
 
   const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, direction);
   const int firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, direction, faceNode);
@@ -660,7 +664,7 @@ exahype2::dg::extrapolateNodalFieldToFaces(
   const int                                 itemStride
 ) {
   constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
-  assertion(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
+  ASSERTION(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
   for (int item = firstItem; item < DIMENSIONS * NodesPerFace; item += itemStride) {
     const int direction = item / NodesPerFace;
     exahype2::dg::extrapolateLineToFacePair<
@@ -716,9 +720,9 @@ exahype2::dg::projectLinesAlongAxis(
   constexpr int ValuesPerItem = Item == exahype2::dg::ProjectionItem::Line ? ValuesPerDof : 1;
   constexpr int ItemsPerLine  = ValuesPerDof / ValuesPerItem;
   static_assert(Axis >= 0 and Axis < Dimensions, "A projection runs along an axis of the field.");
-  static_assert(((ProjectedAxes >> Axis) & 1) == 0, "A projection runs along an axis that no earlier one used.");
-  assertion(source != nullptr and matrix != nullptr);
-  assertion(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
+  static_assert(((ProjectedAxes >> Axis) & 1) == 0, "A projection runs along every axis at most once.");
+  ASSERTION(source != nullptr and matrix != nullptr);
+  ASSERTION(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
 
   int sourceStrides[Dimensions];
   int targetStrides[Dimensions];
@@ -886,10 +890,10 @@ exahype2::dg::projectTensorProductStage(
   constexpr int Values        = ValuesPerDof;
   constexpr int ValuesPerItem = Item == exahype2::dg::ProjectionItem::Line ? ValuesPerDof : 1;
   constexpr int ItemsPerLine  = ValuesPerDof / ValuesPerItem;
-  assertion(stage >= 0 and stage < exahype2::dg::getStagesOfTensorProduct<Dimensions>(), stage);
-  assertion(firstItem >= 0 and firstItem < itemStride, firstItem, itemStride);
-  assertion(input != nullptr and output != nullptr and matrix != nullptr);
-  assertion(Dimensions == 1 or scratch != nullptr);
+  ASSERTION(stage >= 0 and stage < exahype2::dg::getStagesOfTensorProduct<Dimensions>(), stage);
+  ASSERTION(firstItem >= 0 and firstItem < itemStride, firstItem, itemStride);
+  ASSERTION(input != nullptr and output != nullptr and matrix != nullptr);
+  ASSERTION(Dimensions == 1 or scratch != nullptr);
 
   // Returns the first item of the projection whose lines start at lineOffset in the sequence of the
   // caller.
@@ -1108,7 +1112,7 @@ exahype2::dg::projectTensorProduct(const Value* const input, Value* const output
   using Weights = exahype2::dg::ProjectionWeightsOfDofPairs<InputDofs, OutputDofs, Value>;
   constexpr int ScratchValues =
     exahype2::dg::getScratchValuesOfTensorProduct<Dimensions, InputDofs, OutputDofs, ValuesPerDof>();
-  assertion(input != nullptr and output != nullptr and matrix != nullptr);
+  ASSERTION(input != nullptr and output != nullptr and matrix != nullptr);
   Value          scratch[ScratchValues > 0 ? ScratchValues : 1];
   const Weights  weights    = Rule == exahype2::dg::ProjectionRule::Butterfly
     ? exahype2::dg::getProjectionWeightsOfDofPairs<InputDofs, OutputDofs>(matrix)
@@ -1151,9 +1155,9 @@ exahype2::dg::differentiateFluxInPlace(
   constexpr int FluxStride   = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride   = CellLayout::NodesPerCell * FluxStride;
 
-  assertion(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
+  ASSERTION(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
+    ASSERTION(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
   }
 
   const auto derivativeWeights = exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator);
@@ -1167,7 +1171,7 @@ exahype2::dg::differentiateFluxInPlace(
       fluxLine,
       nodeStride,
       derivativeWeights,
-      inverseCellSize(axis)
+      inverseCellSize.getData()[axis]
     );
   };
 
@@ -1308,10 +1312,10 @@ exahype2::dg::interpolateFace(
   static_assert(NodesPerAxis > 0 and Values > 0);
   constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
   constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
-  assertion(coarseFace != nullptr);
-  assertion(fineFace != nullptr);
-  assertion(prolongationMatrix1D != nullptr);
-  assertion(subface >= 0 and subface < peano4::SubfacesPerFace, subface);
+  ASSERTION(coarseFace != nullptr);
+  ASSERTION(fineFace != nullptr);
+  ASSERTION(prolongationMatrix1D != nullptr);
+  ASSERTION(subface >= 0 and subface < peano4::SubfacesPerFace, subface);
 
   const double* const firstMatrix =
     prolongationMatrix1D + static_cast<std::ptrdiff_t>(subface % SubdivisionFactor) * EntriesPerInterval;
@@ -1397,18 +1401,18 @@ exahype2::dg::storeReferenceAndBoundOfTransferTerm(
   double* NOALIAS const  referencesAndBounds
 ) {
   static_assert(Values > 0);
-  assertion(numberOfArrays > 0, numberOfArrays);
-  assertion(nodesPerArray > 0, nodesPerArray);
-  assertion(value >= 0 and value < Values, value);
-  assertion(std::isfinite(largestWeight) and largestWeight >= 0.0, largestWeight);
-  assertion(referencesAndBounds != nullptr);
+  ASSERTION(numberOfArrays > 0, numberOfArrays);
+  ASSERTION(nodesPerArray > 0, nodesPerArray);
+  ASSERTION(value >= 0 and value < Values, value);
+  ASSERTION(std::isfinite(largestWeight) and largestWeight >= 0.0, largestWeight);
+  ASSERTION(referencesAndBounds != nullptr);
   double smallest = static_cast<double>(arrays[0][value]);
   double largest  = smallest;
   for (int array = 0; array < numberOfArrays; array++) {
-    assertion(arrays[array] != nullptr, array);
+    ASSERTION(arrays[array] != nullptr, array);
     for (int node = 0; node < nodesPerArray; node++) {
       const auto candidate = static_cast<double>(arrays[array][node * Values + value]);
-      assertion(std::isfinite(candidate), array, node, value, candidate);
+      ASSERTION(std::isfinite(candidate), array, node, value, candidate);
       smallest = candidate < smallest ? candidate : smallest;
       largest  = candidate > largest ? candidate : largest;
     }
@@ -1440,8 +1444,8 @@ exahype2::dg::computeReferenceAndBoundOfParent(
   static_assert(NodesPerAxis > 0 and Values > 0);
   constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
   constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
-  assertion(coarseCell != nullptr);
-  assertion(prolongationMatrix1D != nullptr);
+  ASSERTION(coarseCell != nullptr);
+  ASSERTION(prolongationMatrix1D != nullptr);
   const T* const coarseCells[1] = {coarseCell};
   exahype2::dg::storeReferenceAndBoundOfTransferTerm<Values>(
     coarseCells,
@@ -1468,7 +1472,7 @@ exahype2::dg::computeReferenceAndBoundOfChildren(
   static_assert(NodesPerAxis > 0 and Values > 0);
   constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
   constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
-  assertion(restrictionMatrix1D != nullptr);
+  ASSERTION(restrictionMatrix1D != nullptr);
   exahype2::dg::storeReferenceAndBoundOfTransferTerm<Values>(
     fineCells,
     peano4::ChildrenPerCell,
@@ -1500,12 +1504,12 @@ exahype2::dg::interpolateNode(
   constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
   constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
   constexpr int NodesPerCell       = peano4::power(NodesPerAxis, DIMENSIONS);
-  assertion(coarseCell != nullptr);
-  assertion(fineCell != nullptr);
-  assertion(prolongationMatrix1D != nullptr);
-  assertion(referencesAndBounds != nullptr);
-  assertion(childPosition >= 0 and childPosition < peano4::ChildrenPerCell, childPosition);
-  assertion(fineNode >= 0 and fineNode < NodesPerCell, fineNode);
+  ASSERTION(coarseCell != nullptr);
+  ASSERTION(fineCell != nullptr);
+  ASSERTION(prolongationMatrix1D != nullptr);
+  ASSERTION(referencesAndBounds != nullptr);
+  ASSERTION(childPosition >= 0 and childPosition < peano4::ChildrenPerCell, childPosition);
+  ASSERTION(fineNode >= 0 and fineNode < NodesPerCell, fineNode);
 
   const double* matrixPerAxis[DIMENSIONS];
   const auto    child = peano4::dDelinearised(childPosition, SubdivisionFactor);
@@ -1559,10 +1563,10 @@ exahype2::dg::restrictFace(
   static_assert(NodesPerAxis > 0 and Values > 0);
   constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
   constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
-  assertion(coarseFace != nullptr);
-  assertion(restrictionMatrix1D != nullptr);
+  ASSERTION(coarseFace != nullptr);
+  ASSERTION(restrictionMatrix1D != nullptr);
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
-    assertion(fineFaces[subface] != nullptr, subface);
+    ASSERTION(fineFaces[subface] != nullptr, subface);
   }
 
   constexpr int NodesPerFace = peano4::power(NodesPerAxis, DIMENSIONS - 1);
@@ -1656,12 +1660,12 @@ exahype2::dg::restrictNode(
   constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
   constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
   constexpr int NodesPerCell       = peano4::power(NodesPerAxis, DIMENSIONS);
-  assertion(coarseCell != nullptr);
-  assertion(restrictionMatrix1D != nullptr);
-  assertion(referencesAndBounds != nullptr);
-  assertion(coarseNode >= 0 and coarseNode < NodesPerCell, coarseNode);
+  ASSERTION(coarseCell != nullptr);
+  ASSERTION(restrictionMatrix1D != nullptr);
+  ASSERTION(referencesAndBounds != nullptr);
+  ASSERTION(coarseNode >= 0 and coarseNode < NodesPerCell, coarseNode);
   for (int child = 0; child < peano4::ChildrenPerCell; child++) {
-    assertion(fineCells[child] != nullptr, child);
+    ASSERTION(fineCells[child] != nullptr, child);
   }
 
   double     reference[Values];
