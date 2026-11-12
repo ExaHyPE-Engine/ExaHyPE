@@ -1,7 +1,4 @@
 
-
-
-
 class Atmosphere():
 
 
@@ -60,10 +57,18 @@ class Atmosphere():
 
 
                 //setting gradients to ground base gradients 
-                Qoutside[Shortcuts::gradients + 0] = -rho_0 / scale_height; 
-            
-            }         
-        
+                Qoutside[Shortcuts::gradients + 0] = -rho_0 / scale_height;
+
+            }
+
+            //at the top the outside is the undisturbed background (all perturbations zero).
+            const bool isTop = x[DIMENSIONS-1] > domainMidHeight && normal == DIMENSIONS-1;
+            if (isTop){
+                Qoutside[Shortcuts::rho] = 0;
+                for (int d = 0; d < DIMENSIONS; d++) Qoutside[Shortcuts::j + d] = 0;
+                Qoutside[Shortcuts::E] = 0;
+            }
+
             """
         )
 
@@ -287,7 +292,6 @@ class Atmosphere():
             const auto radicand = gamma * (pressure/rho_full);
             if (not (radicand > 0.0)) {
                 ::tarch::triggerNonCriticalAssertion(
-                    __FILE__, __LINE__,
                     "gamma * pressure / rho > 0",
                     "radicand=" + std::to_string(radicand)
                         + ", pressure=" + std::to_string(pressure)
@@ -333,8 +337,8 @@ class Atmosphere():
         return (
             """
             constexpr int strideQ = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-            {{CORRECTOR_COMPUTATION_PRECISION}} QavL[strideQ] __attribute__((aligned(16))) = {0};
-            {{CORRECTOR_COMPUTATION_PRECISION}} QavR[strideQ] __attribute__((aligned(16))) = {0};
+            double QavL[strideQ] __attribute__((aligned(16))) = {0};
+            double QavR[strideQ] __attribute__((aligned(16))) = {0};
 
 
             #if DIMENSIONS==3
@@ -343,10 +347,11 @@ class Atmosphere():
                 constexpr int faceSize = (DGOrder+1);
             #endif
 
+            constexpr auto faceWeights = Quadrature<double>::getQuadratureWeightsOnFace();
             for (int xy = 0; xy < faceSize; xy++) {
                 for (int n = 0; n < strideQ; n++) {
-                QavL[n] += kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::QuadratureWeightsOnFace[xy] * QL[xy * strideQ + n];
-                QavR[n] += kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::QuadratureWeightsOnFace[xy] * QR[xy * strideQ + n];                }
+                QavL[n] += faceWeights[xy] * QL[xy * strideQ + n];
+                QavR[n] += faceWeights[xy] * QR[xy * strideQ + n];                }
             } 
 
 
@@ -355,7 +360,7 @@ class Atmosphere():
             const auto domainMidHeight = DomainOffset[DIMENSIONS-1] + 0.5 * DomainSize[DIMENSIONS-1];
             
             const bool isBottom = isBoundaryFace
-                   && direction == DIMENSIONS-1
+                   && normal == DIMENSIONS-1
                    && x[DIMENSIONS-1] < domainMidHeight;
 
             
@@ -369,17 +374,17 @@ class Atmosphere():
 
             // Compute max eigenvalue from the convective flux
             auto smax_c = std::fmax(
-                maxEval(&QavL[0], direction), 
-                maxEval(&QavR[0], direction)
+                maxEval(&QavL[0], normal), 
+                maxEval(&QavR[0], normal)
             );
 
             //compute the max eigenvalue from the diffusive flux 
             auto smax_d = std::fmax(
-                diffusiveEval(&QavL[0], direction),
-                diffusiveEval(&QavR[0], direction)
+                diffusiveEval(&QavL[0], normal),
+                diffusiveEval(&QavR[0], normal)
             ); 
 
-            auto eta = (2*DGOrder+1) / (h[direction]* std::sqrt(0.5*M_PI)); 
+            auto eta = (2*DGOrder+1) / (h[normal]* std::sqrt(0.5*M_PI)); 
             auto smax = smax_c + 2*eta*smax_d;
 
             for (int xy = 0; xy < faceSize; xy++) {
@@ -391,6 +396,8 @@ class Atmosphere():
             //}
 
             std::copy_n(FL, faceSize*NumberOfUnknowns, FR);
+
+            return smax;
             """
         )
 
@@ -436,7 +443,3 @@ class Atmosphere():
             return smax;
             """
         )
-
-
-
-

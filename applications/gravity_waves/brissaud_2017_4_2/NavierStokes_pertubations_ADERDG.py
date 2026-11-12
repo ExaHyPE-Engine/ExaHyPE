@@ -13,8 +13,9 @@ from run_config import embed_run_config
 
 stratified_atmosphere = Atmosphere()
 
+domain_height = 400e3
 
-size = [50e3, 400e3, 1]
+size = [domain_height, domain_height, 1]
 # size = [1200e3, 600e3, 1]
 end_time = 500
 # order = 2
@@ -25,8 +26,8 @@ aux_var = {"height": 1, "backgroundstate": 3, "gradients": 1}   # dTdz, heatflux
 parser = argparse.ArgumentParser()
 parser.add_argument("--order", type=int, default=5)
 args = parser.parse_args()
-
 order = args.order
+
 name = f"Single_Wave_order{order}"
 
 project = exahype2.Project(
@@ -63,15 +64,15 @@ solver.set_pde_terms(
 
 )
 solver.add_includes(
-    "tarch/reader/CSVReader.h",
-    "tarch/reader/VTKSampler.h",
     "iostream",
     "cmath",
     "algorithm",
-    "cstdlib"
+    "cstdlib",
+    "string",
+    "tarch/NonCriticalAssertions.h"
 )
 
-ISOTHERMAL_MODEL = """
+ISOTHERMAL_MODEL = f"""
     static constexpr double scale_height    = 29e3;
     static constexpr double rho_0           = 0.4;
     static constexpr double p_0             = 113760.28571428574;
@@ -81,7 +82,7 @@ ISOTHERMAL_MODEL = """
     static constexpr double gamma           = 1.4;
     static constexpr double mu              = 0.75e-4;
     static constexpr double gravity         = 9.831;
-    static constexpr double domain_height   = 280e3;
+    static constexpr double domain_height   = {domain_height};
 """
 
 SOURCE_INFORMATION = """
@@ -114,48 +115,33 @@ embed_run_config(
 
 
 #add tracer 
+probe_particles = project.add_tracer(name="Probe", particle_attributes=6)
 
-
-
-# if args.use_probes:
-probe_particles = project.add_tracer(name="Probe", particle_attributes=1)
-
-project.add_action_set_to_initialisation(
-    exahype2.particles.InsertTracersByCoordinates(
-        particle_set=probe_particles,
-        coordinates=[
-            [25e3, 100.0e3],
-            [25e3, 150.0e3],
-            [25e3, 180.0e3],
-            [25e3, 200.0e3],
-            [25e3, 230.0e3],
-            [25e3, 280.0e3],
-        ],
-    )
+probe_particles.insert_by_coordinates(
+    [
+        [25e3, 100.0e3],
+        [25e3, 150.0e3],
+        [25e3, 180.0e3],
+        [25e3, 200.0e3],
+        [25e3, 230.0e3],
+        [25e3, 280.0e3],
+    ]
 )
 
+probe_particles.dump_into_database(
+    filename="Probes",
+    time_delta_between_two_snapshots=0.05,
+    output_precision=17,
+)
 solver.trace(
     probe_particles,
-    kernel="""[](const auto& marker, const int order, const auto* nodes,
-                 const int nData, const auto* Q, auto& particle) {
-        const auto x   = particle.getX();
-        const auto rho = ::exahype2::dg::evaluatePolynomial(marker, order, nodes, nData, Q, x, 0);  // rho
-        const auto jy  = ::exahype2::dg::evaluatePolynomial(marker, order, nodes, nData, Q, x, 2);  // j + 1
-        const auto bg  = ::exahype2::dg::evaluatePolynomial(marker, order, nodes, nData, Q, x, 5);  // backgroundstate + 0
-        particle.setData(0, jy / (rho + bg));
-    }""",
-    
-        initialisation=True,
-)
-
-project.add_action_set_to_timestepping(
-    exahype2.particles.DumpTracerIntoDatabase(
-        particle_set=probe_particles,
-        solver=solver,
-        filename="Probes",
-        time_delta_between_two_snapshots=0.05,
-        output_precision=17,
-    )
+    exahype2.particles.Forces(
+        interpolation_scheme=2,   # piecewise linear
+        integration_scheme=0,     # static, the probes don't move
+        force_method=0,
+        fields_to_interpolate="0,1,2,3,4,5",   # first 6 solver values -> data(0..5); rho=0, j=2, background=5
+    ),
+    initialisation=False,
 )
 
 
