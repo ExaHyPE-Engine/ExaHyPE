@@ -48,6 +48,12 @@ struct exahype2::fv::limiter::PolynomialScaling final {
     int                                   point,
     ComputePrecision* NOALIAS const       values
   );
+
+  INLINE_METHOD GPU_CALLABLE_METHOD static tarch::la::Vector<DIMENSIONS, double> getPosition(
+    int                                          point,
+    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& volumeSize
+  );
 };
 
 /**

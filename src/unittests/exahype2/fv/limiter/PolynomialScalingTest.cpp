@@ -35,6 +35,32 @@ namespace {
   };
 
   /**
+   * Admits the states whose depth is not negative and, on the lower face of the first axis, at
+   * least MinimumDepthOnLowerFace.
+   */
+  struct DeeperOnLowerFace {
+    struct RuntimeParameters final {};
+
+    static constexpr double MinimumDepthOnLowerFace = 0.5;
+
+    static bool isPhysicallyAdmissible(
+      const double* const                          Q,
+      const int                                    numberOfStates,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>&,
+      const RuntimeParameters&
+    ) {
+      const double minimumDepth = x(0) < 1e-9 ? MinimumDepthOnLowerFace : 0.0;
+      for (int state = 0; state < numberOfStates; state++) {
+        if (not(Q[state * NumberOfData] >= minimumDepth)) {
+          return false;
+        }
+      }
+      return true;
+    }
+  };
+
+  /**
    * Returns the nodal state of the depth average + slope (x - 1/2) along the first axis.
    */
   std::array<double, Basis::NodesPerCell * NumberOfData> linearDepth(const double average, const double slope) {
@@ -94,6 +120,25 @@ UNIT_TEST("Face undershoot is scaled") {
     average += weight * nodalState[node * NumberOfData];
   }
   VALIDATE_NUMERICAL_EQUALS(average, 1.0);
+}
+
+/**
+ * The slope 1.2 around the average 1 reaches the depth 0.4 on the lower face of the first axis,
+ * where the term asks for 0.5. The largest admissible scaling 5 / 6 meets it there.
+ */
+UNIT_TEST("Admissibility is tested at the position of every point") {
+  auto                                        nodalState                 = linearDepth(1.0, 1.2);
+  const double                                averageState[NumberOfData] = {1.0, Level - 1.0};
+  const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> size(1.0);
+  const double theta = Scaling::limit<DeeperOnLowerFace, NumberOfData>(
+    averageState,
+    nodalState.data(),
+    centre,
+    size,
+    DeeperOnLowerFace::RuntimeParameters{}
+  );
+  VALIDATE(std::abs(theta - 5.0 / 6.0) <= 1e-6, theta, 5.0 / 6.0);
 }
 
 UNIT_TEST("Inadmissible average gives constant") {

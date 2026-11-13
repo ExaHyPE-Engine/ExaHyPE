@@ -60,6 +60,38 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::limiter::PolynomialScaling<
 }
 
 /**
+ * Returns the position of point in a volume, with the points ordered as in evaluate().
+ */
+template <typename Basis>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::fv::limiter::PolynomialScaling<Basis>::getPosition(
+  const int                                    point,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeSize
+) {
+  ASSERTION(point >= 0 and point < Points, point);
+  constexpr auto Nodes = Basis::nodes();
+
+  const bool isNode    = point < NodesPerCell;
+  const int  face      = isNode ? -1 : (point - NodesPerCell) / NodesPerFace;
+  const int  normal    = isNode ? -1 : face % DIMENSIONS;
+  int        remainder = isNode ? point : (point - NodesPerCell) % NodesPerFace;
+
+  tarch::la::Vector<DIMENSIONS, double> position;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    double coordinate;
+    if (axis == normal) {
+      coordinate = face < DIMENSIONS ? 0.0 : 1.0;
+    } else {
+      coordinate = Nodes[remainder % NodesPerAxis];
+      remainder /= NodesPerAxis;
+    }
+    position(axis) = volumeCentre(axis) + (coordinate - 0.5) * volumeSize(axis);
+  }
+  return position;
+}
+
+/**
  * Scales nodalState towards average and returns the scaling factor theta.
  */
 template <typename Basis>
@@ -74,11 +106,12 @@ exahype2::fv::limiter::PolynomialScaling<Basis>::limit(
 ) {
   StoragePrecision sample[NumberOfData];
   ComputePrecision values[NumberOfData];
+  tarch::la::Vector<DIMENSIONS, double> position;
   const auto       isAdmissible = [&](const ComputePrecision theta) {
     for (int entry = 0; entry < NumberOfData; entry++) {
       sample[entry] = static_cast<StoragePrecision>(average[entry] + theta * (values[entry] - average[entry]));
     }
-    return Derived::isPhysicallyAdmissible(sample, 1, volumeCentre, volumeSize, parameters);
+    return Derived::isPhysicallyAdmissible(sample, 1, position, volumeSize, parameters);
   };
 
   ComputePrecision theta = Derived::isPhysicallyAdmissible(average, 1, volumeCentre, volumeSize, parameters)
@@ -86,6 +119,7 @@ exahype2::fv::limiter::PolynomialScaling<Basis>::limit(
     : ComputePrecision(0);
   for (int point = 0; point < Points and theta > ComputePrecision(0); point++) {
     evaluate<NumberOfData>(nodalState, point, values);
+    position = getPosition(point, volumeCentre, volumeSize);
     if (not isAdmissible(theta)) {
       ComputePrecision admissible = 0;
       for (int step = 0; step < BisectionSteps; step++) {
