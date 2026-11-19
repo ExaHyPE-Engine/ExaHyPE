@@ -1,0 +1,24 @@
+name: Image cleanup
+
+on:
+  delete:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: image-cleanup
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  cleanup:
+    if: github.event_name != 'delete' || github.event.ref_type == 'branch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/delete-stale-images.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -92,8 +92,8 @@ docker build -t peanoframework/llvm -f utilities/docker/Dockerfile.llvm .
 ### Building Extension Images
 
 ```shell
-docker build -t peanoframework/exahype2 -f utilities/docker/Dockerfile.exahype2 .
-docker build -t peanoframework/exahype2-tutorials -f utilities/docker/Dockerfile.exahype2-tutorials .
+docker build -t peanoframework/exahype -f utilities/docker/Dockerfile.exahype .
+docker build -t peanoframework/tutorials -f utilities/docker/Dockerfile.tutorials .
 ```
 
 */

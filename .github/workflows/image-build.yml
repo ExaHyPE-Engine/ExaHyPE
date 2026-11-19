@@ -1,0 +1,100 @@
+name: Image build
+
+on:
+  push:
+    paths:
+      - .github/workflows/image-build.yml
+      - requirements.txt
+      - .github/scripts/build-image.sh
+      - .github/scripts/plan-images.sh
+      - utilities/docker/**
+      - utilities/spack/**
+  workflow_dispatch:
+    inputs:
+      images:
+        description: Images to build, separated by spaces
+        default: base spack
+        type: string
+
+concurrency:
+  group: image-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_PREFIXES: ${{ vars.IMAGE_PREFIXES }}
+  GHCR_USERNAME: ${{ github.actor }}
+  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      base: ${{ steps.plan.outputs.base }}
+      spack: ${{ steps.plan.outputs.spack }}
+      toolchains: ${{ steps.plan.outputs.toolchains }}
+      tutorials: ${{ steps.plan.outputs.tutorials }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: plan
+        env:
+          IMAGES: ${{ inputs.images }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = workflow_dispatch ]; then
+            read -r -a requestedImages <<<"${IMAGES}"
+            bash .github/scripts/plan-images.sh "${GITHUB_REF_NAME}" "${requestedImages[@]}" | tee -a "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          if git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            base="${BEFORE}"
+          else
+            base=$(git merge-base origin/main "${GITHUB_SHA}")
+          fi
+          git diff --name-only "${base}" "${GITHUB_SHA}" |
+            bash .github/scripts/plan-images.sh "${GITHUB_REF_NAME}" | tee -a "${GITHUB_OUTPUT}"
+
+  base:
+    needs: plan
+    if: needs.plan.outputs.base == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/build-image.sh base
+
+  spack:
+    needs: [plan, base]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.spack == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/build-image.sh spack
+
+  toolchain:
+    needs: [plan, spack]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.toolchains != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.plan.outputs.toolchains) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache && df -h /
+      - run: bash .github/scripts/build-image.sh ${{ matrix.image }}
+
+  tutorials:
+    needs: [plan, toolchain]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.tutorials == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/build-image.sh tutorials

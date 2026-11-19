@@ -1,4 +1,7 @@
-FROM peanoframework/spack:latest AS builder
+ARG IMAGE_PREFIX=peanoframework
+ARG IMAGE_TAG=latest
+
+FROM ${IMAGE_PREFIX}/spack:${IMAGE_TAG} AS builder
 
 WORKDIR /opt/spack-environment
 
@@ -20,7 +23,7 @@ RUN . /opt/spack/share/spack/setup-env.sh && \
     spack load --sh exahype2 | \
       sed 's/^spack load.*//' > /etc/profile.d/exahype2.sh
 
-FROM peanoframework/base:latest
+FROM ${IMAGE_PREFIX}/base:${IMAGE_TAG}
 
 COPY --from=builder /exahype2 /exahype2
 COPY --from=builder /opt/software /opt/software

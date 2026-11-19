@@ -1,4 +1,7 @@
-FROM peanoframework/exahype2:latest
+ARG IMAGE_PREFIX=peanoframework
+ARG IMAGE_TAG=latest
+
+FROM ${IMAGE_PREFIX}/exahype:${IMAGE_TAG}
 
 WORKDIR /exahype2/tutorials
 
