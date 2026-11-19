@@ -47,13 +47,18 @@ public:
     exahype2::terms::HasRiemannSolver<Derived, ComputePrecision> or exahype2::terms::HasCellPredicate<Derived>;
 
   struct Scratch final {
-    static constexpr int StateSize             = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
-    static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
-    static constexpr int FluxSize        = DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
+    // static constexpr int StateSize             = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
+    // static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
+    // static constexpr int FluxSize        = DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
+    // static constexpr int PointSourceSize = EvaluatePointSources
+    //   ? (CellLayout::NodesPerAxis + 1) * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns
+    //   : 0;
+    static constexpr int StateSize             = CellLayout::PaddedNodesPerCell * CellLayout::NumberOfData;
+    static constexpr int TimeAveragedStateSize = CellLayout::PaddedNodesPerCell * CellLayout::NumberOfData;
+    static constexpr int FluxSize        = DIMENSIONS * CellLayout::PaddedNodesPerCell * CellLayout::NumberOfUnknowns;
     static constexpr int PointSourceSize = EvaluatePointSources
-      ? (CellLayout::NodesPerAxis + 1) * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns
+      ? (CellLayout::NodesPerAxis + 1) * CellLayout::PaddedNodesPerCell * CellLayout::NumberOfUnknowns
       : 0;
-
     static constexpr int StateOffset             = 0;
     static constexpr int TimeAveragedStateOffset = StateOffset + StateSize;
     static constexpr int FluxOffset              = TimeAveragedStateOffset + TimeAveragedStateSize;

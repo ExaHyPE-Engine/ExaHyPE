@@ -21,7 +21,7 @@ namespace {
   constexpr int    NumberOfData       = CellLayout::NumberOfData;
   constexpr int    CellStateSize      = CellLayout::NodesPerCell * NumberOfData;
   constexpr int    FluxAxisSize       = CellLayout::NodesPerCell * NumberOfUnknowns;
-  constexpr int    AveragedAxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
+  constexpr int    AveragedAxisStride = CellLayout::PaddedNodesPerCell * CellLayout::NumberOfUnknowns;
   constexpr double TimeStamp          = 0.5;
   constexpr double TimeStepSize       = 0.25;
   constexpr double Slope              = 0.5;
@@ -706,14 +706,14 @@ UNIT_TEST("The linear predictor translates a linear profile by the flux and the 
 
       THEN("The flux of the time-averaged state is the transport speed times the slope along the first axis alone") {
         const double transportSpeed = LinearFluxSpeed + LinearProductSpeed;
-        for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          const double expected = (axis == 0) ? transportSpeed * Slope : 0.0;
           for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-            for (int axis = 0; axis < DIMENSIONS; axis++) {
-              const double expected = (axis == 0) ? transportSpeed * Slope : 0.0;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               VALIDATE_NUMERICAL_EQUALS(
                 scratch
                   [TransportScratch::FluxOffset + axis * AveragedAxisStride
-                   + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
+                   + unknown * CellLayout::PaddedNodesPerCell + cellNode],
                 expected,
                 axis,
                 cellNode,
@@ -762,12 +762,12 @@ UNIT_TEST("The Taylor recursion of a linear flux, product and source reproduces 
           }
         }
 
-        for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
             const double average = averagedState[cellNode * NumberOfUnknowns + unknown];
             VALIDATE_NUMERICAL_EQUALS(
               scratch
-                [SourceTransportScratch::TimeAveragedStateOffset + cellNode * CellLayout::PaddedNumberOfData + unknown],
+                [SourceTransportScratch::TimeAveragedStateOffset + unknown * CellLayout::PaddedNodesPerCell + cellNode],
               average,
               cellNode,
               unknown
@@ -777,7 +777,7 @@ UNIT_TEST("The Taylor recursion of a linear flux, product and source reproduces 
               VALIDATE_NUMERICAL_EQUALS(
                 scratch
                   [SourceTransportScratch::FluxOffset + axis * AveragedAxisStride
-                   + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
+                   + unknown * CellLayout::PaddedNodesPerCell + cellNode],
                 expectedFlux,
                 axis,
                 cellNode,

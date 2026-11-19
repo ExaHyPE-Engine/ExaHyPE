@@ -174,16 +174,20 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
     // The terms of a linear Derived are linear in the state and constant within the time step.
     // The source of the time-averaged state is the time-averaged source.
     const ComputePrecision* const timeAveragedState = scratch + Scratch::TimeAveragedStateOffset;
-    subtractTimeAveragedVolumeIntegral<Linear::AccumulatesFlux, Linear::AccumulatesSource>(
+    subtractTimeAveragedVolumeIntegralSoA<Linear::AccumulatesFlux, Linear::AccumulatesSource>(
       cellState,
       scratch + Scratch::FluxOffset,
       [&](const int cellNode, ComputePrecision* const values) {
         if constexpr (Linear::AccumulatesSource) {
+          ComputePrecision nodeState[CellLayout::NumberOfData];
+          for (int value = 0; value < CellLayout::NumberOfData; value++) {
+            nodeState[value] = timeAveragedState[value * CellLayout::PaddedNodesPerCell + cellNode];
+          }
           for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
             values[unknown] = static_cast<ComputePrecision>(0);
           }
           Derived::sourceTerm(
-            timeAveragedState + cellNode * CellLayout::PaddedNumberOfData,
+            nodeState,
             cellCentre,
             cellSize,
             timeStamp,
@@ -297,6 +301,72 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::subtractTimeAveragedVo
       if constexpr (AccumulatesFlux) {
         const int entry = cellNode * UnknownStride + unknown;
         update          = workers.threads == 1 ? timeAveragedFlux[entry] : sumOfAxes(entry);
+      }
+      if constexpr (AccumulatesSource) {
+        update -= nodeSource[unknown];
+      }
+      cellState[cellNode * CellLayout::NumberOfData + unknown] -= static_cast<StoragePrecision>(
+        static_cast<UpdatePrecision>(timeStepSize) * static_cast<UpdatePrecision>(update)
+      );
+    }
+  }
+}
+
+/**
+ * Adds the time step times the time-averaged source minus the flux divergence to cellState.
+ * timeAveragedFlux stores the derivative of the flux along its own axis, one block per axis. A cell
+ * on one thread overwrites the block of the first axis with the divergence. sourceOfNode(cellNode,
+ * values) writes the time-averaged source of one node.
+ */
+template <typename Derived, typename ComputePrecision>
+template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::Predictor<Derived, ComputePrecision>::subtractTimeAveragedVolumeIntegralSoA(
+  StoragePrecision* NOALIAS const                  cellState,
+  [[maybe_unused]] ComputePrecision* NOALIAS const timeAveragedFlux,
+  [[maybe_unused]] const SourceOfNode&             sourceOfNode,
+  const double                                     timeStepSize,
+  const TeamWorkers&                               workers
+) {
+  constexpr int UnknownStride = CellLayout::NumberOfUnknowns;
+  constexpr int AxisStride    = UnknownStride * CellLayout::PaddedNodesPerCell;
+
+  using UpdatePrecision = std::common_type_t<ComputePrecision, double>;
+
+  [[maybe_unused]] const auto sumOfAxes = [timeAveragedFlux](const int entry) {
+    if constexpr (DIMENSIONS == 2) {
+      return timeAveragedFlux[entry] + timeAveragedFlux[entry + AxisStride];
+    } else {
+      return tarch::la::sumInOrderOfValue(
+        timeAveragedFlux[entry],
+        timeAveragedFlux[entry + AxisStride],
+        timeAveragedFlux[entry + 2 * AxisStride]
+      );
+    }
+  };
+
+  // A cell on one thread sums the axes in one loop over the contiguous entries of the cell. A loop
+  // over nodes makes the compiler load the entries of four nodes with gather instructions.
+  if constexpr (AccumulatesFlux) {
+    if (workers.threads == 1) {
+      SIMD()
+      for (int entry = 0; entry < AxisStride; entry++) {
+        timeAveragedFlux[entry] = sumOfAxes(entry);
+      }
+    }
+  }
+
+  [[maybe_unused]] ComputePrecision nodeSource[UnknownStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
+    if constexpr (AccumulatesSource) {
+      sourceOfNode(cellNode, nodeSource);
+    }
+    for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
+      auto update = static_cast<ComputePrecision>(0);
+      if constexpr (AccumulatesFlux) {
+        update          = workers.threads == 1 ? timeAveragedFlux[unknown * CellLayout::PaddedNodesPerCell + cellNode]
+          : sumOfAxes(unknown * CellLayout::PaddedNodesPerCell + cellNode);
       }
       if constexpr (AccumulatesSource) {
         update -= nodeSource[unknown];

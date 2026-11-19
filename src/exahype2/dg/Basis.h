@@ -140,6 +140,40 @@ namespace exahype2::dg {
   getProjectionWeightsOfDofPairs(const Value* NOALIAS matrix);
 
   template <
+    int  NumberOfNodes,
+    bool OverwriteResult,
+    typename ResultPrecision,
+    typename ComputePrecision,
+    typename... Scalings
+  >
+  INLINE_METHOD GPU_CALLABLE_METHOD void differentiateAlongAxisSoA(
+    ResultPrecision*                                                     result,
+    int                                                                  resultStride,
+    const ComputePrecision*                                              values,
+    int                                                                  valueNodeStride,
+    const DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>& derivativeWeights,
+    const Scalings... scalings
+  );
+
+  template <
+    int  NumberOfEntries,
+    int  NumberOfNodes,
+    bool OverwriteResult,
+    typename ResultPrecision,
+    typename ComputePrecision,
+    typename... Scalings
+  >
+  INLINE_METHOD GPU_CALLABLE_METHOD void differentiateAlongAxisSoA2AoS(
+    ResultPrecision*                                                     result,
+    int                                                                  resultStride,
+    const ComputePrecision*                                              values,
+    int                                                                  valueEntryStride,
+    int                                                                  valueNodeStride,
+    const DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>& derivativeWeights,
+    const Scalings... scalings
+  );
+
+  template <
     int  NumberOfEntries,
     int  NumberOfNodes,
     bool OverwriteResult,
@@ -162,6 +196,24 @@ namespace exahype2::dg {
     const StoragePrecision* NOALIAS              cellState,
     const ComputePrecision* NOALIAS              derivativeOperator,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  );
+
+  template <
+    int NodesPerAxis,
+    int NumberOfEntries,
+    int UnknownStride,
+    typename FieldPrecision,
+    typename FacePrecision,
+    typename CoefficientPrecision
+  >
+  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateLineToFacePairSoA2AoS(
+    FacePrecision* NOALIAS              lowerFace,
+    FacePrecision* NOALIAS              upperFace,
+    const FieldPrecision* NOALIAS       field,
+    const CoefficientPrecision* NOALIAS leftFaceCoefficients,
+    const CoefficientPrecision* NOALIAS rightFaceCoefficients,
+    int                                 direction,
+    int                                 faceNode
   );
 
   template <
@@ -209,6 +261,24 @@ namespace exahype2::dg {
     typename CoefficientPrecision
   >
   INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateNodalFieldToFaces(
+    FacePrecision* const NOALIAS        faces[peano4::FacesPerCell],
+    const FieldPrecision* NOALIAS       field,
+    const CoefficientPrecision* NOALIAS leftFaceCoefficients,
+    const CoefficientPrecision* NOALIAS rightFaceCoefficients,
+    int                                 firstItem,
+    int                                 itemStride
+  );
+
+  template <
+    int NodesPerAxis,
+    int NumberOfEntries,
+    int UnknownStride,
+    int DirectionStride,
+    typename FieldPrecision,
+    typename FacePrecision,
+    typename CoefficientPrecision
+  >
+  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateNodalFieldToFacesSoA2AoS(
     FacePrecision* const NOALIAS        faces[peano4::FacesPerCell],
     const FieldPrecision* NOALIAS       field,
     const CoefficientPrecision* NOALIAS leftFaceCoefficients,
@@ -289,6 +359,15 @@ namespace exahype2::dg {
     int                                                    firstItem  = 0,
     int                                                    itemStride = 1
   );
+
+  template <typename Derived, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void differentiateFluxInPlaceSoA(
+    ComputePrecision* NOALIAS                              flux,
+    const ComputePrecision* NOALIAS                        derivativeOperator,
+    const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
+    int                                                    firstItem  = 0,
+    int                                                    itemStride = 1
+  );
 } // namespace exahype2::dg
 
 /**
@@ -298,6 +377,7 @@ namespace exahype2::dg {
 template <typename Derived>
 struct exahype2::dg::PaddedLayout final {
   static constexpr int NodesPerAxis           = Derived::DGOrder + 1;
+  static constexpr int PaddedNodesPerAxis     = exahype2::dg::getPaddedCountOf(NodesPerAxis);
   static constexpr int NumberOfUnknowns       = Derived::NumberOfUnknowns;
   static constexpr int NumberOfData           = NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
   static constexpr int PaddedNumberOfUnknowns = exahype2::dg::getPaddedCountOf(NumberOfUnknowns);
@@ -305,6 +385,7 @@ struct exahype2::dg::PaddedLayout final {
   static constexpr int NodesPerAxisIn3D       = (DIMENSIONS == 3) ? NodesPerAxis : 1;
   static constexpr int NodesPerFace           = NodesPerAxis * NodesPerAxisIn3D;
   static constexpr int NodesPerCell           = NodesPerFace * NodesPerAxis;
+  static constexpr int PaddedNodesPerCell     = exahype2::dg::getPaddedCountOf(NodesPerCell);
   static constexpr int SpaceTimeNodes         = NodesPerCell * NodesPerAxis;
 };
 
