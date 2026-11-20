@@ -1,7 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import exahype2
 import euler
+
+import exahype2
 
 arguments = euler.standard_arguments(end_time=0.1, degrees_of_freedom=4)
 order = arguments.degrees_of_freedom - 1

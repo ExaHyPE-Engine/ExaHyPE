@@ -1,4 +1,4 @@
-name: Toolchain
+name: Engine Tests Toolchain
 
 on:
   workflow_call:
@@ -54,8 +54,9 @@ jobs:
     name: Build and Unit Tests
     runs-on: ubuntu-24.04
     outputs:
-      tests: ${{ steps.families.outputs.tests }}
-      applications: ${{ steps.families.outputs.applications }}
+      artifact: ${{ steps.names.outputs.artifact }}
+      tests: ${{ steps.names.outputs.tests }}
+      applications: ${{ steps.names.outputs.applications }}
     env:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
@@ -67,20 +68,25 @@ jobs:
       CCACHE_MAXSIZE: 100M
     steps:
       - uses: actions/checkout@v7
-      - id: families
+      - id: names
         run: |
-          echo "tests=$(bash .github/scripts/run-tests.sh --list "${{ inputs.scope }}" tests)" >>"${GITHUB_OUTPUT}"
-          echo "applications=$(bash .github/scripts/run-tests.sh --list "${{ inputs.scope }}" applications)" >>"${GITHUB_OUTPUT}"
+          mode="${{ inputs.build-mode }}"
+          {
+            echo "artifact=install-${{ inputs.id }}-${mode,,}"
+            echo "ccache=ccache-${{ inputs.id }}-${mode,,}"
+            echo "tests=$(bash .github/scripts/run-tests.sh --list "${{ inputs.scope }}" tests)"
+            echo "applications=$(bash .github/scripts/run-tests.sh --list "${{ inputs.scope }}" applications)"
+          } >>"${GITHUB_OUTPUT}"
       - run: bash .github/scripts/prepare-runner.sh
       - uses: actions/cache@v6
         with:
           path: .ccache
-          key: ccache-${{ inputs.id }}-${{ inputs.build-mode }}-${{ github.sha }}
-          restore-keys: ccache-${{ inputs.id }}-${{ inputs.build-mode }}-
+          key: ${{ steps.names.outputs.ccache }}-${{ github.sha }}
+          restore-keys: ${{ steps.names.outputs.ccache }}-
       - run: bash .github/scripts/in-image.sh "${{ inputs.image }}" "bash .github/scripts/build-library.sh"
       - uses: actions/upload-artifact@v7
         with:
-          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          name: ${{ steps.names.outputs.artifact }}
           path: install/
           retention-days: 1
 
@@ -99,7 +105,7 @@ jobs:
       - run: bash .github/scripts/prepare-runner.sh
       - uses: actions/download-artifact@v8
         with:
-          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          name: ${{ needs.build.outputs.artifact }}
           path: install/
       - run: bash .github/scripts/in-image.sh "${{ inputs.image }}" "bash .github/scripts/run-tests.sh '${{ matrix.family }}'"
 
@@ -124,6 +130,6 @@ jobs:
       - run: bash .github/scripts/prepare-runner.sh
       - uses: actions/download-artifact@v8
         with:
-          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          name: ${{ needs.build.outputs.artifact }}
           path: install/
       - run: bash .github/scripts/in-image.sh "${{ inputs.image }}" "bash .github/scripts/run-tests.sh '${{ matrix.family }}'"

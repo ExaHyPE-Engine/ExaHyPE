@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds utilities/docker/Dockerfile.<image> and pushes it to every prefix of IMAGE_PREFIXES.
-# Usage: IMAGE_PREFIXES="ghcr.io/exahype-engine exahype" .github/scripts/build-image.sh <image>
+# Usage: [IMAGE_BRANCH=<branch>] IMAGE_PREFIXES="ghcr.io/exahype-engine exahype" .github/scripts/build-image.sh <image>
 
 set -euo pipefail
 
@@ -18,7 +18,7 @@ if [ "${#prefixes[@]}" -eq 0 ] || [[ "${prefixes[0]}" == */ ]]; then
   exit 2
 fi
 
-branch="${GITHUB_REF_NAME:-$(git -C "$(dirname "$0")" rev-parse --abbrev-ref HEAD)}"
+branch="${IMAGE_BRANCH:-${GITHUB_REF_NAME:-$(git -C "$(dirname "$0")" rev-parse --abbrev-ref HEAD)}}"
 if [ "${branch}" = main ]; then
   tag=latest
 else
@@ -71,6 +71,7 @@ fi
 docker build \
   --build-arg "IMAGE_PREFIX=${prefixes[0]}" \
   --build-arg "IMAGE_TAG=${tag}" \
+  --label "org.exahype.image.sources=$(bash .github/scripts/plan-images.sh --hash "${image}")" \
   --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY:-ExaHyPE-Engine/ExaHyPE}" \
   "${tags[@]}" \
   "${cacheArguments[@]}" \

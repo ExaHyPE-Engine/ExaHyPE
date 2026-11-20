@@ -1,28 +1,17 @@
-name: Image build
+name: Image Build
 
 on:
-  push:
-    paths:
-      - CMakeLists.txt
-      - cmake/**
-      - src/**
-      - api/**
-      - requirements.txt
-      - tests/**
-      - tutorials/**
-      - applications/**
-      - utilities/docker/**
-      - utilities/spack/**
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       images:
-        description: Images to build, separated by spaces
-        default: base spack
+        description: Images to build, separated by spaces (empty builds every outdated image)
+        default: ""
         type: string
-
-concurrency:
-  group: image-build-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -30,6 +19,7 @@ permissions:
 
 env:
   IMAGE_PREFIXES: ${{ vars.IMAGE_PREFIXES }}
+  IMAGE_BRANCH: ${{ inputs.branch || github.ref_name }}
   GHCR_USERNAME: ${{ github.actor }}
   GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -37,6 +27,7 @@ env:
 
 jobs:
   plan:
+    name: Plan
     runs-on: ubuntu-24.04
     outputs:
       base: ${{ steps.plan.outputs.base }}
@@ -45,30 +36,18 @@ jobs:
       tutorials: ${{ steps.plan.outputs.tutorials }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - id: plan
         env:
           IMAGES: ${{ inputs.images }}
-          BEFORE: ${{ github.event.before }}
         run: |
           read -r -a prefixes <<<"${IMAGE_PREFIXES:-ghcr.io/${GITHUB_REPOSITORY_OWNER,,}}"
           export IMAGE_PREFIX="${prefixes[0]}"
           docker login ghcr.io --username "${GHCR_USERNAME}" --password-stdin <<<"${GHCR_TOKEN}"
-          if [ "${GITHUB_EVENT_NAME}" = workflow_dispatch ]; then
-            read -r -a requestedImages <<<"${IMAGES}"
-            bash .github/scripts/plan-images.sh "${GITHUB_REF_NAME}" "${requestedImages[@]}" | tee -a "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-          if git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
-            base="${BEFORE}"
-          else
-            base=$(git merge-base origin/main "${GITHUB_SHA}")
-          fi
-          git diff --name-only "${base}" "${GITHUB_SHA}" |
-            bash .github/scripts/plan-images.sh "${GITHUB_REF_NAME}" | tee -a "${GITHUB_OUTPUT}"
+          read -r -a requestedImages <<<"${IMAGES}"
+          bash .github/scripts/plan-images.sh "${IMAGE_BRANCH}" "${requestedImages[@]}" | tee -a "${GITHUB_OUTPUT}"
 
   base:
+    name: Base
     needs: plan
     if: needs.plan.outputs.base == 'true'
     runs-on: ubuntu-24.04
@@ -77,6 +56,7 @@ jobs:
       - run: bash .github/scripts/build-image.sh base
 
   spack:
+    name: Spack
     needs: [plan, base]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.spack == 'true' }}
     runs-on: ubuntu-24.04
@@ -85,20 +65,22 @@ jobs:
       - run: bash .github/scripts/build-image.sh spack
 
   toolchain:
+    name: ${{ matrix.toolchain.name }}
     needs: [plan, spack]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.toolchains != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        image: ${{ fromJSON(needs.plan.outputs.toolchains) }}
+        toolchain: ${{ fromJSON(needs.plan.outputs.toolchains) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
-      - run: bash .github/scripts/build-image.sh ${{ matrix.image }}
+      - run: bash .github/scripts/build-image.sh ${{ matrix.toolchain.image }}
 
   tutorials:
+    name: Tutorials
     needs: [plan, toolchain]
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.tutorials == 'true' }}
     runs-on: ubuntu-24.04

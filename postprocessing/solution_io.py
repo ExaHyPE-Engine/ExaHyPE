@@ -3,13 +3,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field as dataclass_field
 import json
 import math
 import os
-from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
+
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
+from pathlib import Path
 
 import numpy as np
 
@@ -547,6 +549,7 @@ def _load_vtu(ref: SnapshotRef) -> MeshSnapshot:
 
 def _load_vtu_vtk(ref: SnapshotRef, path: Path) -> MeshSnapshot:
     import vtk
+
     from vtk.util.numpy_support import vtk_to_numpy
 
     if path.suffix.lower() == ".pvtu":

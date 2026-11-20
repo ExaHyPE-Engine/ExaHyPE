@@ -6,7 +6,8 @@ import tempfile
 import unittest
 
 from postprocessing.check_error_norms import COLUMNS
-from postprocessing.plot_error_norms import SERIES_STYLES, _load_csv
+from postprocessing.plot_error_norms import SERIES_STYLES
+from postprocessing.plot_error_norms import _load_csv
 
 DATABASE = [
     "t, l1-error, l2-error, linf-error\n",

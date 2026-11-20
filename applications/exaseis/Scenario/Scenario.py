@@ -1,6 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os, shutil, jinja2
+import os
+import shutil
+
+import jinja2
 
 
 class Scenario:

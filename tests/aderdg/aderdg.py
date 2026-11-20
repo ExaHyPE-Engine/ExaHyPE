@@ -2,9 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
 
-import exahype2
-
 import scenarios
+
+import exahype2
 
 available_precisions = (
     "float",

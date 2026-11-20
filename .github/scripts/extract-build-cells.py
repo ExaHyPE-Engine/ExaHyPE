@@ -26,6 +26,6 @@ def get_build_cells(notebook_path):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        sys.exit("Usage: extract_build_cells.py <notebook> <script>")
+        sys.exit("Usage: extract-build-cells.py <notebook> <script>")
     with open(sys.argv[2], "w", encoding="utf-8") as script_file:
         script_file.write("\n\n".join(get_build_cells(sys.argv[1])) + "\n")

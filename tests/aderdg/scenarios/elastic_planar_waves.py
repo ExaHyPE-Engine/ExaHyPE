@@ -1,9 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .scenario import Scenario
-
 import os
 import sys
+
+from .scenario import Scenario
 
 sys.path.insert(0, os.path.abspath("../equations"))
 from equations import Elastic

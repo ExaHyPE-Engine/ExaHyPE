@@ -2,11 +2,12 @@
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
 
-import exahype2
-
+from GRMHD import flux
+from GRMHD import max_eigenvalue
+from GRMHD import ncp
 from numpy import pi
 
-from GRMHD import max_eigenvalue, flux, ncp
+import exahype2
 
 available_scenarios = ["AlfvenWave", "MichelSphericalAccretion"]
 

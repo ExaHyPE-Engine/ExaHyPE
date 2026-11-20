@@ -5,6 +5,7 @@ A test of particles that settle under gravity, buoyancy and drag forces.
 """
 
 import argparse
+
 from pathlib import Path
 
 import exahype2

@@ -8,14 +8,17 @@ import math
 import sys
 
 import numpy as np
+
 from scipy.spatial import cKDTree
 
 # The dual import works both as a package and when this script is
 # run directly from the postprocessing/ directory (see render_solution.py).
 try:
-    from postprocessing.solution_io import MeshSnapshot, SolutionSource
+    from postprocessing.solution_io import MeshSnapshot
+    from postprocessing.solution_io import SolutionSource
 except ImportError:
-    from solution_io import MeshSnapshot, SolutionSource
+    from solution_io import MeshSnapshot
+    from solution_io import SolutionSource
 
 
 def build_parser() -> argparse.ArgumentParser:

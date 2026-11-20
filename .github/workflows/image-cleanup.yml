@@ -1,4 +1,4 @@
-name: Image cleanup
+name: Image Cleanup
 
 on:
   delete:
@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   cleanup:
+    name: Delete Stale Images
     if: github.event_name != 'delete' || github.event.ref_type == 'branch'
     runs-on: ubuntu-24.04
     steps:

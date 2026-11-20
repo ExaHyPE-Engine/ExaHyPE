@@ -1,4 +1,4 @@
-name: CI
+name: Engine Tests
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: engine-tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -21,6 +21,8 @@ jobs:
     outputs:
       run: ${{ steps.plan.outputs.run }}
       scope: ${{ steps.plan.outputs.scope }}
+      images: ${{ steps.plan.outputs.images }}
+      branch: ${{ steps.plan.outputs.branch }}
       tag: ${{ steps.plan.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
@@ -29,12 +31,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_BRANCH: ${{ github.head_ref }}
-        run: bash .github/scripts/plan-ci.sh | tee -a "${GITHUB_OUTPUT}"
+        run: bash .github/scripts/plan-engine-tests.sh | tee -a "${GITHUB_OUTPUT}"
+
+  images:
+    name: Images
+    needs: plan
+    if: needs.plan.outputs.run == 'true' && needs.plan.outputs.images == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/image-build.yml
+    with:
+      branch: ${{ needs.plan.outputs.branch }}
+    secrets: inherit
 
   python:
     name: Python
-    needs: plan
-    if: needs.plan.outputs.run == 'true'
+    needs: [plan, images]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     env:
       IMAGE_TAG: ${{ needs.plan.outputs.tag }}
@@ -45,8 +59,8 @@ jobs:
 
   postprocessing:
     name: Postprocessing
-    needs: plan
-    if: needs.plan.outputs.run == 'true'
+    needs: [plan, images]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     env:
       IMAGE_TAG: ${{ needs.plan.outputs.tag }}
@@ -55,6 +69,23 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - run: bash .github/scripts/in-image.sh gcc "python3 -m unittest discover -s postprocessing/tests -t ."
+
+  style:
+    name: Style
+    needs: [plan, images]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    env:
+      IMAGE_TAG: ${{ needs.plan.outputs.tag }}
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color && rm actionlint
+          shellcheck .github/scripts/*.sh
+      - run: bash .github/scripts/prepare-runner.sh
+      - run: bash .github/scripts/in-image.sh gcc "bash .github/scripts/check-style.sh"
 
   lfs:
     name: LFS
@@ -77,7 +108,7 @@ jobs:
 
   cpu:
     name: "${{ matrix.toolchain.name }}: [${{ matrix.build-mode }}, ${{ matrix.toolchain.curve || 'Peano' }}]"
-    needs: [plan, lfs]
+    needs: [plan, images, lfs]
     if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
     strategy:
       fail-fast: false
@@ -89,7 +120,7 @@ jobs:
           - { id: llvm, name: LLVM, image: llvm, cc: clang, cxx: clang++, fc: gfortran, sanitizer: address+undefined }
           - { id: nvidia, name: NVIDIA, image: nvidia, cc: nvc, cxx: nvc++, fc: nvfortran }
           - { id: amd, name: AMD, image: amd, cc: amdclang, cxx: amdclang++, fc: flang }
-    uses: ./.github/workflows/toolchain.yml
+    uses: ./.github/workflows/engine-tests-toolchain.yml
     with:
       id: ${{ matrix.toolchain.id }}
       image: ${{ matrix.toolchain.image }}
@@ -108,7 +139,7 @@ jobs:
 
   gpu:
     name: "${{ matrix.toolchain.name }}: [${{ matrix.build-mode }}, Peano]"
-    needs: [plan, lfs]
+    needs: [plan, images, lfs]
     if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
     strategy:
       fail-fast: false
@@ -129,7 +160,7 @@ jobs:
           - { id: amd-ompt, name: AMD OpenMP Target, image: amd, cc: amdclang, cxx: amdclang++, fc: flang, gpu-backend: ompt, gpu-arch: gfx90a }
           - { id: amd-kokkos, name: AMD Kokkos, image: amd, cc: amdclang, cxx: hipcc, fc: flang, gpu-backend: kokkos, gpu-arch: gfx90a }
           - { id: amd-acpp, name: AMD AdaptiveCpp, image: amd, cc: amdclang, cxx: amdclang++, fc: flang, gpu-backend: acpp, gpu-arch: gfx90a }
-    uses: ./.github/workflows/toolchain.yml
+    uses: ./.github/workflows/engine-tests-toolchain.yml
     with:
       id: ${{ matrix.toolchain.id }}
       image: ${{ matrix.toolchain.image }}
@@ -147,8 +178,8 @@ jobs:
       cpu-device: ${{ matrix.toolchain.cpu-device || false }}
 
   result:
-    name: CI result
-    needs: [plan, python, postprocessing, lfs, cpu, gpu]
+    name: Result
+    needs: [plan, images, python, postprocessing, style, lfs, cpu, gpu]
     if: always()
     runs-on: ubuntu-24.04
     steps:

@@ -1,6 +1,7 @@
 #!/bin/bash
-# Prints whether the CI runs, which test families it runs (full or branch) and the tag of its images.
-# Usage: GH_TOKEN=<token> .github/scripts/plan-ci.sh
+# Prints whether the engine tests run, which test families they run (full or branch), whether they build the
+# images of the branch, the branch and the image tag.
+# Usage: GH_TOKEN=<token> .github/scripts/plan-engine-tests.sh
 
 set -euo pipefail
 
@@ -15,14 +16,13 @@ tagOf() {
 
 run=true
 scope=full
-tag=latest
+images=true
+branch="${GITHUB_REF_NAME}"
 case "${GITHUB_EVENT_NAME}" in
   push)
-    branch="${GITHUB_REF_NAME}"
-    tag=$(tagOf "${branch}")
     if [ "${branch}" != main ]; then
       scope=branch
-      # The pull request of a branch of this repository runs the full CI of the same commit.
+      # The pull request of a branch of this repository runs the full engine tests of the same commit.
       openRequests=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${branch}" --state open \
         --json headRepositoryOwner --jq "map(select(.headRepositoryOwner.login == \"${GITHUB_REPOSITORY_OWNER}\")) | length")
       if [ "${openRequests}" -gt 0 ]; then
@@ -31,15 +31,16 @@ case "${GITHUB_EVENT_NAME}" in
     fi
     ;;
   pull_request)
-    if [ "${HEAD_REPOSITORY}" = "${GITHUB_REPOSITORY}" ]; then
-      tag=$(tagOf "${HEAD_BRANCH}")
+    branch="${HEAD_BRANCH}"
+    if [ "${HEAD_REPOSITORY}" != "${GITHUB_REPOSITORY}" ]; then
+      images=false
+      branch=main
     fi
-    ;;
-  *)
-    tag=$(tagOf "${GITHUB_REF_NAME}")
     ;;
 esac
 
 echo "run=${run}"
 echo "scope=${scope}"
-echo "tag=${tag}"
+echo "images=${images}"
+echo "branch=${branch}"
+echo "tag=$(tagOf "${branch}")"

@@ -6,17 +6,21 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import sys
+
 from collections.abc import Collection
 
 import numpy as np
+
 from scipy.spatial import cKDTree
 
 # The first import works in the package. The second one works in a direct run from the
 # postprocessing/ directory.
 try:
-    from postprocessing.solution_io import MeshSnapshot, SolutionSource
+    from postprocessing.solution_io import MeshSnapshot
+    from postprocessing.solution_io import SolutionSource
 except ImportError:
-    from solution_io import MeshSnapshot, SolutionSource
+    from solution_io import MeshSnapshot
+    from solution_io import SolutionSource
 
 
 MIRRORS = ("x", "y", "z", "xy", "xz", "yz")

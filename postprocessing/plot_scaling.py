@@ -3,8 +3,9 @@
 
 import argparse
 import glob
-from pathlib import Path
 import re
+
+from pathlib import Path
 from typing import NamedTuple
 
 import matplotlib
@@ -12,13 +13,12 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
-from matplotlib.ticker import (
-    FixedLocator,
-    LogFormatterSciNotation,
-    LogLocator,
-    NullFormatter,
-    NullLocator,
-)
+
+from matplotlib.ticker import FixedLocator
+from matplotlib.ticker import LogFormatterSciNotation
+from matplotlib.ticker import LogLocator
+from matplotlib.ticker import NullFormatter
+from matplotlib.ticker import NullLocator
 
 DEFAULT_DPI = 330
 NUMBER = r"([0-9.]+(?:[eE][-+]?[0-9]+)?)"

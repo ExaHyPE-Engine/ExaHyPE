@@ -5,6 +5,7 @@ A convergence test of the particle tracing in a linearly rising plume.
 """
 
 import argparse
+
 from pathlib import Path
 
 import exahype2

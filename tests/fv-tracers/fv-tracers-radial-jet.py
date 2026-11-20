@@ -6,6 +6,7 @@ A convergence test of the particle tracing in a radial jet flow.
 
 import argparse
 import math
+
 from pathlib import Path
 
 import exahype2

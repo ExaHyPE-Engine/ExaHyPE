@@ -4,16 +4,16 @@
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor
-from io import BytesIO
 import math
 import multiprocessing
 import os
+
+from concurrent.futures import ProcessPoolExecutor
+from io import BytesIO
 from pathlib import Path
 
-import numpy as np
-
 import matplotlib
+import numpy as np
 
 # Render head-less when running as a plain script or worker process, but leave
 # the backend untouched inside an IPython kernel, where forcing Agg would
@@ -50,19 +50,15 @@ LABELLED_CBAR_RECT = (0.85, 0.09, 0.03, 0.84)
 # solution_io defines the mesh model and the readers of every format. The second import serves a
 # run of this script from the postprocessing/ directory with solution_io as a sibling module.
 try:
-    from postprocessing.solution_io import (
-        MeshSnapshot,
-        SnapshotRef,
-        SolutionSource,
-        load_snapshot_ref,
-    )
+    from postprocessing.solution_io import MeshSnapshot
+    from postprocessing.solution_io import SnapshotRef
+    from postprocessing.solution_io import SolutionSource
+    from postprocessing.solution_io import load_snapshot_ref
 except ImportError:
-    from solution_io import (
-        MeshSnapshot,
-        SnapshotRef,
-        SolutionSource,
-        load_snapshot_ref,
-    )
+    from solution_io import MeshSnapshot
+    from solution_io import SnapshotRef
+    from solution_io import SolutionSource
+    from solution_io import load_snapshot_ref
 
 
 # --------------------------------------------------------------------------- #
@@ -869,6 +865,7 @@ def show_solution(
 
     try:
         import ipywidgets as widgets
+
         from IPython.display import display
     except ImportError:
         return render(chosen, last)
@@ -1087,6 +1084,7 @@ def show_solution_3D(
 
     try:
         import ipywidgets as widgets
+
         from IPython.display import display
     except ImportError:
         layers = slice_layers(base, axis)

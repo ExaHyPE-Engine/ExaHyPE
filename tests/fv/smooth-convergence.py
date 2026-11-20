@@ -2,9 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
 
-import exahype2
+from PDE import flux
+from PDE import max_eigenvalue
 
-from PDE import max_eigenvalue, flux
+import exahype2
 
 
 def parse_arguments():

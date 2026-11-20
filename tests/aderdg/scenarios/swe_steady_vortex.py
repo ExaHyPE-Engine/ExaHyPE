@@ -1,9 +1,11 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .scenario import Scenario
+import os
+import sys
 
-import os, sys
 import jinja2
+
+from .scenario import Scenario
 
 sys.path.insert(0, os.path.abspath("../equations"))
 from equations import SWE_W_Bathymetry

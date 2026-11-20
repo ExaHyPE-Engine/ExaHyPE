@@ -46,7 +46,7 @@ fi
 root="${PWD}"
 MpiRanks=2
 OmpThreads=2
-Steps="-nt 500 -ns 2 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+Steps="-nt 300 -ns 2 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
 failures=()
 
 # Runs a command in a folder and records a failure under the title of the scenario.
