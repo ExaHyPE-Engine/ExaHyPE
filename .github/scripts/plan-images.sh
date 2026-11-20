@@ -1,6 +1,6 @@
 #!/bin/bash
 # Prints the images to build for the images given or for the changed files on standard input.
-# Usage: plan-images.sh <branch> [<image>...]
+# Usage: [IMAGE_PREFIX=<prefix>] plan-images.sh <branch> [<image>...]
 
 set -euo pipefail
 
@@ -19,10 +19,7 @@ Images=(base spack "${Toolchains[@]}" tutorials)
 sources() {
   local spackPackages="utilities/spack/repo.yaml utilities/spack/packages/"
   case "$1" in
-    base)
-      echo "utilities/docker/Dockerfile.base .github/workflows/image-build.yml .github/scripts/build-image.sh"
-      echo ".github/scripts/plan-images.sh"
-      ;;
+    base) echo "utilities/docker/Dockerfile.base" ;;
     spack) echo "utilities/docker/Dockerfile.spack" ;;
     gcc | nvidia) echo "utilities/docker/Dockerfile.$1 utilities/spack/compilers/$1/ requirements.txt" ;;
     llvm | intel | amd)
@@ -30,6 +27,7 @@ sources() {
       ;;
     exahype)
       echo "utilities/docker/Dockerfile.exahype utilities/spack/repo.yaml utilities/spack/packages/exahype2/"
+      echo "CMakeLists.txt cmake/ src/ api/ requirements.txt tests/ tutorials/ applications/"
       ;;
     tutorials) echo "utilities/docker/Dockerfile.tutorials" ;;
     *)
@@ -47,6 +45,15 @@ parent() {
     tutorials) echo exahype ;;
     *) echo spack ;;
   esac
+}
+
+# Returns whether IMAGE_PREFIX contains the image with the tag of the branch.
+published() {
+  local tag=latest
+  if [ "${branch}" != main ]; then
+    tag="branch-${branch//[^A-Za-z0-9_.-]/-}"
+  fi
+  [ -n "${IMAGE_PREFIX:-}" ] && docker manifest inspect "${IMAGE_PREFIX}/$1:${tag}" >/dev/null 2>&1
 }
 
 declare -A selected=()
@@ -79,7 +86,8 @@ if [ "${branch}" != main ]; then
   for ((index = ${#Images[@]} - 1; index >= 0; index--)); do
     image="${Images[index]}"
     parentImage=$(parent "${image}")
-    if [ -n "${parentImage}" ] && [ -n "${selected[${image}]:-}" ]; then
+    if [ -n "${parentImage}" ] && [ -n "${selected[${image}]:-}" ] && [ -z "${selected[${parentImage}]:-}" ] &&
+      ! published "${parentImage}"; then
       selected["${parentImage}"]=true
     fi
   done

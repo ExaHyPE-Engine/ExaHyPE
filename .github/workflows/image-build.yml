@@ -3,10 +3,14 @@ name: Image build
 on:
   push:
     paths:
-      - .github/workflows/image-build.yml
+      - CMakeLists.txt
+      - cmake/**
+      - src/**
+      - api/**
       - requirements.txt
-      - .github/scripts/build-image.sh
-      - .github/scripts/plan-images.sh
+      - tests/**
+      - tutorials/**
+      - applications/**
       - utilities/docker/**
       - utilities/spack/**
   workflow_dispatch:
@@ -48,6 +52,9 @@ jobs:
           IMAGES: ${{ inputs.images }}
           BEFORE: ${{ github.event.before }}
         run: |
+          read -r -a prefixes <<<"${IMAGE_PREFIXES:-ghcr.io/${GITHUB_REPOSITORY_OWNER,,}}"
+          export IMAGE_PREFIX="${prefixes[0]}"
+          docker login ghcr.io --username "${GHCR_USERNAME}" --password-stdin <<<"${GHCR_TOKEN}"
           if [ "${GITHUB_EVENT_NAME}" = workflow_dispatch ]; then
             read -r -a requestedImages <<<"${IMAGES}"
             bash .github/scripts/plan-images.sh "${GITHUB_REF_NAME}" "${requestedImages[@]}" | tee -a "${GITHUB_OUTPUT}"

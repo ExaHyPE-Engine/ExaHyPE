@@ -58,11 +58,22 @@ for prefix in "${prefixes[@]}"; do
   tags+=(--tag "${prefix}/${image}:${tag}")
 done
 
+# Spack pushes every package it installs to this build cache and installs from it.
+cacheArguments=()
+if [ -n "${GHCR_TOKEN:-}" ] && [ -n "${repositoryOwner}" ]; then
+  cacheArguments=(
+    --build-arg "SPACK_BUILDCACHE=oci://ghcr.io/${repositoryOwner,,}/spack-buildcache"
+    --secret id=spack_buildcache_user,env=GHCR_USERNAME
+    --secret id=spack_buildcache_token,env=GHCR_TOKEN
+  )
+fi
+
 docker build \
   --build-arg "IMAGE_PREFIX=${prefixes[0]}" \
   --build-arg "IMAGE_TAG=${tag}" \
   --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY:-ExaHyPE-Engine/ExaHyPE}" \
   "${tags[@]}" \
+  "${cacheArguments[@]}" \
   --file "utilities/docker/Dockerfile.${image}" \
   .
 

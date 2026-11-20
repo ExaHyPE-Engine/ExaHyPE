@@ -1,4 +1,4 @@
-ARG IMAGE_PREFIX=peanoframework
+ARG IMAGE_PREFIX=ghcr.io/exahype-engine
 ARG IMAGE_TAG=latest
 
 FROM ${IMAGE_PREFIX}/exahype:${IMAGE_TAG}

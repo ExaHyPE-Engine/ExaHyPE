@@ -52,7 +52,7 @@ Get started with ExaHyPE following our [Installation Guide](documentation/instal
 # Environments
 
 We maintain packaged [environments](utilities)
-for Docker, Apptainer, and [Spack](https://github.com/spack/spack/wiki) to simplify
+for Docker and [Spack](https://github.com/spack/spack/wiki) to simplify
 setup on workstations and HPC systems.
 
 # Contributing

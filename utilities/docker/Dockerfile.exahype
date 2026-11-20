@@ -1,4 +1,5 @@
-ARG IMAGE_PREFIX=peanoframework
+# syntax=docker/dockerfile:1
+ARG IMAGE_PREFIX=ghcr.io/exahype-engine
 ARG IMAGE_TAG=latest
 
 FROM ${IMAGE_PREFIX}/spack:${IMAGE_TAG} AS builder
@@ -11,10 +12,13 @@ COPY tests/ /exahype2/tests
 COPY tutorials/ /exahype2/tutorials
 COPY applications/ /exahype2/applications
 
-RUN . /opt/spack/share/spack/setup-env.sh && \
+# Spack builds the library from the checkout that the image is built from.
+RUN --mount=type=bind,target=/opt/exahype-source,rw \
+    . /opt/spack/share/spack/setup-env.sh && \
     spack config add config:install_tree:root:/opt/software && \
+    spack config add "packages:all:target:[x86_64]" && \
     spack repo add . && \
-    spack install --fail-fast --concurrent-packages 1 exahype2 && \
+    spack install --fail-fast --concurrent-packages 1 exahype2@main dev_path=/opt/exahype-source && \
     spack gc -y && \
     spack clean -a
 

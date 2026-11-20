@@ -1,7 +1,10 @@
-ARG IMAGE_PREFIX=peanoframework
+# syntax=docker/dockerfile:1
+ARG IMAGE_PREFIX=ghcr.io/exahype-engine
 ARG IMAGE_TAG=latest
 
 FROM ${IMAGE_PREFIX}/spack:${IMAGE_TAG} AS builder
+
+ARG SPACK_BUILDCACHE
 
 WORKDIR /opt/spack-environment
 
@@ -10,7 +13,13 @@ COPY utilities/spack/repo.yaml /opt/spack-peano/repo.yaml
 COPY utilities/spack/packages /opt/spack-peano/packages
 
 # Clang 22 embeds PTX only with --cuda-include-ptx. The CUDA driver compiles the PTX for every GPU newer than sm_75.
-RUN . /opt/spack/share/spack/setup-env.sh && \
+RUN --mount=type=secret,id=spack_buildcache_user,env=SPACK_BUILDCACHE_USER \
+    --mount=type=secret,id=spack_buildcache_token,env=SPACK_BUILDCACHE_TOKEN \
+    . /opt/spack/share/spack/setup-env.sh && \
+    if [ -n "${SPACK_BUILDCACHE}" ] && [ -n "${SPACK_BUILDCACHE_TOKEN}" ]; then \
+      spack mirror add --scope site --unsigned --autopush --oci-username-variable SPACK_BUILDCACHE_USER \
+        --oci-password-variable SPACK_BUILDCACHE_TOKEN buildcache "${SPACK_BUILDCACHE}"; \
+    fi && \
     spack env activate . && \
     spack compiler find && \
     spack repo add /opt/spack-peano && \

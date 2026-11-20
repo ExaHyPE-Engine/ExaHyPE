@@ -35,7 +35,7 @@ childDigests() {
 }
 
 packages=$(gh api --paginate "orgs/${owner}/packages?package_type=container" \
-  --jq ".[] | select(.repository.full_name == \"${repository}\") | .name")
+  --jq ".[] | select(.repository.full_name == \"${repository}\" and .name != \"spack-buildcache\") | .name")
 
 for package in ${packages}; do
   versions=$(gh api --paginate "orgs/${owner}/packages/container/${package}/versions" \
