@@ -1,0 +1,109 @@
+name: Toolchain
+
+on:
+  workflow_call:
+    inputs:
+      id: { type: string, required: true }
+      image: { type: string, required: true }
+      image-tag: { type: string, required: true }
+      scope: { type: string, required: true }
+      lfs-key: { type: string, required: false, default: "" }
+      cc: { type: string, required: true }
+      cxx: { type: string, required: true }
+      fc: { type: string, required: true }
+      build-mode: { type: string, required: true }
+      curve: { type: string, required: true }
+      sanitizer: { type: string, required: true }
+      gpu-backend: { type: string, required: true }
+      gpu-arch: { type: string, required: true }
+      cpu-device: { type: boolean, required: true }
+
+env:
+  IMAGE_TAG: ${{ inputs.image-tag }}
+  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CI_COMMIT_REF_NAME: ${{ github.head_ref || github.ref_name }}
+  CC: ${{ inputs.cc }}
+  CXX: ${{ inputs.cxx }}
+  FC: ${{ inputs.fc }}
+  BUILD_MODE: ${{ inputs.build-mode }}
+  SPACE_FILLING_CURVE: ${{ inputs.curve }}
+  SANITIZER: ${{ inputs.build-mode == 'Asserts' && inputs.sanitizer || 'none' }}
+  GPU_BACKEND: ${{ inputs.gpu-backend }}
+  GPU_ARCH: ${{ inputs.gpu-arch }}
+  RUN_UNIT_TESTS: ${{ inputs.gpu-backend == 'none' || (inputs.cpu-device && inputs.build-mode == 'Release') }}
+  RUN_SIMULATIONS: ${{ inputs.gpu-backend == 'none' || (inputs.cpu-device && inputs.build-mode == 'Release') }}
+  EXTRA_CONFIGURATION_OPTIONS: ${{ inputs.gpu-backend != 'none' && '-DPEANO_WITH_FPE=OFF' || '' }}
+  MIN_GRID_LEVELS: ${{ inputs.curve == 'Hilbert' && '3' || '2' }}
+  MAX_GRID_LEVELS: ${{ inputs.curve == 'Hilbert' && '5' || '4' }}
+  ASAN_OPTIONS: ${{ inputs.sanitizer != 'none' && 'detect_leaks=0' || '' }}
+  UBSAN_OPTIONS: ${{ inputs.sanitizer != 'none' && 'print_stacktrace=1:halt_on_error=1' || '' }}
+  OMPI_MCA_pml: ${{ inputs.sanitizer != 'none' && 'ob1' || '' }}
+  OMPI_MCA_osc: ${{ inputs.sanitizer != 'none' && '^ucx' || '' }}
+  OMPI_MCA_btl: ${{ inputs.sanitizer != 'none' && 'self,sm,tcp' || '' }}
+  # The binary memory patcher of Open MPI rewrites the allocator entry points that the address
+  # sanitizer interposes. MPI_Init_thread then raises a segmentation fault.
+  OMPI_MCA_memory: ${{ inputs.sanitizer != 'none' && '^patcher' || '' }}
+  UCX_TLS: ${{ inputs.sanitizer != 'none' && 'tcp,sm' || '' }}
+  SYCL_CACHE_PERSISTENT: ${{ inputs.id == 'intel-sycl' && '1' || '' }}
+  # The OpenMP runtime of oneAPI offloads to the CPU through its OpenCL plugin.
+  LIBOMPTARGET_PLUGIN: ${{ inputs.id == 'intel-ompt' && 'OPENCL' || '' }}
+  LIBOMPTARGET_DEVICETYPE: ${{ inputs.id == 'intel-ompt' && 'CPU' || '' }}
+
+jobs:
+  build:
+    name: Build and unit tests
+    runs-on: ubuntu-24.04
+    outputs:
+      families: ${{ steps.families.outputs.families }}
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CMAKE_CUDA_COMPILER_LAUNCHER: ccache
+      CMAKE_HIP_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_MAXSIZE: 100M
+    steps:
+      - uses: actions/checkout@v5
+      - id: families
+        run: echo "families=$(bash .github/scripts/run-tests.sh --list "${{ inputs.scope }}")" >>"${GITHUB_OUTPUT}"
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ inputs.id }}-${{ inputs.build-mode }}-${{ github.sha }}
+          restore-keys: ccache-${{ inputs.id }}-${{ inputs.build-mode }}-
+      - run: bash .github/scripts/in-image.sh "${{ inputs.image }}" "bash .github/scripts/build-library.sh"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+          retention-days: 1
+
+  tests:
+    name: ${{ matrix.family }}
+    needs: build
+    if: needs.build.outputs.families != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        family: ${{ fromJSON(needs.build.outputs.families) }}
+    steps:
+      - uses: actions/checkout@v5
+      - if: startsWith(matrix.family, 'Exa')
+        uses: actions/cache/restore@v4
+        with:
+          path: .git/lfs
+          key: ${{ inputs.lfs-key }}
+          fail-on-cache-miss: true
+      - if: startsWith(matrix.family, 'Exa')
+        run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/download-artifact@v4
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - run: bash .github/scripts/in-image.sh "${{ inputs.image }}" "bash .github/scripts/run-tests.sh '${{ matrix.family }}'"
