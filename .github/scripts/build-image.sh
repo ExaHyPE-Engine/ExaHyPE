@@ -63,8 +63,8 @@ cacheArguments=()
 if [ -n "${GHCR_TOKEN:-}" ] && [ -n "${repositoryOwner}" ]; then
   cacheArguments=(
     --build-arg "SPACK_BUILDCACHE=oci://ghcr.io/${repositoryOwner,,}/spack-buildcache"
-    --secret id=spack_buildcache_user,env=GHCR_USERNAME
-    --secret id=spack_buildcache_token,env=GHCR_TOKEN
+    --secret "id=spack_buildcache_user,env=GHCR_USERNAME"
+    --secret "id=spack_buildcache_token,env=GHCR_TOKEN"
   )
 fi
 
