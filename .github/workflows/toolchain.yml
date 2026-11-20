@@ -51,10 +51,11 @@ env:
 
 jobs:
   build:
-    name: Build and unit tests
+    name: Build and Unit Tests
     runs-on: ubuntu-24.04
     outputs:
-      families: ${{ steps.families.outputs.families }}
+      tests: ${{ steps.families.outputs.tests }}
+      applications: ${{ steps.families.outputs.applications }}
     env:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
@@ -65,17 +66,19 @@ jobs:
       CCACHE_NOHASHDIR: "true"
       CCACHE_MAXSIZE: 100M
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - id: families
-        run: echo "families=$(bash .github/scripts/run-tests.sh --list "${{ inputs.scope }}")" >>"${GITHUB_OUTPUT}"
+        run: |
+          echo "tests=$(bash .github/scripts/run-tests.sh --list "${{ inputs.scope }}" tests)" >>"${GITHUB_OUTPUT}"
+          echo "applications=$(bash .github/scripts/run-tests.sh --list "${{ inputs.scope }}" applications)" >>"${GITHUB_OUTPUT}"
       - run: bash .github/scripts/prepare-runner.sh
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .ccache
           key: ccache-${{ inputs.id }}-${{ inputs.build-mode }}-${{ github.sha }}
           restore-keys: ccache-${{ inputs.id }}-${{ inputs.build-mode }}-
       - run: bash .github/scripts/in-image.sh "${{ inputs.image }}" "bash .github/scripts/build-library.sh"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: install-${{ inputs.id }}-${{ inputs.build-mode }}
           path: install/
@@ -84,25 +87,42 @@ jobs:
   tests:
     name: ${{ matrix.family }}
     needs: build
-    if: needs.build.outputs.families != '[]'
+    if: needs.build.outputs.tests != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
-        family: ${{ fromJSON(needs.build.outputs.families) }}
+        family: ${{ fromJSON(needs.build.outputs.tests) }}
     steps:
-      - uses: actions/checkout@v5
-      - if: startsWith(matrix.family, 'Exa')
-        uses: actions/cache/restore@v4
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - run: bash .github/scripts/in-image.sh "${{ inputs.image }}" "bash .github/scripts/run-tests.sh '${{ matrix.family }}'"
+
+  applications:
+    name: ${{ matrix.family }}
+    needs: build
+    if: needs.build.outputs.applications != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        family: ${{ fromJSON(needs.build.outputs.applications) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
         with:
           path: .git/lfs
           key: ${{ inputs.lfs-key }}
           fail-on-cache-miss: true
-      - if: startsWith(matrix.family, 'Exa')
-        run: git lfs checkout
+      - run: git lfs checkout
       - run: bash .github/scripts/prepare-runner.sh
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: install-${{ inputs.id }}-${{ inputs.build-mode }}
           path: install/

@@ -44,7 +44,7 @@ jobs:
       toolchains: ${{ steps.plan.outputs.toolchains }}
       tutorials: ${{ steps.plan.outputs.tutorials }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: plan
@@ -73,7 +73,7 @@ jobs:
     if: needs.plan.outputs.base == 'true'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: bash .github/scripts/build-image.sh base
 
   spack:
@@ -81,7 +81,7 @@ jobs:
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.spack == 'true' }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: bash .github/scripts/build-image.sh spack
 
   toolchain:
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - run: bash .github/scripts/build-image.sh ${{ matrix.image }}
 
@@ -103,5 +103,5 @@ jobs:
     if: ${{ !cancelled() && !failure() && needs.plan.outputs.tutorials == 'true' }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: bash .github/scripts/build-image.sh tutorials

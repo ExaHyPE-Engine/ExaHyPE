@@ -16,13 +16,14 @@ permissions:
 
 jobs:
   plan:
+    name: Plan
     runs-on: ubuntu-24.04
     outputs:
       run: ${{ steps.plan.outputs.run }}
       scope: ${{ steps.plan.outputs.scope }}
       tag: ${{ steps.plan.outputs.tag }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - id: plan
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -31,6 +32,7 @@ jobs:
         run: bash .github/scripts/plan-ci.sh | tee -a "${GITHUB_OUTPUT}"
 
   python:
+    name: Python
     needs: plan
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-24.04
@@ -38,10 +40,11 @@ jobs:
       IMAGE_TAG: ${{ needs.plan.outputs.tag }}
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: bash .github/scripts/in-image.sh base "python3 -m compileall -q -f ./ && python3 api/exahype2/tests/import_layers.py"
 
   postprocessing:
+    name: Postprocessing
     needs: plan
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-24.04
@@ -49,30 +52,31 @@ jobs:
       IMAGE_TAG: ${{ needs.plan.outputs.tag }}
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - run: bash .github/scripts/in-image.sh gcc "python3 -m unittest discover -s postprocessing/tests -t ."
 
   lfs:
+    name: LFS
     needs: plan
     if: needs.plan.outputs.run == 'true' && needs.plan.outputs.scope == 'full'
     runs-on: ubuntu-24.04
     outputs:
       key: ${{ steps.key.outputs.key }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - id: key
         run: echo "key=lfs-$(git lfs ls-files --long | sha256sum | cut -c1-16)" >>"${GITHUB_OUTPUT}"
       - id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .git/lfs
           key: ${{ steps.key.outputs.key }}
       - if: steps.cache.outputs.cache-hit != 'true'
         run: git lfs fetch
 
-  toolchain:
-    name: ${{ matrix.toolchain.name }} ${{ matrix.build-mode }}
+  cpu:
+    name: "${{ matrix.toolchain.name }}: [${{ matrix.build-mode }}, ${{ matrix.toolchain.curve || 'Peano' }}]"
     needs: [plan, lfs]
     if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
     strategy:
@@ -85,6 +89,32 @@ jobs:
           - { id: llvm, name: LLVM, image: llvm, cc: clang, cxx: clang++, fc: gfortran, sanitizer: address+undefined }
           - { id: nvidia, name: NVIDIA, image: nvidia, cc: nvc, cxx: nvc++, fc: nvfortran }
           - { id: amd, name: AMD, image: amd, cc: amdclang, cxx: amdclang++, fc: flang }
+    uses: ./.github/workflows/toolchain.yml
+    with:
+      id: ${{ matrix.toolchain.id }}
+      image: ${{ matrix.toolchain.image }}
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      cc: ${{ matrix.toolchain.cc }}
+      cxx: ${{ matrix.toolchain.cxx }}
+      fc: ${{ matrix.toolchain.fc }}
+      build-mode: ${{ matrix.build-mode }}
+      curve: ${{ matrix.toolchain.curve || 'Peano' }}
+      sanitizer: ${{ matrix.toolchain.sanitizer || 'none' }}
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  gpu:
+    name: "${{ matrix.toolchain.name }}: [${{ matrix.build-mode }}, Peano]"
+    needs: [plan, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+        toolchain:
           - { id: gcc-cuda, name: GCC CUDA, image: gcc, cc: gcc, cxx: g++, fc: gfortran, gpu-backend: native, gpu-arch: sm_75 }
           - { id: gcc-kokkos, name: GCC Kokkos, image: gcc, cc: gcc, cxx: nvcc_wrapper, fc: gfortran, gpu-backend: kokkos, gpu-arch: sm_75 }
           - { id: intel-sycl, name: Intel SYCL, image: intel, cc: icx, cxx: icpx, fc: ifx, gpu-backend: native, gpu-arch: spir64, cpu-device: true }
@@ -110,15 +140,15 @@ jobs:
       cxx: ${{ matrix.toolchain.cxx }}
       fc: ${{ matrix.toolchain.fc }}
       build-mode: ${{ matrix.build-mode }}
-      curve: ${{ matrix.toolchain.curve || 'Peano' }}
-      sanitizer: ${{ matrix.toolchain.sanitizer || 'none' }}
+      curve: Peano
+      sanitizer: none
       gpu-backend: ${{ matrix.toolchain.gpu-backend || 'none' }}
       gpu-arch: ${{ matrix.toolchain.gpu-arch || 'none' }}
       cpu-device: ${{ matrix.toolchain.cpu-device || false }}
 
   result:
     name: CI result
-    needs: [plan, python, postprocessing, lfs, toolchain]
+    needs: [plan, python, postprocessing, lfs, cpu, gpu]
     if: always()
     runs-on: ubuntu-24.04
     steps:

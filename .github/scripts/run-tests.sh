@@ -1,23 +1,28 @@
 #!/bin/bash
 # Generates, builds and runs every scenario of one test family inside a toolchain image.
-# Usage: .github/scripts/run-tests.sh <family> | --list <full|branch>
+# Usage: .github/scripts/run-tests.sh <family> | --list <full|branch> <tests|applications>
 
 set -euo pipefail
 
-BranchFamilies=("API" "FV" "ADERDG" "RKDG")
-FullFamilies=(
+BranchTests=("API" "FV" "ADERDG" "RKDG")
+FullTests=(
   "API" "FV" "FV Tracers" "FV Static AMR" "Dynamic AMR" "ADERDG" "ADERDG Static AMR" "ADERDG Limiting"
-  "ADERDG GRMHD" "ADERDG Coupling" "RKDG" "RKDG Static AMR" "Fortran Coupling" "Tutorials" "ExaSkred Tsunami"
-  "ExaSkred Meteotsunami" "ExaSkred Landslide" "ExaSkred Coupled" "ExaSeis" "ExaGRyPE"
+  "ADERDG GRMHD" "ADERDG Coupling" "RKDG" "RKDG Static AMR" "Fortran Coupling" "Tutorials"
+)
+FullApplications=(
+  "ExaSkred Tsunami" "ExaSkred Meteotsunami" "ExaSkred Landslide" "ExaSkred Coupled" "ExaSeis" "ExaGRyPE"
 )
 # A GPU build skips the families that test the Python API, Fortran or the notebooks.
 CpuOnlyFamilies=("API" "Fortran Coupling" "Tutorials")
 
 if [ "${1:-}" = --list ]; then
-  if [ "${2:-}" = branch ]; then
-    families=("${BranchFamilies[@]}")
-  else
-    families=("${FullFamilies[@]}")
+  families=()
+  if [ "${2:-}" = branch ] && [ "${3:-}" = tests ]; then
+    families=("${BranchTests[@]}")
+  elif [ "${2:-}" = full ] && [ "${3:-}" = tests ]; then
+    families=("${FullTests[@]}")
+  elif [ "${2:-}" = full ] && [ "${3:-}" = applications ]; then
+    families=("${FullApplications[@]}")
   fi
   selected=()
   for family in "${families[@]}"; do
@@ -34,7 +39,7 @@ if [ "${1:-}" = --list ]; then
 fi
 
 if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 <family> | --list <full|branch>" >&2
+  echo "Usage: $0 <family> | --list <full|branch> <tests|applications>" >&2
   exit 2
 fi
 
