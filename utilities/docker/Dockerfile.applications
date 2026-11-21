@@ -1,0 +1,10 @@
+ARG IMAGE_PREFIX=ghcr.io/exahype-engine
+ARG IMAGE_TAG=latest
+
+FROM ${IMAGE_PREFIX}/exahype:${IMAGE_TAG}
+
+COPY applications/ /exahype2/applications
+
+WORKDIR /exahype2/applications
+
+CMD ["/bin/bash", "-l"]

@@ -4,6 +4,7 @@
 """Writes the code cells of a notebook up to the cell that calls generate_and_build() into an
 IPython script. The script builds the executable of the notebook without running it."""
 
+import argparse
 import json
 import sys
 
@@ -24,8 +25,16 @@ def get_build_cells(notebook_path):
     )
 
 
+def build_parser():
+    parser = argparse.ArgumentParser(
+        description="Writes the code cells of a notebook up to its build into an IPython script."
+    )
+    parser.add_argument("notebook", help="Notebook to read")
+    parser.add_argument("script", help="IPython script to write")
+    return parser
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        sys.exit("Usage: extract-build-cells.py <notebook> <script>")
-    with open(sys.argv[2], "w", encoding="utf-8") as script_file:
-        script_file.write("\n\n".join(get_build_cells(sys.argv[1])) + "\n")
+    args = build_parser().parse_args()
+    with open(args.script, "w", encoding="utf-8") as script_file:
+        script_file.write("\n\n".join(get_build_cells(args.notebook)) + "\n")

@@ -8,9 +8,6 @@ WORKDIR /opt/spack-environment
 
 COPY utilities/spack/repo.yaml .
 COPY utilities/spack/packages/exahype2 packages/exahype2
-COPY tests/ /exahype2/tests
-COPY tutorials/ /exahype2/tutorials
-COPY applications/ /exahype2/applications
 
 # Spack builds the library from the checkout that the image is built from.
 RUN --mount=type=bind,target=/opt/exahype-source,rw \
@@ -28,10 +25,7 @@ RUN . /opt/spack/share/spack/setup-env.sh && \
 
 FROM ${IMAGE_PREFIX}/base:${IMAGE_TAG}
 
-COPY --from=builder /exahype2 /exahype2
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /etc/profile.d/exahype2.sh /etc/profile.d/
-
-WORKDIR /exahype2
 
 CMD ["/bin/bash", "-l"]

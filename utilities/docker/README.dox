@@ -25,6 +25,10 @@ Both support GPU offloading.
 Pull the image whose compiler fits your hardware.
 
 Only the image builds use the images `base` and `spack`.
+The image `exahype` contains the installed ExaHyPE engine and its Python API.
+The images `tutorials` and `applications` start from it.
+`tutorials` adds the tutorials and starts JupyterLab on them.
+`applications` adds the applications.
 
 The `gcc` and `llvm` images also contain Kokkos for `sm_75`.
 `sm_75` is the oldest architecture that CUDA 13 supports.
@@ -95,6 +99,7 @@ docker build -t ghcr.io/exahype-engine/llvm -f utilities/docker/Dockerfile.llvm 
 ```shell
 docker build -t ghcr.io/exahype-engine/exahype -f utilities/docker/Dockerfile.exahype .
 docker build -t ghcr.io/exahype-engine/tutorials -f utilities/docker/Dockerfile.tutorials .
+docker build -t ghcr.io/exahype-engine/applications -f utilities/docker/Dockerfile.applications .
 ```
 
 */

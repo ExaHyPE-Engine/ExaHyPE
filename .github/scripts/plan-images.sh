@@ -11,7 +11,7 @@ fi
 
 Toolchains=(gcc llvm intel nvidia amd exahype)
 declare -A DisplayNames=([gcc]=GCC [llvm]=LLVM [intel]=Intel [nvidia]=NVIDIA [amd]=AMD [exahype]=ExaHyPE)
-Images=(base spack "${Toolchains[@]}" tutorials)
+Images=(base spack "${Toolchains[@]}" tutorials applications)
 
 # Prints the files and folders that an image is built from. A folder ends with a slash.
 sources() {
@@ -25,9 +25,10 @@ sources() {
       ;;
     exahype)
       echo "utilities/docker/Dockerfile.exahype utilities/spack/repo.yaml utilities/spack/packages/exahype2/"
-      echo "CMakeLists.txt cmake/ src/ api/ requirements.txt tests/ tutorials/ applications/"
+      echo "CMakeLists.txt cmake/ src/ api/ requirements.txt"
       ;;
-    tutorials) echo "utilities/docker/Dockerfile.tutorials" ;;
+    tutorials) echo "utilities/docker/Dockerfile.tutorials tutorials/" ;;
+    applications) echo "utilities/docker/Dockerfile.applications applications/" ;;
     *)
       echo "Unknown image $1" >&2
       return 1
@@ -40,7 +41,7 @@ parent() {
   case "$1" in
     base) ;;
     spack) echo base ;;
-    tutorials) echo exahype ;;
+    tutorials | applications) echo exahype ;;
     *) echo spack ;;
   esac
 }
@@ -126,3 +127,4 @@ echo "toolchains=[$(
   echo "${toolchains[*]}"
 )]"
 echo "tutorials=${selected[tutorials]:-false}"
+echo "applications=${selected[applications]:-false}"

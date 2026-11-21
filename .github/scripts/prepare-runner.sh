@@ -1,5 +1,6 @@
 #!/bin/bash
-# Frees disk on a GitHub-hosted runner and moves the Docker storage to its larger second disk /mnt.
+# Frees disk on a GitHub-hosted runner, moves the Docker storage to its larger second disk /mnt and adds a
+# swap file of 16 GiB there.
 # Usage: .github/scripts/prepare-runner.sh
 
 set -euo pipefail
@@ -22,5 +23,15 @@ if [ "${mntFree}" -gt "${rootFree}" ]; then
   sudo systemctl start docker
 fi
 
+if mountpoint -q /mnt; then
+  sudo swapoff -a
+  sudo rm -f /mnt/swapfile
+  sudo fallocate -l 16G /mnt/swapfile
+  sudo chmod 600 /mnt/swapfile
+  sudo mkswap /mnt/swapfile >/dev/null
+  sudo swapon /mnt/swapfile
+fi
+
 df -h / /mnt
+free -h
 docker info --format 'Docker storage: {{.DockerRootDir}}'

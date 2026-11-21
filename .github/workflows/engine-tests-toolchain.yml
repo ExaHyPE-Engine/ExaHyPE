@@ -32,7 +32,8 @@ env:
   GPU_ARCH: ${{ inputs.gpu-arch }}
   RUN_UNIT_TESTS: ${{ inputs.gpu-backend == 'none' || (inputs.cpu-device && inputs.build-mode == 'Release') }}
   RUN_SIMULATIONS: ${{ inputs.gpu-backend == 'none' || (inputs.cpu-device && inputs.build-mode == 'Release') }}
-  EXTRA_CONFIGURATION_OPTIONS: ${{ inputs.gpu-backend != 'none' && '-DPEANO_WITH_FPE=OFF' || '' }}
+  # The jobs of one toolchain run on runners with different CPUs.
+  EXTRA_CONFIGURATION_OPTIONS: -DPEANO_WITH_CPU_ARCH=x86-64-v3 ${{ inputs.gpu-backend != 'none' && '-DPEANO_WITH_FPE=OFF' || '' }}
   MIN_GRID_LEVELS: ${{ inputs.curve == 'Hilbert' && '3' || '2' }}
   MAX_GRID_LEVELS: ${{ inputs.curve == 'Hilbert' && '5' || '4' }}
   ASAN_OPTIONS: ${{ inputs.sanitizer != 'none' && 'detect_leaks=0' || '' }}

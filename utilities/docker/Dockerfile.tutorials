@@ -3,6 +3,8 @@ ARG IMAGE_TAG=latest
 
 FROM ${IMAGE_PREFIX}/exahype:${IMAGE_TAG}
 
+COPY tutorials/ /exahype2/tutorials
+
 WORKDIR /exahype2/tutorials
 
 EXPOSE 8888

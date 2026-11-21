@@ -34,6 +34,7 @@ jobs:
       spack: ${{ steps.plan.outputs.spack }}
       toolchains: ${{ steps.plan.outputs.toolchains }}
       tutorials: ${{ steps.plan.outputs.tutorials }}
+      applications: ${{ steps.plan.outputs.applications }}
     steps:
       - uses: actions/checkout@v7
       - id: plan
@@ -87,3 +88,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/build-image.sh tutorials
+
+  applications:
+    name: Applications
+    needs: [plan, toolchain]
+    if: ${{ !cancelled() && !failure() && needs.plan.outputs.applications == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - id: lfs
+        run: echo "key=lfs-$(git lfs ls-files --long | sha256sum | cut -c1-16)" >>"${GITHUB_OUTPUT}"
+      - id: cache
+        uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: ${{ steps.lfs.outputs.key }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: git lfs fetch
+      - run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - run: bash .github/scripts/build-image.sh applications

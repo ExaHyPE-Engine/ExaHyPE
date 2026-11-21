@@ -46,7 +46,7 @@ jobs:
     secrets: inherit
 
   python:
-    name: Python
+    name: Python API
     needs: [plan, images]
     if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
@@ -55,7 +55,10 @@ jobs:
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - run: bash .github/scripts/in-image.sh base "python3 -m compileall -q -f ./ && python3 api/exahype2/tests/import_layers.py"
+      - run: bash .github/scripts/prepare-runner.sh
+      - run: |
+          bash .github/scripts/in-image.sh gcc "python3 -m compileall -q -f ./ && python3 api/exahype2/tests/check_import_layers.py \
+            && PYTHONPATH=api python3 api/exahype2/tests/check_operator_tables.py"
 
   postprocessing:
     name: Postprocessing

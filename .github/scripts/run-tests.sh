@@ -4,16 +4,15 @@
 
 set -euo pipefail
 
-BranchTests=("API" "FV" "ADERDG" "RKDG")
+BranchTests=("Code Generation" "FV" "ADERDG" "RKDG")
 FullTests=(
-  "API" "FV" "FV Tracers" "FV Static AMR" "Dynamic AMR" "ADERDG" "ADERDG Static AMR" "ADERDG Limiting"
+  "Code Generation" "FV" "FV Tracers" "FV Static AMR" "Dynamic AMR" "ADERDG" "ADERDG Static AMR" "ADERDG Limiting"
   "ADERDG GRMHD" "ADERDG Coupling" "RKDG" "RKDG Static AMR" "Fortran Coupling" "Tutorials"
 )
 FullApplications=(
   "ExaSkred Tsunami" "ExaSkred Meteotsunami" "ExaSkred Landslide" "ExaSkred Coupled" "ExaSeis" "ExaGRyPE"
 )
-# A GPU build skips the families that test the Python API, Fortran or the notebooks.
-CpuOnlyFamilies=("API" "Fortran Coupling" "Tutorials")
+CpuOnlyFamilies=("Code Generation" "Fortran Coupling" "Tutorials")
 
 if [ "${1:-}" = --list ]; then
   families=()
@@ -81,12 +80,10 @@ AderdgScenarios=(
 )
 
 case "$1" in
-  "API")
-    for test in all_pde_terms operator_tables; do
-      mkdir -p "api-tests/${test}"
-      step "API ${test}" "api-tests/${test}" \
-        "PYTHONPATH=${root}/api python3 ${root}/api/exahype2/tests/${test}.py --build-mode ${BUILD_MODE}"
-    done
+  "Code Generation")
+    mkdir -p code-generation
+    step "Code Generation" code-generation \
+      "PYTHONPATH=${root}/api python3 ${root}/api/exahype2/tests/generate_all_pde_terms.py --build-mode ${BUILD_MODE}"
     ;;
   "FV")
     for test in breaking-dam channel-flow gaussian-bell gaussian-explosion point-explosion smooth-convergence \
