@@ -6,6 +6,9 @@ FROM ${IMAGE_PREFIX}/spack:${IMAGE_TAG} AS builder
 
 ARG SPACK_BUILDCACHE
 
+COPY utilities/spack/compilers/amd/install-rocm.sh /tmp/install-rocm.sh
+RUN bash /tmp/install-rocm.sh && rm /tmp/install-rocm.sh
+
 WORKDIR /opt/spack-environment
 
 COPY utilities/spack/compilers/amd/spack.yaml spack.yaml
@@ -39,6 +42,9 @@ RUN { \
 && ln -s /opt/views/view /opt/view
 
 FROM ${IMAGE_PREFIX}/base:${IMAGE_TAG}
+
+COPY utilities/spack/compilers/amd/install-rocm.sh /tmp/install-rocm.sh
+RUN bash /tmp/install-rocm.sh && rm /tmp/install-rocm.sh
 
 COPY --from=builder /opt/spack-environment /opt/spack-environment
 COPY --from=builder /opt/software /opt/software

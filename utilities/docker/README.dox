@@ -19,7 +19,8 @@ docker run --platform linux/amd64 -it -v ${PWD}:/work --rm --privileged ghcr.io/
 
 We recommend that users pull the prebuilt images from the [GitHub Container Registry](https://github.com/orgs/ExaHyPE-Engine/packages).
 The images `gcc`, `intel`, `nvidia`, `llvm` and `amd` contain the same dependencies to build, run and visualise Peano applications.
-Spack installs every dependency of the images.
+Spack installs every dependency of the images apart from ROCm.
+The `amd` image installs ROCm 7.2.3 from the package repository of AMD.
 Each image adds one compiler and one MPI library.
 Both support GPU offloading.
 Pull the image whose compiler fits your hardware.
