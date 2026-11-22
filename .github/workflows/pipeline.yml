@@ -38,8 +38,9 @@ jobs:
           if [ "${GITHUB_EVENT_NAME}" = push ] && [ "${branch}" != main ]; then
             scope=branch
             # The pull request of a branch of this repository runs the full tests of the same commit.
+            ownRequests="map(select(.headRepositoryOwner.login == \"${GITHUB_REPOSITORY_OWNER}\")) | length"
             openRequests=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${branch}" --state open \
-              --json headRepositoryOwner --jq "map(select(.headRepositoryOwner.login == \"${GITHUB_REPOSITORY_OWNER}\")) | length")
+              --json headRepositoryOwner --jq "${ownRequests}")
             if [ "${openRequests}" -gt 0 ]; then
               run=false
             fi
@@ -93,11 +94,11 @@ jobs:
       branch: ${{ needs.plan.outputs.branch }}
     secrets: inherit
 
-  python:
-    name: Python
+  static:
+    name: Static
     needs: [plan, images]
     if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
-    uses: ./.github/workflows/python.yml
+    uses: ./.github/workflows/static.yml
     with:
       image-tag: ${{ needs.plan.outputs.tag }}
 
@@ -123,7 +124,7 @@ jobs:
 
   result:
     name: Result
-    needs: [plan, lfs, images, python, cpu, gpu]
+    needs: [plan, lfs, images, static, cpu, gpu]
     if: always()
     runs-on: ubuntu-24.04
     steps:

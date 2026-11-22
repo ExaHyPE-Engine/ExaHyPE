@@ -35,10 +35,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: base
-          sources: utilities/docker/Dockerfile.base
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.base
+        run: bash .github/scripts/build-image.sh base
 
   spack:
     name: Spack
@@ -49,11 +49,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: spack
-          sources: utilities/docker/Dockerfile.spack
-          parent-hash: ${{ needs.base.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.spack
+        run: bash .github/scripts/build-image.sh spack "${{ needs.base.outputs.hash }}"
 
   amd:
     name: AMD
@@ -66,11 +65,11 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: amd
-          sources: utilities/docker/Dockerfile.amd utilities/spack/compilers/amd/ requirements.txt utilities/spack/repo.yaml utilities/spack/packages/
-          parent-hash: ${{ needs.spack.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.amd utilities/spack/compilers/amd/ requirements.txt utilities/spack/repo.yaml
+            utilities/spack/packages/
+        run: bash .github/scripts/build-image.sh amd "${{ needs.spack.outputs.hash }}"
 
   gcc:
     name: GCC
@@ -83,11 +82,10 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: gcc
-          sources: utilities/docker/Dockerfile.gcc utilities/spack/compilers/gcc/ requirements.txt
-          parent-hash: ${{ needs.spack.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.gcc utilities/spack/compilers/gcc/ requirements.txt
+        run: bash .github/scripts/build-image.sh gcc "${{ needs.spack.outputs.hash }}"
 
   intel:
     name: Intel
@@ -100,11 +98,11 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: intel
-          sources: utilities/docker/Dockerfile.intel utilities/spack/compilers/intel/ requirements.txt utilities/spack/repo.yaml utilities/spack/packages/
-          parent-hash: ${{ needs.spack.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.intel utilities/spack/compilers/intel/ requirements.txt
+            utilities/spack/repo.yaml utilities/spack/packages/
+        run: bash .github/scripts/build-image.sh intel "${{ needs.spack.outputs.hash }}"
 
   llvm:
     name: LLVM
@@ -117,11 +115,11 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: llvm
-          sources: utilities/docker/Dockerfile.llvm utilities/spack/compilers/llvm/ requirements.txt utilities/spack/repo.yaml utilities/spack/packages/
-          parent-hash: ${{ needs.spack.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.llvm utilities/spack/compilers/llvm/ requirements.txt
+            utilities/spack/repo.yaml utilities/spack/packages/
+        run: bash .github/scripts/build-image.sh llvm "${{ needs.spack.outputs.hash }}"
 
   nvidia:
     name: NVIDIA
@@ -134,11 +132,10 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: nvidia
-          sources: utilities/docker/Dockerfile.nvidia utilities/spack/compilers/nvidia/ requirements.txt
-          parent-hash: ${{ needs.spack.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.nvidia utilities/spack/compilers/nvidia/ requirements.txt
+        run: bash .github/scripts/build-image.sh nvidia "${{ needs.spack.outputs.hash }}"
 
   exahype:
     name: ExaHyPE
@@ -151,11 +148,11 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash .github/scripts/prepare-runner.sh
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: exahype
-          sources: utilities/docker/Dockerfile.exahype utilities/spack/repo.yaml utilities/spack/packages/exahype2/ CMakeLists.txt cmake/ src/ api/ requirements.txt
-          parent-hash: ${{ needs.spack.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.exahype utilities/spack/repo.yaml utilities/spack/packages/exahype2/
+            CMakeLists.txt cmake/ src/ api/ requirements.txt
+        run: bash .github/scripts/build-image.sh exahype "${{ needs.spack.outputs.hash }}"
 
   tutorials:
     name: Tutorials
@@ -166,11 +163,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: tutorials
-          sources: utilities/docker/Dockerfile.tutorials tutorials/
-          parent-hash: ${{ needs.exahype.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.tutorials tutorials/
+        run: bash .github/scripts/build-image.sh tutorials "${{ needs.exahype.outputs.hash }}"
 
   applications:
     name: Applications
@@ -192,8 +188,7 @@ jobs:
       - run: git lfs checkout
       - run: bash .github/scripts/prepare-runner.sh
       - id: build
-        uses: ./.github/actions/build-image
-        with:
-          image: applications
-          sources: utilities/docker/Dockerfile.applications applications/
-          parent-hash: ${{ needs.exahype.outputs.hash }}
+        env:
+          SOURCES: >-
+            utilities/docker/Dockerfile.applications applications/
+        run: bash .github/scripts/build-image.sh applications "${{ needs.exahype.outputs.hash }}"

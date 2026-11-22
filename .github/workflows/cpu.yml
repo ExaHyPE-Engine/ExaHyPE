@@ -16,6 +16,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: AMD
       id: amd
       image: amd
       image-tag: ${{ inputs.image-tag }}
@@ -39,6 +40,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: GCC
       id: gcc
       image: gcc
       image-tag: ${{ inputs.image-tag }}
@@ -62,6 +64,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: Intel
       id: intel
       image: intel
       image-tag: ${{ inputs.image-tag }}
@@ -85,6 +88,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: LLVM
       id: llvm
       image: llvm
       image-tag: ${{ inputs.image-tag }}
@@ -108,6 +112,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: NVIDIA
       id: nvidia
       image: nvidia
       image-tag: ${{ inputs.image-tag }}

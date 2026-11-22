@@ -16,6 +16,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: AMD AdaptiveCpp
       id: amd-acpp
       image: amd
       image-tag: ${{ inputs.image-tag }}
@@ -39,6 +40,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: AMD HIP
       id: amd-hip
       image: amd
       image-tag: ${{ inputs.image-tag }}
@@ -62,6 +64,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: AMD Kokkos
       id: amd-kokkos
       image: amd
       image-tag: ${{ inputs.image-tag }}
@@ -85,6 +88,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: AMD OpenMP Target
       id: amd-ompt
       image: amd
       image-tag: ${{ inputs.image-tag }}
@@ -108,6 +112,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: GCC CUDA
       id: gcc-cuda
       image: gcc
       image-tag: ${{ inputs.image-tag }}
@@ -131,6 +136,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: GCC Kokkos
       id: gcc-kokkos
       image: gcc
       image-tag: ${{ inputs.image-tag }}
@@ -154,6 +160,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: Intel AdaptiveCpp
       id: intel-acpp
       image: intel
       image-tag: ${{ inputs.image-tag }}
@@ -177,6 +184,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: Intel Kokkos
       id: intel-kokkos
       image: intel
       image-tag: ${{ inputs.image-tag }}
@@ -200,6 +208,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: Intel OpenMP Target
       id: intel-ompt
       image: intel
       image-tag: ${{ inputs.image-tag }}
@@ -223,6 +232,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: Intel SYCL
       id: intel-sycl
       image: intel
       image-tag: ${{ inputs.image-tag }}
@@ -246,6 +256,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: LLVM AdaptiveCpp
       id: llvm-acpp
       image: llvm
       image-tag: ${{ inputs.image-tag }}
@@ -269,6 +280,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: LLVM CUDA
       id: llvm-cuda
       image: llvm
       image-tag: ${{ inputs.image-tag }}
@@ -292,6 +304,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: LLVM Kokkos
       id: llvm-kokkos
       image: llvm
       image-tag: ${{ inputs.image-tag }}
@@ -315,6 +328,7 @@ jobs:
         build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
+      name: LLVM OpenMP Target
       id: llvm-ompt
       image: llvm
       image-tag: ${{ inputs.image-tag }}

@@ -1,4 +1,4 @@
-name: Python
+name: Static
 
 on:
   workflow_call:
@@ -35,7 +35,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: |
-          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          installer=https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash
+          bash <(curl -sSfL "${installer}") 1.7.7
           ./actionlint -color && rm actionlint
           shellcheck .github/scripts/*.sh
       - id: prepare
