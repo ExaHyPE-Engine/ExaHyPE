@@ -1,0 +1,1053 @@
+name: Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      id: { type: string, required: true }
+      image: { type: string, required: true }
+      image-tag: { type: string, required: true }
+      scope: { type: string, required: true }
+      lfs-key: { type: string, required: false, default: "" }
+      cc: { type: string, required: true }
+      cxx: { type: string, required: true }
+      fc: { type: string, required: true }
+      build-mode: { type: string, required: true }
+      curve: { type: string, required: true }
+      sanitizer: { type: string, required: true }
+      gpu-backend: { type: string, required: true }
+      gpu-arch: { type: string, required: true }
+      cpu-device: { type: boolean, required: true }
+
+env:
+  IMAGE_TAG: ${{ inputs.image-tag }}
+  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  IMAGE: ${{ inputs.image }}
+  CI_COMMIT_REF_NAME: ${{ github.head_ref || github.ref_name }}
+  CC: ${{ inputs.cc }}
+  CXX: ${{ inputs.cxx }}
+  FC: ${{ inputs.fc }}
+  BUILD_MODE: ${{ inputs.build-mode }}
+  SPACE_FILLING_CURVE: ${{ inputs.curve }}
+  SANITIZER: ${{ inputs.build-mode == 'Asserts' && inputs.sanitizer || 'none' }}
+  GPU_BACKEND: ${{ inputs.gpu-backend }}
+  GPU_ARCH: ${{ inputs.gpu-arch }}
+  RUN_UNIT_TESTS: ${{ inputs.gpu-backend == 'none' || (inputs.cpu-device && inputs.build-mode == 'Release') }}
+  RUN_SIMULATIONS: ${{ inputs.gpu-backend == 'none' || (inputs.cpu-device && inputs.build-mode == 'Release') }}
+  # GitHub runs the jobs of one toolchain on runners with different CPUs.
+  EXTRA_CONFIGURATION_OPTIONS: -DPEANO_WITH_CPU_ARCH=x86-64-v3 ${{ inputs.gpu-backend != 'none' && '-DPEANO_WITH_FPE=OFF' || '' }}
+  MIN_GRID_LEVELS: ${{ inputs.curve == 'Hilbert' && '3' || '2' }}
+  MAX_GRID_LEVELS: ${{ inputs.curve == 'Hilbert' && '5' || '4' }}
+  STEPS: -nt 300 -ns 2 -lmin ${{ inputs.curve == 'Hilbert' && '3' || '2' }} -lmax ${{ inputs.curve == 'Hilbert' && '5' || '4' }}
+  ASAN_OPTIONS: ${{ inputs.sanitizer != 'none' && 'detect_leaks=0' || '' }}
+  UBSAN_OPTIONS: ${{ inputs.sanitizer != 'none' && 'print_stacktrace=1:halt_on_error=1' || '' }}
+  OMPI_MCA_pml: ${{ inputs.sanitizer != 'none' && 'ob1' || '' }}
+  OMPI_MCA_osc: ${{ inputs.sanitizer != 'none' && '^ucx' || '' }}
+  OMPI_MCA_btl: ${{ inputs.sanitizer != 'none' && 'self,sm,tcp' || '' }}
+  # The binary memory patcher of Open MPI rewrites the allocator entry points that the address sanitizer
+  # interposes. MPI_Init_thread then raises a segmentation fault.
+  OMPI_MCA_memory: ${{ inputs.sanitizer != 'none' && '^patcher' || '' }}
+  UCX_TLS: ${{ inputs.sanitizer != 'none' && 'tcp,sm' || '' }}
+  SYCL_CACHE_PERSISTENT: ${{ inputs.id == 'intel-sycl' && '1' || '' }}
+  # The OpenMP runtime of oneAPI offloads to the CPU through its OpenCL plugin.
+  LIBOMPTARGET_PLUGIN: ${{ inputs.id == 'intel-ompt' && 'OPENCL' || '' }}
+  LIBOMPTARGET_DEVICETYPE: ${{ inputs.id == 'intel-ompt' && 'CPU' || '' }}
+
+jobs:
+  build:
+    name: Build and Unit Tests
+    runs-on: ubuntu-24.04
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CMAKE_CUDA_COMPILER_LAUNCHER: ccache
+      CMAKE_HIP_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_MAXSIZE: 100M
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-${{ inputs.id }}-${{ inputs.build-mode }}-${{ github.sha }}
+          restore-keys: ccache-${{ inputs.id }}-${{ inputs.build-mode }}-
+      - run: |
+          bash .github/scripts/in-image.sh "${{ inputs.image }}" '
+            echo "Running CI with $(nproc) cores"
+            echo "CC=${CC} CXX=${CXX} FC=${FC}"
+            mkdir -p build && cd build
+            cmake .. -GNinja -DBUILD_TESTING=ON -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON -DPEANO_WITH_FPE=ON \
+              -DPEANO_WITH_HDF5=ON -DPEANO_WITH_NETCDF=ON ${EXTRA_CONFIGURATION_OPTIONS} \
+              -DSUPPORTED_BUILD_TYPES="${BUILD_MODE}" -DPEANO_WITH_SANITIZER="${SANITIZER}" \
+              -DPEANO_WITH_SPACE_FILLING_CURVE="${SPACE_FILLING_CURVE}" -DPEANO_WITH_GPU_BACKEND="${GPU_BACKEND}" \
+              -DPEANO_WITH_GPU_ARCH="${GPU_ARCH}" -DCMAKE_INSTALL_PREFIX=../install
+            ccache --zero-stats
+            ninja -j "$(nproc)"
+            ccache --show-stats
+            if [ "${RUN_UNIT_TESTS}" = true ]; then
+              ctest --output-on-failure --timeout 1800
+            fi
+            ninja install'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+          retention-days: 1
+
+  code-generation:
+    name: Code Generation
+    needs: build
+    if: inputs.gpu-backend == 'none'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: Code Generation
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: >-
+          bash .github/scripts/in-image.sh "${{ inputs.image }}" "mkdir -p code-generation && cd code-generation
+          && PYTHONPATH=${PWD}/api python3 ${PWD}/api/exahype2/tests/generate_all_pde_terms.py --build-mode ${BUILD_MODE}"
+
+  fv:
+    name: FV
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/fv breaking-dam.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: breaking-dam.py --dimensions 2 }
+      - name: tests/fv breaking-dam.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: breaking-dam.py --dimensions 3 }
+      - name: tests/fv channel-flow.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: channel-flow.py --dimensions 2 }
+      - name: tests/fv channel-flow.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: channel-flow.py --dimensions 3 }
+      - name: tests/fv gaussian-bell.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: gaussian-bell.py --dimensions 2, errors: GaussianBell.output/Error.csv 8e-3 }
+      - name: tests/fv gaussian-bell.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: gaussian-bell.py --dimensions 3, errors: GaussianBell.output/Error.csv 8e-3 }
+      - name: tests/fv gaussian-explosion.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: gaussian-explosion.py --dimensions 2 }
+      - name: tests/fv gaussian-explosion.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: gaussian-explosion.py --dimensions 3 }
+      - name: tests/fv point-explosion.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: point-explosion.py --dimensions 2 }
+      - name: tests/fv point-explosion.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: point-explosion.py --dimensions 3 }
+      - name: tests/fv smooth-convergence.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: smooth-convergence.py --dimensions 2 }
+      - name: tests/fv smooth-convergence.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: smooth-convergence.py --dimensions 3 }
+      - name: tests/fv taylor-green-vortex.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: taylor-green-vortex.py --dimensions 2 }
+      - name: tests/fv taylor-green-vortex.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: taylor-green-vortex.py --dimensions 3 }
+      - name: tests/fv dry-ring.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: dry-ring.py --dimensions 2 }
+      - name: tests/fv isothermal-stratification.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv, generator: isothermal-stratification.py --dimensions 2 }
+
+  fv-tracers:
+    name: FV Tracers
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/fv-tracers fv-tracers-advection.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-tracers, generator: fv-tracers-advection.py --dimensions 2 }
+      - name: tests/fv-tracers fv-tracers-periodic-advection.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-tracers, generator: fv-tracers-periodic-advection.py --dimensions 2 }
+      - name: tests/fv-tracers fv-tracers-circular-bubble.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-tracers, generator: fv-tracers-circular-bubble.py --dimensions 2 }
+      - name: tests/fv-tracers fv-tracers-drag-force-validation.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-tracers, generator: fv-tracers-drag-force-validation.py --dimensions 2 }
+      - name: tests/fv-tracers fv-tracers-vertical-plume-rise.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-tracers, generator: fv-tracers-vertical-plume-rise.py --dimensions 2 }
+      - name: tests/fv-tracers fv-tracers-one-body-problem.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-tracers, generator: fv-tracers-one-body-problem.py --dimensions 2 }
+      - name: tests/fv-tracers fv-tracers-radial-jet.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-tracers, generator: fv-tracers-radial-jet.py --dimensions 2 }
+      - name: tests/fv-tracers fv-tracers-volcanic-plume-rise.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-tracers, generator: fv-tracers-volcanic-plume-rise.py --dimensions 2 }
+
+  fv-static-amr:
+    name: FV Static AMR
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/fv-static-amr fv-static-amr.py --periodic-bc on --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-static-amr, generator: fv-static-amr.py --periodic-bc on --dimensions 2 }
+      - name: tests/fv-static-amr fv-static-amr.py --periodic-bc on --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-static-amr, generator: fv-static-amr.py --periodic-bc on --dimensions 3 }
+      - name: tests/fv-static-amr fv-static-amr.py --periodic-bc off --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-static-amr, generator: fv-static-amr.py --periodic-bc off --dimensions 2 }
+      - name: tests/fv-static-amr fv-static-amr.py --periodic-bc off --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-static-amr, generator: fv-static-amr.py --periodic-bc off --dimensions 3 }
+
+  dynamic-amr:
+    name: Dynamic AMR
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/fv-dynamic-amr acoustic-point-explosion.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: acoustic-point-explosion.py --dimensions 2 }
+      - name: tests/fv-dynamic-amr acoustic-point-explosion.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: acoustic-point-explosion.py --dimensions 3 }
+      - name: tests/fv-dynamic-amr freestream.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: freestream.py --dimensions 2, errors: FreeStream.output/Error.csv 1e-10 }
+      - name: tests/fv-dynamic-amr freestream.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: freestream.py --dimensions 3, errors: FreeStream.output/Error.csv 1e-10 }
+      - name: tests/fv-dynamic-amr periodic-advection.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: periodic-advection.py --dimensions 2 }
+      - name: tests/fv-dynamic-amr periodic-advection.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: periodic-advection.py --dimensions 3 }
+      - name: tests/fv-dynamic-amr radial-advection.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: radial-advection.py --dimensions 2 }
+      - name: tests/fv-dynamic-amr radial-advection.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: radial-advection.py --dimensions 3 }
+      - name: tests/fv-dynamic-amr euler-point-explosion.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: euler-point-explosion.py --dimensions 2 }
+      - name: tests/fv-dynamic-amr euler-point-explosion.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fv-dynamic-amr, generator: euler-point-explosion.py --dimensions 3 }
+      - name: tests/aderdg-dynamic-amr acoustic-point-explosion.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-dynamic-amr, generator: acoustic-point-explosion.py --dimensions 2 }
+      - name: tests/aderdg-dynamic-amr acoustic-point-explosion.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-dynamic-amr, generator: acoustic-point-explosion.py --dimensions 3 }
+      - name: tests/aderdg-dynamic-amr freestream.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-dynamic-amr, generator: freestream.py --dimensions 2, errors: FreeStream.output/Error.csv 1e-10 }
+      - name: tests/aderdg-dynamic-amr freestream.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-dynamic-amr, generator: freestream.py --dimensions 3, errors: FreeStream.output/Error.csv 1e-10 }
+      - name: tests/aderdg-dynamic-amr periodic-advection.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-dynamic-amr, generator: periodic-advection.py --dimensions 2 }
+      - name: tests/aderdg-dynamic-amr periodic-advection.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-dynamic-amr, generator: periodic-advection.py --dimensions 3 }
+      - name: tests/aderdg-dynamic-amr radial-advection.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-dynamic-amr, generator: radial-advection.py --dimensions 2 }
+      - name: tests/aderdg-dynamic-amr radial-advection.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-dynamic-amr, generator: radial-advection.py --dimensions 3 }
+      - name: tests/rkdg-dynamic-amr acoustic-point-explosion.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-dynamic-amr, generator: acoustic-point-explosion.py --dimensions 2 }
+      - name: tests/rkdg-dynamic-amr acoustic-point-explosion.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-dynamic-amr, generator: acoustic-point-explosion.py --dimensions 3 }
+      - name: tests/rkdg-dynamic-amr freestream.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-dynamic-amr, generator: freestream.py --dimensions 2, errors: FreeStream.output/Error.csv 1e-10 }
+      - name: tests/rkdg-dynamic-amr freestream.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-dynamic-amr, generator: freestream.py --dimensions 3, errors: FreeStream.output/Error.csv 1e-10 }
+      - name: tests/rkdg-dynamic-amr periodic-advection.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-dynamic-amr, generator: periodic-advection.py --dimensions 2 }
+      - name: tests/rkdg-dynamic-amr periodic-advection.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-dynamic-amr, generator: periodic-advection.py --dimensions 3 }
+      - name: tests/rkdg-dynamic-amr radial-advection.py --dimensions 2
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-dynamic-amr, generator: radial-advection.py --dimensions 2 }
+      - name: tests/rkdg-dynamic-amr radial-advection.py --dimensions 3
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-dynamic-amr, generator: radial-advection.py --dimensions 3 }
+
+  aderdg:
+    name: ADERDG
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/aderdg aderdg.py -s AdvectionLinear -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s AdvectionLinear -pr float }
+      - name: tests/aderdg aderdg.py -s AdvectionLinear -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s AdvectionLinear -pr double }
+      - name: tests/aderdg aderdg.py -s AcousticPlanarWaves -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s AcousticPlanarWaves -pr float }
+      - name: tests/aderdg aderdg.py -s AcousticPlanarWaves -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s AcousticPlanarWaves -pr double }
+      - name: tests/aderdg aderdg.py -s ElasticPlanarWaves -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s ElasticPlanarWaves -pr float }
+      - name: tests/aderdg aderdg.py -s ElasticPlanarWaves -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s ElasticPlanarWaves -pr double }
+      - name: tests/aderdg aderdg.py -s ElasticRickerPulse -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s ElasticRickerPulse -pr float }
+      - name: tests/aderdg aderdg.py -s ElasticRickerPulse -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s ElasticRickerPulse -pr double }
+      - name: tests/aderdg aderdg.py -s EulerGaussianBell -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s EulerGaussianBell -pr float }
+      - name: tests/aderdg aderdg.py -s EulerGaussianBell -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s EulerGaussianBell -pr double, errors: EulerGaussianBell.output/Error_EulerGaussianBell.csv 5e-4 }
+      - name: tests/aderdg aderdg.py -s EulerGaussianBell3D -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s EulerGaussianBell3D -pr float }
+      - name: tests/aderdg aderdg.py -s EulerGaussianBell3D -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s EulerGaussianBell3D -pr double }
+      - name: tests/aderdg aderdg.py -s EulerIsentropicVortex -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s EulerIsentropicVortex -pr float }
+      - name: tests/aderdg aderdg.py -s EulerIsentropicVortex -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s EulerIsentropicVortex -pr double }
+      - name: tests/aderdg aderdg.py -s SWERadialDamBreak -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s SWERadialDamBreak -pr float }
+      - name: tests/aderdg aderdg.py -s SWERadialDamBreak -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s SWERadialDamBreak -pr double }
+      - name: tests/aderdg aderdg.py -s SWERestingLake -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s SWERestingLake -pr float }
+      - name: tests/aderdg aderdg.py -s SWERestingLake -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s SWERestingLake -pr double }
+      - name: tests/aderdg aderdg.py -s SWESteadyVortex -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s SWESteadyVortex -pr float }
+      - name: tests/aderdg aderdg.py -s SWESteadyVortex -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s SWESteadyVortex -pr double }
+      - name: tests/aderdg aderdg.py -s NavierStokesCosineBubble -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s NavierStokesCosineBubble -pr float }
+      - name: tests/aderdg aderdg.py -s NavierStokesCosineBubble -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s NavierStokesCosineBubble -pr double }
+      - name: tests/aderdg aderdg.py -s NavierStokesTwoBubbles -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s NavierStokesTwoBubbles -pr float }
+      - name: tests/aderdg aderdg.py -s NavierStokesTwoBubbles -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s NavierStokesTwoBubbles -pr double }
+      - name: tests/aderdg aderdg.py -s NavierStokesTaylorGreen -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s NavierStokesTaylorGreen -pr float }
+      - name: tests/aderdg aderdg.py -s NavierStokesTaylorGreen -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s NavierStokesTaylorGreen -pr double }
+      - name: tests/aderdg aderdg.py -s NavierStokesABCFlow -pr float
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s NavierStokesABCFlow -pr float }
+      - name: tests/aderdg aderdg.py -s NavierStokesABCFlow -pr double
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg, generator: aderdg.py -s NavierStokesABCFlow -pr double }
+
+  aderdg-static-amr:
+    name: ADERDG Static AMR
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/aderdg-static-amr shallow-water-radial-dam-break.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-static-amr, generator: shallow-water-radial-dam-break.py }
+      - name: tests/aderdg-static-amr acoustic-point-explosion.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-static-amr, generator: acoustic-point-explosion.py }
+
+  aderdg-limiting:
+    name: ADERDG Limiting
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/aderdg-limiting euler-airfoil.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-limiting, generator: euler-airfoil.py }
+      - name: tests/aderdg-limiting euler-corner-blast.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-limiting, generator: euler-corner-blast.py }
+      - name: tests/aderdg-limiting euler-double-rarefaction.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-limiting, generator: euler-double-rarefaction.py }
+      - name: tests/aderdg-limiting euler-quadrant-riemann.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-limiting, generator: euler-quadrant-riemann.py }
+      - name: tests/aderdg-limiting euler-rayleigh-taylor.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-limiting, generator: euler-rayleigh-taylor.py }
+
+  aderdg-grmhd:
+    name: ADERDG GRMHD
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/aderdg-grmhd aderdg-grmhd.py -s AlfvenWave
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-grmhd, generator: aderdg-grmhd.py -s AlfvenWave }
+      - name: tests/aderdg-grmhd aderdg-grmhd.py -s MichelSphericalAccretion
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-grmhd, generator: aderdg-grmhd.py -s MichelSphericalAccretion }
+
+  aderdg-coupling:
+    name: ADERDG Coupling
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/aderdg-coupling LOH1.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/aderdg-coupling, generator: LOH1.py, executable: "./coupled_LOH1 ${STEPS}" }
+
+  rkdg:
+    name: RKDG
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/rkdg rkdg.py -s AdvectionLinear
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s AdvectionLinear }
+      - name: tests/rkdg rkdg.py -s AcousticPlanarWaves
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s AcousticPlanarWaves }
+      - name: tests/rkdg rkdg.py -s ElasticPlanarWaves
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s ElasticPlanarWaves }
+      - name: tests/rkdg rkdg.py -s ElasticRickerPulse
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s ElasticRickerPulse }
+      - name: tests/rkdg rkdg.py -s EulerGaussianBell
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s EulerGaussianBell, errors: EulerGaussianBell.output/Error_EulerGaussianBell.csv 1.5e-3 }
+      - name: tests/rkdg rkdg.py -s EulerGaussianBell3D
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s EulerGaussianBell3D }
+      - name: tests/rkdg rkdg.py -s EulerIsentropicVortex
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s EulerIsentropicVortex }
+      - name: tests/rkdg rkdg.py -s SWERadialDamBreak
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s SWERadialDamBreak }
+      - name: tests/rkdg rkdg.py -s SWERestingLake
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s SWERestingLake }
+      - name: tests/rkdg rkdg.py -s SWESteadyVortex
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s SWESteadyVortex }
+      - name: tests/rkdg rkdg.py -s NavierStokesCosineBubble
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s NavierStokesCosineBubble }
+      - name: tests/rkdg rkdg.py -s NavierStokesTwoBubbles
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s NavierStokesTwoBubbles }
+      - name: tests/rkdg rkdg.py -s NavierStokesTaylorGreen
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s NavierStokesTaylorGreen }
+      - name: tests/rkdg rkdg.py -s NavierStokesABCFlow
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg, generator: rkdg.py -s NavierStokesABCFlow }
+
+  rkdg-static-amr:
+    name: RKDG Static AMR
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/rkdg-static-amr shallow-water-radial-dam-break.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-static-amr, generator: shallow-water-radial-dam-break.py }
+      - name: tests/rkdg-static-amr acoustic-point-explosion.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/rkdg-static-amr, generator: acoustic-point-explosion.py }
+
+  fortran-coupling:
+    name: Fortran Coupling
+    needs: build
+    if: inputs.scope == 'full' && inputs.gpu-backend == 'none'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tests/fortran-coupling fortran-coupling.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: tests/fortran-coupling, generator: fortran-coupling.py }
+
+  tutorials:
+    name: Tutorials
+    needs: build
+    if: inputs.scope == 'full' && inputs.gpu-backend == 'none'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: tutorials/01_acoustic
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          script=AcousticWaves.ipynb
+          if [ "${RUN_SIMULATIONS}" != true ]; then
+            script=build.ipy
+            python3 .github/scripts/extract-build-cells.py tutorials/01_acoustic/AcousticWaves.ipynb tutorials/01_acoustic/build.ipy
+          fi
+          bash .github/scripts/in-image.sh "${{ inputs.image }}" \
+            "cd tutorials/01_acoustic && PYTHONPATH=${PWD}/api ipython ${script} -- --build-mode ${BUILD_MODE}"
+      - name: tutorials/02_shallow-water
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          script=ShallowWater.ipynb
+          if [ "${RUN_SIMULATIONS}" != true ]; then
+            script=build.ipy
+            python3 .github/scripts/extract-build-cells.py tutorials/02_shallow-water/ShallowWater.ipynb tutorials/02_shallow-water/build.ipy
+          fi
+          bash .github/scripts/in-image.sh "${{ inputs.image }}" \
+            "cd tutorials/02_shallow-water && PYTHONPATH=${PWD}/api ipython ${script} -- --build-mode ${BUILD_MODE}"
+      - name: tutorials/03_euler
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          script=Euler.ipynb
+          if [ "${RUN_SIMULATIONS}" != true ]; then
+            script=build.ipy
+            python3 .github/scripts/extract-build-cells.py tutorials/03_euler/Euler.ipynb tutorials/03_euler/build.ipy
+          fi
+          bash .github/scripts/in-image.sh "${{ inputs.image }}" \
+            "cd tutorials/03_euler && PYTHONPATH=${PWD}/api ipython ${script} -- --build-mode ${BUILD_MODE}"
+      - name: tutorials/04_limiting
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          script=EulerShock.ipynb
+          if [ "${RUN_SIMULATIONS}" != true ]; then
+            script=build.ipy
+            python3 .github/scripts/extract-build-cells.py tutorials/04_limiting/EulerShock.ipynb tutorials/04_limiting/build.ipy
+          fi
+          bash .github/scripts/in-image.sh "${{ inputs.image }}" \
+            "cd tutorials/04_limiting && PYTHONPATH=${PWD}/api ipython ${script} -- --build-mode ${BUILD_MODE}"
+      - name: tutorials/05_elastic
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          script=ElasticWaves.ipynb
+          if [ "${RUN_SIMULATIONS}" != true ]; then
+            script=build.ipy
+            python3 .github/scripts/extract-build-cells.py tutorials/05_elastic/ElasticWaves.ipynb tutorials/05_elastic/build.ipy
+          fi
+          bash .github/scripts/in-image.sh "${{ inputs.image }}" \
+            "cd tutorials/05_elastic && PYTHONPATH=${PWD}/api ipython ${script} -- --build-mode ${BUILD_MODE}"
+
+  exaskred-tsunami:
+    name: ExaSkred Tsunami
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
+        with:
+          path: .git/lfs
+          key: ${{ inputs.lfs-key }}
+          fail-on-cache-miss: true
+      - run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: applications/exaskred/tsunami/artificial artificial.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/tsunami/artificial, generator: artificial.py, executable: "./ExaSkred-Tsunami ${STEPS}" }
+      - name: applications/exaskred/tsunami/chile chile.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/tsunami/chile, generator: chile.py, executable: "./ExaSkred-Tsunami ${STEPS}" }
+      - name: applications/exaskred/tsunami/oscillating-lake oscillating-lake.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/tsunami/oscillating-lake, generator: oscillating-lake.py, executable: "./ExaSkred-Tsunami ${STEPS}" }
+      - name: applications/exaskred/tsunami/solitary-wave solitary-wave.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/tsunami/solitary-wave, generator: solitary-wave.py, executable: "./ExaSkred-Tsunami ${STEPS}" }
+      - name: applications/exaskred/tsunami/three-mounds-channel three-mounds-channel.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/tsunami/three-mounds-channel, generator: three-mounds-channel.py, executable: "./ExaSkred-Tsunami ${STEPS}" }
+      - name: applications/exaskred/tsunami/tohoku tohoku.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/tsunami/tohoku, generator: tohoku.py, executable: "./ExaSkred-Tsunami ${STEPS}" }
+
+  exaskred-meteotsunami:
+    name: ExaSkred Meteotsunami
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
+        with:
+          path: .git/lfs
+          key: ${{ inputs.lfs-key }}
+          fail-on-cache-miss: true
+      - run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: applications/exaskred/meteotsunami/gulf-of-mexico gulf-of-mexico.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/meteotsunami/gulf-of-mexico, generator: gulf-of-mexico.py, executable: "./ExaSkred-Meteotsunami ${STEPS}" }
+      - name: applications/exaskred/meteotsunami/r1 r1.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/meteotsunami/r1, generator: r1.py, executable: "./ExaSkred-Meteotsunami ${STEPS}" }
+
+  exaskred-landslide:
+    name: ExaSkred Landslide
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
+        with:
+          path: .git/lfs
+          key: ${{ inputs.lfs-key }}
+          fail-on-cache-miss: true
+      - run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: applications/exaskred/landslide/tafjord tafjord.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/landslide/tafjord, generator: tafjord.py, executable: "./ExaSkred-Landslide ${STEPS}" }
+
+  exaskred-coupled:
+    name: ExaSkred Coupled
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
+        with:
+          path: .git/lfs
+          key: ${{ inputs.lfs-key }}
+          fail-on-cache-miss: true
+      - run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: applications/exaskred/coupled/impulse-wave impulse-wave.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/coupled/impulse-wave, generator: impulse-wave.py, executable: "./ExaSkred-Coupled ${STEPS}" }
+      - name: applications/exaskred/coupled/tafjord tafjord.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaskred/coupled/tafjord, generator: tafjord.py, executable: "./ExaSkred-Coupled ${STEPS}" }
+
+  exaseis:
+    name: ExaSeis
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
+        with:
+          path: .git/lfs
+          key: ${{ inputs.lfs-key }}
+          fail-on-cache-miss: true
+      - run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: applications/exaseis/cartesian cartesian.py
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/cartesian, generator: cartesian.py, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/curvilinear curvilinear.py -s LOH1
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/curvilinear, generator: curvilinear.py -s LOH1, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/curvilinear curvilinear.py -s Zugspitze
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/curvilinear, generator: curvilinear.py -s Zugspitze, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml pml.py -s LOH1
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml, generator: pml.py -s LOH1, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml pml.py -s Zugspitze
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml, generator: pml.py -s Zugspitze, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/dynamic-rupture dynamic-rupture.py -s TPV5
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/dynamic-rupture, generator: dynamic-rupture.py -s TPV5, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/dynamic-rupture dynamic-rupture.py -s TPV6
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/dynamic-rupture, generator: dynamic-rupture.py -s TPV6, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/dynamic-rupture dynamic-rupture.py -s TPV16
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/dynamic-rupture, generator: dynamic-rupture.py -s TPV16, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/dynamic-rupture dynamic-rupture.py -s TPV26
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/dynamic-rupture, generator: dynamic-rupture.py -s TPV26, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/dynamic-rupture dynamic-rupture.py -s TPV28
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/dynamic-rupture, generator: dynamic-rupture.py -s TPV28, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/dynamic-rupture dynamic-rupture.py -s TPV29
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/dynamic-rupture, generator: dynamic-rupture.py -s TPV29, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/dynamic-rupture dynamic-rupture.py -s TPV34
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/dynamic-rupture, generator: dynamic-rupture.py -s TPV34, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/dynamic-rupture dynamic-rupture.py -s Husavik
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/dynamic-rupture, generator: dynamic-rupture.py -s Husavik, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml-dynamic-rupture pml-dynamic-rupture.py -s TPV5
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml-dynamic-rupture, generator: pml-dynamic-rupture.py -s TPV5, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml-dynamic-rupture pml-dynamic-rupture.py -s TPV6
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml-dynamic-rupture, generator: pml-dynamic-rupture.py -s TPV6, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml-dynamic-rupture pml-dynamic-rupture.py -s TPV16
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml-dynamic-rupture, generator: pml-dynamic-rupture.py -s TPV16, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml-dynamic-rupture pml-dynamic-rupture.py -s TPV26
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml-dynamic-rupture, generator: pml-dynamic-rupture.py -s TPV26, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml-dynamic-rupture pml-dynamic-rupture.py -s TPV28
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml-dynamic-rupture, generator: pml-dynamic-rupture.py -s TPV28, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml-dynamic-rupture pml-dynamic-rupture.py -s TPV29
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml-dynamic-rupture, generator: pml-dynamic-rupture.py -s TPV29, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml-dynamic-rupture pml-dynamic-rupture.py -s TPV34
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml-dynamic-rupture, generator: pml-dynamic-rupture.py -s TPV34, executable: "./ExaSeis ${STEPS}" }
+      - name: applications/exaseis/pml-dynamic-rupture pml-dynamic-rupture.py -s Husavik
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exaseis/pml-dynamic-rupture, generator: pml-dynamic-rupture.py -s Husavik, executable: "./ExaSeis ${STEPS}" }
+
+  exagrype:
+    name: ExaGRyPE
+    needs: build
+    if: inputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
+        with:
+          path: .git/lfs
+          key: ${{ inputs.lfs-key }}
+          fail-on-cache-miss: true
+      - run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - id: install
+        uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.id }}-${{ inputs.build-mode }}
+          path: install/
+      - name: applications/exagrype/gauge-wave gauge-wave.py --solver fv
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: ./.github/actions/scenario
+        with: { folder: applications/exagrype/gauge-wave, generator: gauge-wave.py --solver fv, executable: "./ExaGRyPE -nt 500 -ns 2 -l 1" }

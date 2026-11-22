@@ -1,4 +1,4 @@
-[![Pipeline](https://img.shields.io/github/actions/workflow/status/ExaHyPE-Engine/ExaHyPE/engine-tests.yml?branch=main&label=pipeline)](https://github.com/ExaHyPE-Engine/ExaHyPE/actions/workflows/engine-tests.yml?query=branch%3Amain)
+[![Pipeline](https://img.shields.io/github/actions/workflow/status/ExaHyPE-Engine/ExaHyPE/pipeline.yml?branch=main&label=pipeline)](https://github.com/ExaHyPE-Engine/ExaHyPE/actions/workflows/pipeline.yml?query=branch%3Amain)
 [![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-silver-lightgrey)](https://api.eu.badgr.io/public/assertions/uhyUShBWT1Wfd0Vx3EoMrQ "SQAaaS silver badge achieved")
 <a href="https://api.eu.badgr.io/public/assertions/uhyUShBWT1Wfd0Vx3EoMrQ" title="SQAaaS silver badge achieved"><img src="https://github.com/EOSC-synergy/SQAaaS/raw/master/badges/badges_150x116/badge_software_silver.png" alt="SQAaaS badge" height="20"></a>
 

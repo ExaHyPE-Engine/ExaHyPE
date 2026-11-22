@@ -4,18 +4,26 @@ ARG IMAGE_TAG=latest
 
 FROM ${IMAGE_PREFIX}/spack:${IMAGE_TAG} AS builder
 
+ARG SPACK_BUILDCACHE
+
 WORKDIR /opt/spack-environment
 
 COPY utilities/spack/repo.yaml .
 COPY utilities/spack/packages/exahype2 packages/exahype2
 
-# Spack builds the library from the checkout that the image is built from.
 RUN --mount=type=bind,target=/opt/exahype-source,rw \
+    --mount=type=secret,id=spack_buildcache_user,env=SPACK_BUILDCACHE_USER \
+    --mount=type=secret,id=spack_buildcache_token,env=SPACK_BUILDCACHE_TOKEN \
     . /opt/spack/share/spack/setup-env.sh && \
+    if [ -n "${SPACK_BUILDCACHE}" ] && [ -n "${SPACK_BUILDCACHE_TOKEN}" ]; then \
+      spack mirror add --scope site --unsigned --autopush --oci-username-variable SPACK_BUILDCACHE_USER \
+        --oci-password-variable SPACK_BUILDCACHE_TOKEN buildcache "${SPACK_BUILDCACHE}"; \
+    fi && \
     spack config add config:install_tree:root:/opt/software && \
     spack config add "packages:all:target:[x86_64]" && \
     spack repo add . && \
-    spack install --fail-fast --concurrent-packages 1 exahype2@main dev_path=/opt/exahype-source && \
+    spack install --fail-fast --concurrent-packages 1 --use-buildcache package:never,dependencies:auto \
+      exahype2@main dev_path=/opt/exahype-source && \
     spack gc -y && \
     spack clean -a
 

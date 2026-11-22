@@ -34,8 +34,7 @@ for variable in "${Variables[@]}"; do
   fi
 done
 
-# The entrypoint of an image activates its Spack environment, which sets CC, CXX and FC to the compilers of the
-# image. The command sets the compilers of the job again after the activation.
+# The entrypoint of an image sets CC, CXX and FC to the compilers of the image.
 compilers=()
 for variable in CC CXX FC; do
   if [ -n "${!variable:-}" ]; then

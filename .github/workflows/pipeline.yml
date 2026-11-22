@@ -1,0 +1,670 @@
+name: Pipeline
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: pipeline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+  pull-requests: read
+
+env:
+  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+      scope: ${{ steps.plan.outputs.scope }}
+      images: ${{ steps.plan.outputs.images }}
+      branch: ${{ steps.plan.outputs.branch }}
+      tag: ${{ steps.plan.outputs.tag }}
+    steps:
+      - id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          run=true
+          scope=full
+          images=true
+          branch="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = push ] && [ "${branch}" != main ]; then
+            scope=branch
+            # The pull request of a branch of this repository runs the full tests of the same commit.
+            openRequests=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${branch}" --state open \
+              --json headRepositoryOwner --jq "map(select(.headRepositoryOwner.login == \"${GITHUB_REPOSITORY_OWNER}\")) | length")
+            if [ "${openRequests}" -gt 0 ]; then
+              run=false
+            fi
+          elif [ "${GITHUB_EVENT_NAME}" = pull_request ]; then
+            branch="${HEAD_BRANCH}"
+            if [ "${HEAD_REPOSITORY}" != "${GITHUB_REPOSITORY}" ]; then
+              images=false
+              branch=main
+            fi
+          fi
+          tag=latest
+          if [ "${branch}" != main ]; then
+            tag="branch-${branch//[^A-Za-z0-9_.-]/-}"
+          fi
+          {
+            echo "run=${run}"
+            echo "scope=${scope}"
+            echo "images=${images}"
+            echo "branch=${branch}"
+            echo "tag=${tag}"
+          } | tee -a "${GITHUB_OUTPUT}"
+
+  lfs:
+    name: LFS
+    needs: plan
+    if: needs.plan.outputs.run == 'true' && needs.plan.outputs.scope == 'full'
+    runs-on: ubuntu-24.04
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: key
+        run: echo "key=lfs-$(git lfs ls-files --long | sha256sum | cut -c1-16)" >>"${GITHUB_OUTPUT}"
+      - id: cache
+        uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: ${{ steps.key.outputs.key }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: git lfs fetch
+
+  images:
+    name: Images
+    needs: plan
+    if: needs.plan.outputs.run == 'true' && needs.plan.outputs.images == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/images.yml
+    with:
+      branch: ${{ needs.plan.outputs.branch }}
+    secrets: inherit
+
+  postprocessing:
+    name: Postprocessing
+    needs: [plan, images]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    env:
+      IMAGE_TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - run: bash .github/scripts/in-image.sh gcc "python3 -m unittest discover -s postprocessing/tests -t ."
+
+  python:
+    name: Python API
+    needs: [plan, images]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    env:
+      IMAGE_TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - run: |
+          bash .github/scripts/in-image.sh gcc "python3 -m compileall -q -f ./ \
+            && python3 api/exahype2/tests/check_import_layers.py \
+            && PYTHONPATH=api python3 api/exahype2/tests/check_operator_tables.py"
+
+  style:
+    name: Style
+    needs: [plan, images]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    env:
+      IMAGE_TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color && rm actionlint
+          shellcheck .github/scripts/*.sh
+      - id: prepare
+        run: bash .github/scripts/prepare-runner.sh
+      - name: clang-format
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.apply_clang_format --check"
+      - name: black
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.apply_black --check"
+      - name: Includes
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.check_includes"
+      - name: Imports
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.check_imports"
+      - name: Python lint
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.check_python_lint"
+      - name: Dead code
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.check_dead_code"
+
+  amd:
+    name: AMD
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: amd
+      image: amd
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: amdclang
+      cxx: amdclang++
+      fc: flang
+      curve: Peano
+      sanitizer: none
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  gcc:
+    name: GCC
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: gcc
+      image: gcc
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: gcc
+      cxx: g++
+      fc: gfortran
+      curve: Hilbert
+      sanitizer: address+undefined
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  intel:
+    name: Intel
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: intel
+      image: intel
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: icx
+      cxx: icpx
+      fc: ifx
+      curve: Peano
+      sanitizer: none
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  llvm:
+    name: LLVM
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: llvm
+      image: llvm
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: clang
+      cxx: clang++
+      fc: gfortran
+      curve: Peano
+      sanitizer: address+undefined
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  nvidia:
+    name: NVIDIA
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: nvidia
+      image: nvidia
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: nvc
+      cxx: nvc++
+      fc: nvfortran
+      curve: Peano
+      sanitizer: none
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  amd-acpp:
+    name: AMD AdaptiveCpp
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: amd-acpp
+      image: amd
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: amdclang
+      cxx: amdclang++
+      fc: flang
+      curve: Peano
+      sanitizer: none
+      gpu-backend: acpp
+      gpu-arch: gfx90a
+      cpu-device: false
+
+  amd-hip:
+    name: AMD HIP
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: amd-hip
+      image: amd
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: amdclang
+      cxx: amdclang++
+      fc: flang
+      curve: Peano
+      sanitizer: none
+      gpu-backend: native
+      gpu-arch: gfx90a
+      cpu-device: false
+
+  amd-kokkos:
+    name: AMD Kokkos
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: amd-kokkos
+      image: amd
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: amdclang
+      cxx: hipcc
+      fc: flang
+      curve: Peano
+      sanitizer: none
+      gpu-backend: kokkos
+      gpu-arch: gfx90a
+      cpu-device: false
+
+  amd-ompt:
+    name: AMD OpenMP Target
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: amd-ompt
+      image: amd
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: amdclang
+      cxx: amdclang++
+      fc: flang
+      curve: Peano
+      sanitizer: none
+      gpu-backend: ompt
+      gpu-arch: gfx90a
+      cpu-device: false
+
+  gcc-cuda:
+    name: GCC CUDA
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: gcc-cuda
+      image: gcc
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: gcc
+      cxx: g++
+      fc: gfortran
+      curve: Peano
+      sanitizer: none
+      gpu-backend: native
+      gpu-arch: sm_75
+      cpu-device: false
+
+  gcc-kokkos:
+    name: GCC Kokkos
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: gcc-kokkos
+      image: gcc
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: gcc
+      cxx: nvcc_wrapper
+      fc: gfortran
+      curve: Peano
+      sanitizer: none
+      gpu-backend: kokkos
+      gpu-arch: sm_75
+      cpu-device: false
+
+  intel-acpp:
+    name: Intel AdaptiveCpp
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: intel-acpp
+      image: intel
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: /opt/views/acpp/bin/clang
+      cxx: /opt/views/acpp/bin/clang++
+      fc: ifx
+      curve: Peano
+      sanitizer: none
+      gpu-backend: acpp
+      gpu-arch: spir64
+      cpu-device: false
+
+  intel-kokkos:
+    name: Intel Kokkos
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: intel-kokkos
+      image: intel
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: icx
+      cxx: icpx
+      fc: ifx
+      curve: Peano
+      sanitizer: none
+      gpu-backend: kokkos
+      gpu-arch: spir64
+      cpu-device: false
+
+  intel-ompt:
+    name: Intel OpenMP Target
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: intel-ompt
+      image: intel
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: icx
+      cxx: icpx
+      fc: ifx
+      curve: Peano
+      sanitizer: none
+      gpu-backend: ompt
+      gpu-arch: spir64
+      cpu-device: true
+
+  intel-sycl:
+    name: Intel SYCL
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: intel-sycl
+      image: intel
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: icx
+      cxx: icpx
+      fc: ifx
+      curve: Peano
+      sanitizer: none
+      gpu-backend: native
+      gpu-arch: spir64
+      cpu-device: true
+
+  llvm-acpp:
+    name: LLVM AdaptiveCpp
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: llvm-acpp
+      image: llvm
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: clang
+      cxx: clang++
+      fc: gfortran
+      curve: Peano
+      sanitizer: none
+      gpu-backend: acpp
+      gpu-arch: sm_75
+      cpu-device: false
+
+  llvm-cuda:
+    name: LLVM CUDA
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: llvm-cuda
+      image: llvm
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: clang
+      cxx: clang++
+      fc: gfortran
+      curve: Peano
+      sanitizer: none
+      gpu-backend: native
+      gpu-arch: sm_75
+      cpu-device: false
+
+  llvm-kokkos:
+    name: LLVM Kokkos
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: llvm-kokkos
+      image: llvm
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: clang
+      cxx: clang++
+      fc: gfortran
+      curve: Peano
+      sanitizer: none
+      gpu-backend: kokkos
+      gpu-arch: sm_75
+      cpu-device: false
+
+  llvm-ompt:
+    name: LLVM OpenMP Target
+    needs: [plan, images, lfs]
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: llvm-ompt
+      image: llvm
+      image-tag: ${{ needs.plan.outputs.tag }}
+      scope: ${{ needs.plan.outputs.scope }}
+      lfs-key: ${{ needs.lfs.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: clang
+      cxx: clang++
+      fc: gfortran
+      curve: Peano
+      sanitizer: none
+      gpu-backend: ompt
+      gpu-arch: sm_75
+      cpu-device: false
+
+  result:
+    name: Result
+    needs:
+      - plan
+      - lfs
+      - images
+      - postprocessing
+      - python
+      - style
+      - amd
+      - gcc
+      - intel
+      - llvm
+      - nvidia
+      - amd-acpp
+      - amd-hip
+      - amd-kokkos
+      - amd-ompt
+      - gcc-cuda
+      - gcc-kokkos
+      - intel-acpp
+      - intel-kokkos
+      - intel-ompt
+      - intel-sycl
+      - llvm-acpp
+      - llvm-cuda
+      - llvm-kokkos
+      - llvm-ompt
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: ${RESULTS}"
+          [[ " ${RESULTS} " != *" failure "* && " ${RESULTS} " != *" cancelled "* ]]

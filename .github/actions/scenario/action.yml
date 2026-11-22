@@ -1,0 +1,30 @@
+name: Scenario
+description: Generates the executable of a scenario, runs it and compares its error norms with a tolerance.
+
+inputs:
+  folder:
+    description: Folder of the scenario
+    required: true
+  generator:
+    description: Python script of the scenario and its arguments
+    required: true
+  executable:
+    description: Executable and its arguments
+    default: ./ExaHyPE ${STEPS}
+  errors:
+    description: Error file and tolerance of the error norms
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        command="cd ${{ inputs.folder }} && PYTHONPATH=${PWD}/api python3 ${{ inputs.generator }} --build-mode ${BUILD_MODE}"
+        if [ "${RUN_SIMULATIONS}" = true ]; then
+          command+=" && OMP_NUM_THREADS=2 mpirun --bind-to none -np 2 ${{ inputs.executable }}"
+          if [ -n "${{ inputs.errors }}" ]; then
+            command+=" && PYTHONPATH=${PWD} python3 -m postprocessing.check_error_norms ${{ inputs.errors }}"
+          fi
+        fi
+        bash .github/scripts/in-image.sh "${IMAGE}" "${command}"
