@@ -3,7 +3,6 @@ name: Build and Test
 on:
   workflow_call:
     inputs:
-      name: { type: string, required: true }
       id: { type: string, required: true }
       image: { type: string, required: true }
       image-tag: { type: string, required: true }
@@ -54,7 +53,7 @@ env:
 
 jobs:
   Build-and-Unit-Tests:
-    name: "${{ inputs.name }} ${{ inputs.build-mode }}: Build and Unit Tests"
+    name: Build and Unit Tests
     outputs:
       families: ${{ steps.families.outputs.families }}
     runs-on: ubuntu-24.04
@@ -113,7 +112,7 @@ jobs:
           retention-days: 1
 
   Family:
-    name: "${{ inputs.name }} ${{ inputs.build-mode }}: ${{ matrix.family }}"
+    name: ${{ matrix.family }}
     needs: Build-and-Unit-Tests
     runs-on: ubuntu-24.04
     timeout-minutes: 360

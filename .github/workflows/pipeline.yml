@@ -103,20 +103,27 @@ jobs:
       image-tag: ${{ needs.Plan.outputs.tag }}
 
   CPU:
-    name: ${{ matrix.toolchain.name }} ${{ matrix.build-mode }}
+    name: CPU
     needs: [Plan, Images, LFS]
     if: ${{ !cancelled() && needs.Plan.outputs.run == 'true' && needs.LFS.result != 'failure' }}
     strategy:
       fail-fast: false
       matrix:
         toolchain:
-          - name: AMD
+          - AMD
+          - GCC
+          - Intel
+          - LLVM
+          - NVIDIA
+        build-mode: [Release, Debug, Asserts]
+        include:
+          - toolchain: AMD
             id: amd
             image: amd
             cc: amdclang
             cxx: amdclang++
             fc: flang
-          - name: GCC
+          - toolchain: GCC
             id: gcc
             image: gcc
             cc: gcc
@@ -124,45 +131,43 @@ jobs:
             fc: gfortran
             curve: Hilbert
             sanitizer: address+undefined
-          - name: Intel
+          - toolchain: Intel
             id: intel
             image: intel
             cc: icx
             cxx: icpx
             fc: ifx
-          - name: LLVM
+          - toolchain: LLVM
             id: llvm
             image: llvm
             cc: clang
             cxx: clang++
             fc: gfortran
             sanitizer: address+undefined
-          - name: NVIDIA
+          - toolchain: NVIDIA
             id: nvidia
             image: nvidia
             cc: nvc
             cxx: nvc++
             fc: nvfortran
-        build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
-      name: ${{ matrix.toolchain.name }}
-      id: ${{ matrix.toolchain.id }}
-      image: ${{ matrix.toolchain.image }}
+      id: ${{ matrix.id }}
+      image: ${{ matrix.image }}
       image-tag: ${{ needs.Plan.outputs.tag }}
       lfs-key: ${{ needs.LFS.outputs.key }}
       build-mode: ${{ matrix.build-mode }}
-      cc: ${{ matrix.toolchain.cc }}
-      cxx: ${{ matrix.toolchain.cxx }}
-      fc: ${{ matrix.toolchain.fc }}
-      curve: ${{ matrix.toolchain.curve || 'Peano' }}
-      sanitizer: ${{ matrix.toolchain.sanitizer || 'none' }}
+      cc: ${{ matrix.cc }}
+      cxx: ${{ matrix.cxx }}
+      fc: ${{ matrix.fc }}
+      curve: ${{ matrix.curve || 'Peano' }}
+      sanitizer: ${{ matrix.sanitizer || 'none' }}
       gpu-backend: none
       gpu-arch: none
       cpu-device: false
 
   GPU:
-    name: ${{ matrix.toolchain.name }} ${{ matrix.build-mode }}
+    name: GPU
     needs: [Plan, Images, LFS]
     if: >-
       ${{ !cancelled() && needs.Plan.outputs.run == 'true' && needs.Plan.outputs.gpu == 'true'
@@ -171,7 +176,23 @@ jobs:
       fail-fast: false
       matrix:
         toolchain:
-          - name: AMD AdaptiveCpp
+          - AMD AdaptiveCpp
+          - AMD HIP
+          - AMD Kokkos
+          - AMD OpenMP Target
+          - GCC CUDA
+          - GCC Kokkos
+          - Intel AdaptiveCpp
+          - Intel Kokkos
+          - Intel OpenMP Target
+          - Intel SYCL
+          - LLVM AdaptiveCpp
+          - LLVM CUDA
+          - LLVM Kokkos
+          - LLVM OpenMP Target
+        build-mode: [Release, Debug, Asserts]
+        include:
+          - toolchain: AMD AdaptiveCpp
             id: amd-acpp
             image: amd
             cc: amdclang
@@ -179,7 +200,7 @@ jobs:
             fc: flang
             gpu-backend: acpp
             gpu-arch: gfx90a
-          - name: AMD HIP
+          - toolchain: AMD HIP
             id: amd-hip
             image: amd
             cc: amdclang
@@ -187,7 +208,7 @@ jobs:
             fc: flang
             gpu-backend: native
             gpu-arch: gfx90a
-          - name: AMD Kokkos
+          - toolchain: AMD Kokkos
             id: amd-kokkos
             image: amd
             cc: amdclang
@@ -195,7 +216,7 @@ jobs:
             fc: flang
             gpu-backend: kokkos
             gpu-arch: gfx90a
-          - name: AMD OpenMP Target
+          - toolchain: AMD OpenMP Target
             id: amd-ompt
             image: amd
             cc: amdclang
@@ -203,7 +224,7 @@ jobs:
             fc: flang
             gpu-backend: ompt
             gpu-arch: gfx90a
-          - name: GCC CUDA
+          - toolchain: GCC CUDA
             id: gcc-cuda
             image: gcc
             cc: gcc
@@ -211,7 +232,7 @@ jobs:
             fc: gfortran
             gpu-backend: native
             gpu-arch: sm_75
-          - name: GCC Kokkos
+          - toolchain: GCC Kokkos
             id: gcc-kokkos
             image: gcc
             cc: gcc
@@ -219,7 +240,7 @@ jobs:
             fc: gfortran
             gpu-backend: kokkos
             gpu-arch: sm_75
-          - name: Intel AdaptiveCpp
+          - toolchain: Intel AdaptiveCpp
             id: intel-acpp
             image: intel
             cc: /opt/views/acpp/bin/clang
@@ -227,7 +248,7 @@ jobs:
             fc: ifx
             gpu-backend: acpp
             gpu-arch: spir64
-          - name: Intel Kokkos
+          - toolchain: Intel Kokkos
             id: intel-kokkos
             image: intel
             cc: icx
@@ -235,7 +256,7 @@ jobs:
             fc: ifx
             gpu-backend: kokkos
             gpu-arch: spir64
-          - name: Intel OpenMP Target
+          - toolchain: Intel OpenMP Target
             id: intel-ompt
             image: intel
             cc: icx
@@ -244,7 +265,7 @@ jobs:
             gpu-backend: ompt
             gpu-arch: spir64
             cpu-device: true
-          - name: Intel SYCL
+          - toolchain: Intel SYCL
             id: intel-sycl
             image: intel
             cc: icx
@@ -253,7 +274,7 @@ jobs:
             gpu-backend: native
             gpu-arch: spir64
             cpu-device: true
-          - name: LLVM AdaptiveCpp
+          - toolchain: LLVM AdaptiveCpp
             id: llvm-acpp
             image: llvm
             cc: clang
@@ -261,7 +282,7 @@ jobs:
             fc: gfortran
             gpu-backend: acpp
             gpu-arch: sm_75
-          - name: LLVM CUDA
+          - toolchain: LLVM CUDA
             id: llvm-cuda
             image: llvm
             cc: clang
@@ -269,7 +290,7 @@ jobs:
             fc: gfortran
             gpu-backend: native
             gpu-arch: sm_75
-          - name: LLVM Kokkos
+          - toolchain: LLVM Kokkos
             id: llvm-kokkos
             image: llvm
             cc: clang
@@ -277,7 +298,7 @@ jobs:
             fc: gfortran
             gpu-backend: kokkos
             gpu-arch: sm_75
-          - name: LLVM OpenMP Target
+          - toolchain: LLVM OpenMP Target
             id: llvm-ompt
             image: llvm
             cc: clang
@@ -285,23 +306,21 @@ jobs:
             fc: gfortran
             gpu-backend: ompt
             gpu-arch: sm_75
-        build-mode: [Release, Debug, Asserts]
     uses: ./.github/workflows/build-and-test.yml
     with:
-      name: ${{ matrix.toolchain.name }}
-      id: ${{ matrix.toolchain.id }}
-      image: ${{ matrix.toolchain.image }}
+      id: ${{ matrix.id }}
+      image: ${{ matrix.image }}
       image-tag: ${{ needs.Plan.outputs.tag }}
       lfs-key: ${{ needs.LFS.outputs.key }}
       build-mode: ${{ matrix.build-mode }}
-      cc: ${{ matrix.toolchain.cc }}
-      cxx: ${{ matrix.toolchain.cxx }}
-      fc: ${{ matrix.toolchain.fc }}
+      cc: ${{ matrix.cc }}
+      cxx: ${{ matrix.cxx }}
+      fc: ${{ matrix.fc }}
       curve: Peano
       sanitizer: none
-      gpu-backend: ${{ matrix.toolchain.gpu-backend }}
-      gpu-arch: ${{ matrix.toolchain.gpu-arch }}
-      cpu-device: ${{ matrix.toolchain.cpu-device || false }}
+      gpu-backend: ${{ matrix.gpu-backend }}
+      gpu-arch: ${{ matrix.gpu-arch }}
+      cpu-device: ${{ matrix.cpu-device || false }}
 
   Result:
     name: Result
