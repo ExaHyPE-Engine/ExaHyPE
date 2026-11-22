@@ -1,0 +1,60 @@
+name: Python
+
+on:
+  workflow_call:
+    inputs:
+      image-tag: { type: string, required: true }
+
+env:
+  IMAGE_TAG: ${{ inputs.image-tag }}
+  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  postprocessing:
+    name: Postprocessing
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - run: bash .github/scripts/in-image.sh gcc "python3 -m unittest discover -s postprocessing/tests -t ."
+
+  python:
+    name: Python API
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - run: |
+          bash .github/scripts/in-image.sh gcc "python3 -m compileall -q -f ./ \
+            && python3 api/exahype2/tests/check_import_layers.py \
+            && PYTHONPATH=api python3 api/exahype2/tests/check_operator_tables.py"
+
+  style:
+    name: Style
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color && rm actionlint
+          shellcheck .github/scripts/*.sh
+      - id: prepare
+        run: bash .github/scripts/prepare-runner.sh
+      - name: clang-format
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.apply_clang_format --check"
+      - name: black
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.apply_black --check"
+      - name: Includes
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.check_includes"
+      - name: Imports
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.check_imports"
+      - name: Python lint
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.check_python_lint"
+      - name: Dead code
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: bash .github/scripts/in-image.sh gcc "python3 -m postprocessing.check_dead_code"

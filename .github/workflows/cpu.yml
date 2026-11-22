@@ -1,0 +1,124 @@
+name: CPU
+
+on:
+  workflow_call:
+    inputs:
+      image-tag: { type: string, required: true }
+      scope: { type: string, required: true }
+      lfs-key: { type: string, required: false, default: "" }
+
+jobs:
+  amd:
+    name: AMD
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: amd
+      image: amd
+      image-tag: ${{ inputs.image-tag }}
+      scope: ${{ inputs.scope }}
+      lfs-key: ${{ inputs.lfs-key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: amdclang
+      cxx: amdclang++
+      fc: flang
+      curve: Peano
+      sanitizer: none
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  gcc:
+    name: GCC
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: gcc
+      image: gcc
+      image-tag: ${{ inputs.image-tag }}
+      scope: ${{ inputs.scope }}
+      lfs-key: ${{ inputs.lfs-key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: gcc
+      cxx: g++
+      fc: gfortran
+      curve: Hilbert
+      sanitizer: address+undefined
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  intel:
+    name: Intel
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: intel
+      image: intel
+      image-tag: ${{ inputs.image-tag }}
+      scope: ${{ inputs.scope }}
+      lfs-key: ${{ inputs.lfs-key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: icx
+      cxx: icpx
+      fc: ifx
+      curve: Peano
+      sanitizer: none
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  llvm:
+    name: LLVM
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: llvm
+      image: llvm
+      image-tag: ${{ inputs.image-tag }}
+      scope: ${{ inputs.scope }}
+      lfs-key: ${{ inputs.lfs-key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: clang
+      cxx: clang++
+      fc: gfortran
+      curve: Peano
+      sanitizer: address+undefined
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
+
+  nvidia:
+    name: NVIDIA
+    strategy:
+      fail-fast: false
+      matrix:
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
+    with:
+      id: nvidia
+      image: nvidia
+      image-tag: ${{ inputs.image-tag }}
+      scope: ${{ inputs.scope }}
+      lfs-key: ${{ inputs.lfs-key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: nvc
+      cxx: nvc++
+      fc: nvfortran
+      curve: Peano
+      sanitizer: none
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
