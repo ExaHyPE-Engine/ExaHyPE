@@ -7,7 +7,6 @@ on:
       id: { type: string, required: true }
       image: { type: string, required: true }
       image-tag: { type: string, required: true }
-      scope: { type: string, required: true }
       lfs-key: { type: string, required: false, default: "" }
       cc: { type: string, required: true }
       cxx: { type: string, required: true }
@@ -54,7 +53,7 @@ env:
   LIBOMPTARGET_DEVICETYPE: ${{ inputs.id == 'intel-ompt' && 'CPU' || '' }}
 
 jobs:
-  build:
+  Build-and-Unit-Tests:
     name: "${{ inputs.name }} ${{ inputs.build-mode }}: Build and Unit Tests"
     outputs:
       families: ${{ steps.families.outputs.families }}
@@ -71,12 +70,9 @@ jobs:
     steps:
       - id: families
         run: |
-          families=("Code Generation" FV ADERDG RKDG)
-          if [ "${{ inputs.scope }}" = full ]; then
-            families=("Code Generation" FV "FV Tracers" "FV Static AMR" "Dynamic AMR" ADERDG "ADERDG Static AMR"
-              "ADERDG Limiting" "ADERDG GRMHD" "ADERDG Coupling" RKDG "RKDG Static AMR" "Fortran Coupling" Tutorials
-              "ExaSkred Tsunami" "ExaSkred Meteotsunami" "ExaSkred Landslide" "ExaSkred Coupled" ExaSeis ExaGRyPE)
-          fi
+          families=("Code Generation" FV "FV Tracers" "FV Static AMR" "Dynamic AMR" ADERDG "ADERDG Static AMR"
+            "ADERDG Limiting" "ADERDG GRMHD" "ADERDG Coupling" RKDG "RKDG Static AMR" "Fortran Coupling" Tutorials
+            "ExaSkred Tsunami" "ExaSkred Meteotsunami" "ExaSkred Landslide" "ExaSkred Coupled" ExaSeis ExaGRyPE)
           selected=()
           for family in "${families[@]}"; do
             # Skip the families whose PDE terms run on the host only.
@@ -116,15 +112,15 @@ jobs:
           path: install/
           retention-days: 1
 
-  families:
+  Family:
     name: "${{ inputs.name }} ${{ inputs.build-mode }}: ${{ matrix.family }}"
-    needs: build
+    needs: Build-and-Unit-Tests
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
-        family: ${{ fromJSON(needs.build.outputs.families) }}
+        family: ${{ fromJSON(needs.Build-and-Unit-Tests.outputs.families) }}
     steps:
       - uses: actions/checkout@v7
       - if: startsWith(matrix.family, 'Exa')

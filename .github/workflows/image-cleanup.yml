@@ -14,7 +14,7 @@ permissions:
   packages: write
 
 jobs:
-  cleanup:
+  Delete-Stale-Images:
     name: Delete Stale Images
     if: github.event_name != 'delete' || github.event.ref_type == 'branch'
     runs-on: ubuntu-24.04

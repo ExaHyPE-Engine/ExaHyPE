@@ -10,7 +10,7 @@ env:
   GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  postprocessing:
+  Postprocessing:
     name: Postprocessing
     runs-on: ubuntu-24.04
     steps:
@@ -18,7 +18,7 @@ jobs:
       - run: bash .github/scripts/prepare-runner.sh
       - run: bash .github/scripts/in-image.sh gcc "python3 -m unittest discover -s postprocessing/tests -t ."
 
-  python:
+  Python-API:
     name: Python API
     runs-on: ubuntu-24.04
     steps:
@@ -29,7 +29,7 @@ jobs:
             && python3 api/exahype2/tests/check_import_layers.py \
             && PYTHONPATH=api python3 api/exahype2/tests/check_operator_tables.py"
 
-  style:
+  Style:
     name: Style
     runs-on: ubuntu-24.04
     steps:

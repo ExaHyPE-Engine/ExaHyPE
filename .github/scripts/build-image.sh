@@ -1,6 +1,6 @@
 #!/bin/bash
-# Builds utilities/docker/Dockerfile.<image> and pushes it to every prefix of IMAGE_PREFIXES, unless the published
-# image already contains the sources. Writes the hash of the sources of the image and its parents to GITHUB_OUTPUT.
+# Builds utilities/docker/Dockerfile.<image> on a prepared runner and pushes it to every prefix of IMAGE_PREFIXES,
+# unless the published image contains the hash of its sources. Writes that hash to GITHUB_OUTPUT.
 # Usage: SOURCES="<source>..." .github/scripts/build-image.sh <image> [<hash of the parent image>]
 
 set -euo pipefail
@@ -50,6 +50,8 @@ elif [ -z "${IMAGES}" ] && [ "${published}" = "${hash}" ]; then
   echo "${IMAGE} is current"
   exit 0
 fi
+
+bash .github/scripts/prepare-runner.sh
 
 parents=$(grep -oP 'FROM \$\{IMAGE_PREFIX\}/\K[a-z]+' "utilities/docker/Dockerfile.${IMAGE}" | sort -u || true)
 for parent in ${parents}; do

@@ -15,12 +15,12 @@ permissions:
   pull-requests: read
 
 jobs:
-  plan:
+  Plan:
     name: Plan
     runs-on: ubuntu-24.04
     outputs:
       run: ${{ steps.plan.outputs.run }}
-      scope: ${{ steps.plan.outputs.scope }}
+      gpu: ${{ steps.plan.outputs.gpu }}
       images: ${{ steps.plan.outputs.images }}
       branch: ${{ steps.plan.outputs.branch }}
       tag: ${{ steps.plan.outputs.tag }}
@@ -32,12 +32,12 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           run=true
-          scope=full
+          gpu=true
           images=true
           branch="${GITHUB_REF_NAME}"
           if [ "${GITHUB_EVENT_NAME}" = push ] && [ "${branch}" != main ]; then
-            scope=branch
-            # The pull request of a branch of this repository runs the full tests of the same commit.
+            gpu=false
+            # The pull request of a branch of this repository runs every job for the same commit.
             ownRequests="map(select(.headRepositoryOwner.login == \"${GITHUB_REPOSITORY_OWNER}\")) | length"
             openRequests=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${branch}" --state open \
               --json headRepositoryOwner --jq "${ownRequests}")
@@ -57,16 +57,16 @@ jobs:
           fi
           {
             echo "run=${run}"
-            echo "scope=${scope}"
+            echo "gpu=${gpu}"
             echo "images=${images}"
             echo "branch=${branch}"
             echo "tag=${tag}"
           } | tee -a "${GITHUB_OUTPUT}"
 
-  lfs:
+  LFS:
     name: LFS
-    needs: plan
-    if: needs.plan.outputs.run == 'true' && needs.plan.outputs.scope == 'full'
+    needs: Plan
+    if: needs.Plan.outputs.run == 'true'
     runs-on: ubuntu-24.04
     outputs:
       key: ${{ steps.key.outputs.key }}
@@ -82,49 +82,230 @@ jobs:
       - if: steps.cache.outputs.cache-hit != 'true'
         run: git lfs fetch
 
-  images:
+  Images:
     name: Images
-    needs: plan
-    if: needs.plan.outputs.run == 'true' && needs.plan.outputs.images == 'true'
+    needs: Plan
+    if: needs.Plan.outputs.run == 'true' && needs.Plan.outputs.images == 'true'
     permissions:
       contents: read
       packages: write
     uses: ./.github/workflows/images.yml
     with:
-      branch: ${{ needs.plan.outputs.branch }}
+      branch: ${{ needs.Plan.outputs.branch }}
     secrets: inherit
 
-  static:
+  Static:
     name: Static
-    needs: [plan, images]
-    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
+    needs: [Plan, Images]
+    if: ${{ !cancelled() && needs.Plan.outputs.run == 'true' }}
     uses: ./.github/workflows/static.yml
     with:
-      image-tag: ${{ needs.plan.outputs.tag }}
+      image-tag: ${{ needs.Plan.outputs.tag }}
 
-  cpu:
-    name: CPU
-    needs: [plan, images, lfs]
-    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
-    uses: ./.github/workflows/cpu.yml
+  CPU:
+    name: ${{ matrix.toolchain.name }} ${{ matrix.build-mode }}
+    needs: [Plan, Images, LFS]
+    if: ${{ !cancelled() && needs.Plan.outputs.run == 'true' && needs.LFS.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - name: AMD
+            id: amd
+            image: amd
+            cc: amdclang
+            cxx: amdclang++
+            fc: flang
+          - name: GCC
+            id: gcc
+            image: gcc
+            cc: gcc
+            cxx: g++
+            fc: gfortran
+            curve: Hilbert
+            sanitizer: address+undefined
+          - name: Intel
+            id: intel
+            image: intel
+            cc: icx
+            cxx: icpx
+            fc: ifx
+          - name: LLVM
+            id: llvm
+            image: llvm
+            cc: clang
+            cxx: clang++
+            fc: gfortran
+            sanitizer: address+undefined
+          - name: NVIDIA
+            id: nvidia
+            image: nvidia
+            cc: nvc
+            cxx: nvc++
+            fc: nvfortran
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
     with:
-      image-tag: ${{ needs.plan.outputs.tag }}
-      scope: ${{ needs.plan.outputs.scope }}
-      lfs-key: ${{ needs.lfs.outputs.key }}
+      name: ${{ matrix.toolchain.name }}
+      id: ${{ matrix.toolchain.id }}
+      image: ${{ matrix.toolchain.image }}
+      image-tag: ${{ needs.Plan.outputs.tag }}
+      lfs-key: ${{ needs.LFS.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: ${{ matrix.toolchain.cc }}
+      cxx: ${{ matrix.toolchain.cxx }}
+      fc: ${{ matrix.toolchain.fc }}
+      curve: ${{ matrix.toolchain.curve || 'Peano' }}
+      sanitizer: ${{ matrix.toolchain.sanitizer || 'none' }}
+      gpu-backend: none
+      gpu-arch: none
+      cpu-device: false
 
-  gpu:
-    name: GPU
-    needs: [plan, images, lfs]
-    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && needs.lfs.result != 'failure' }}
-    uses: ./.github/workflows/gpu.yml
+  GPU:
+    name: ${{ matrix.toolchain.name }} ${{ matrix.build-mode }}
+    needs: [Plan, Images, LFS]
+    if: >-
+      ${{ !cancelled() && needs.Plan.outputs.run == 'true' && needs.Plan.outputs.gpu == 'true'
+      && needs.LFS.result != 'failure' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - name: AMD AdaptiveCpp
+            id: amd-acpp
+            image: amd
+            cc: amdclang
+            cxx: amdclang++
+            fc: flang
+            gpu-backend: acpp
+            gpu-arch: gfx90a
+          - name: AMD HIP
+            id: amd-hip
+            image: amd
+            cc: amdclang
+            cxx: amdclang++
+            fc: flang
+            gpu-backend: native
+            gpu-arch: gfx90a
+          - name: AMD Kokkos
+            id: amd-kokkos
+            image: amd
+            cc: amdclang
+            cxx: hipcc
+            fc: flang
+            gpu-backend: kokkos
+            gpu-arch: gfx90a
+          - name: AMD OpenMP Target
+            id: amd-ompt
+            image: amd
+            cc: amdclang
+            cxx: amdclang++
+            fc: flang
+            gpu-backend: ompt
+            gpu-arch: gfx90a
+          - name: GCC CUDA
+            id: gcc-cuda
+            image: gcc
+            cc: gcc
+            cxx: g++
+            fc: gfortran
+            gpu-backend: native
+            gpu-arch: sm_75
+          - name: GCC Kokkos
+            id: gcc-kokkos
+            image: gcc
+            cc: gcc
+            cxx: nvcc_wrapper
+            fc: gfortran
+            gpu-backend: kokkos
+            gpu-arch: sm_75
+          - name: Intel AdaptiveCpp
+            id: intel-acpp
+            image: intel
+            cc: /opt/views/acpp/bin/clang
+            cxx: /opt/views/acpp/bin/clang++
+            fc: ifx
+            gpu-backend: acpp
+            gpu-arch: spir64
+          - name: Intel Kokkos
+            id: intel-kokkos
+            image: intel
+            cc: icx
+            cxx: icpx
+            fc: ifx
+            gpu-backend: kokkos
+            gpu-arch: spir64
+          - name: Intel OpenMP Target
+            id: intel-ompt
+            image: intel
+            cc: icx
+            cxx: icpx
+            fc: ifx
+            gpu-backend: ompt
+            gpu-arch: spir64
+            cpu-device: true
+          - name: Intel SYCL
+            id: intel-sycl
+            image: intel
+            cc: icx
+            cxx: icpx
+            fc: ifx
+            gpu-backend: native
+            gpu-arch: spir64
+            cpu-device: true
+          - name: LLVM AdaptiveCpp
+            id: llvm-acpp
+            image: llvm
+            cc: clang
+            cxx: clang++
+            fc: gfortran
+            gpu-backend: acpp
+            gpu-arch: sm_75
+          - name: LLVM CUDA
+            id: llvm-cuda
+            image: llvm
+            cc: clang
+            cxx: clang++
+            fc: gfortran
+            gpu-backend: native
+            gpu-arch: sm_75
+          - name: LLVM Kokkos
+            id: llvm-kokkos
+            image: llvm
+            cc: clang
+            cxx: clang++
+            fc: gfortran
+            gpu-backend: kokkos
+            gpu-arch: sm_75
+          - name: LLVM OpenMP Target
+            id: llvm-ompt
+            image: llvm
+            cc: clang
+            cxx: clang++
+            fc: gfortran
+            gpu-backend: ompt
+            gpu-arch: sm_75
+        build-mode: [Release, Debug, Asserts]
+    uses: ./.github/workflows/build-and-test.yml
     with:
-      image-tag: ${{ needs.plan.outputs.tag }}
-      scope: ${{ needs.plan.outputs.scope }}
-      lfs-key: ${{ needs.lfs.outputs.key }}
+      name: ${{ matrix.toolchain.name }}
+      id: ${{ matrix.toolchain.id }}
+      image: ${{ matrix.toolchain.image }}
+      image-tag: ${{ needs.Plan.outputs.tag }}
+      lfs-key: ${{ needs.LFS.outputs.key }}
+      build-mode: ${{ matrix.build-mode }}
+      cc: ${{ matrix.toolchain.cc }}
+      cxx: ${{ matrix.toolchain.cxx }}
+      fc: ${{ matrix.toolchain.fc }}
+      curve: Peano
+      sanitizer: none
+      gpu-backend: ${{ matrix.toolchain.gpu-backend }}
+      gpu-arch: ${{ matrix.toolchain.gpu-arch }}
+      cpu-device: ${{ matrix.toolchain.cpu-device || false }}
 
-  result:
+  Result:
     name: Result
-    needs: [plan, lfs, images, static, cpu, gpu]
+    needs: [Plan, LFS, Images, Static, CPU, GPU]
     if: always()
     runs-on: ubuntu-24.04
     steps:

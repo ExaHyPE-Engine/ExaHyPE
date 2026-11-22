@@ -27,7 +27,7 @@ env:
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
 jobs:
-  base:
+  Base:
     name: Base
     runs-on: ubuntu-24.04
     outputs:
@@ -40,9 +40,9 @@ jobs:
             utilities/docker/Dockerfile.base
         run: bash .github/scripts/build-image.sh base
 
-  spack:
+  Spack:
     name: Spack
-    needs: base
+    needs: Base
     runs-on: ubuntu-24.04
     outputs:
       hash: ${{ steps.build.outputs.hash }}
@@ -52,111 +52,105 @@ jobs:
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.spack
-        run: bash .github/scripts/build-image.sh spack "${{ needs.base.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh spack "${{ needs.Base.outputs.hash }}"
 
-  amd:
+  AMD:
     name: AMD
-    needs: spack
+    needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     outputs:
       hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
       - id: build
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.amd utilities/spack/compilers/amd/ requirements.txt utilities/spack/repo.yaml
             utilities/spack/packages/
-        run: bash .github/scripts/build-image.sh amd "${{ needs.spack.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh amd "${{ needs.Spack.outputs.hash }}"
 
-  gcc:
+  GCC:
     name: GCC
-    needs: spack
+    needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     outputs:
       hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
       - id: build
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.gcc utilities/spack/compilers/gcc/ requirements.txt
-        run: bash .github/scripts/build-image.sh gcc "${{ needs.spack.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh gcc "${{ needs.Spack.outputs.hash }}"
 
-  intel:
+  Intel:
     name: Intel
-    needs: spack
+    needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     outputs:
       hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
       - id: build
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.intel utilities/spack/compilers/intel/ requirements.txt
             utilities/spack/repo.yaml utilities/spack/packages/
-        run: bash .github/scripts/build-image.sh intel "${{ needs.spack.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh intel "${{ needs.Spack.outputs.hash }}"
 
-  llvm:
+  LLVM:
     name: LLVM
-    needs: spack
+    needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     outputs:
       hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
       - id: build
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.llvm utilities/spack/compilers/llvm/ requirements.txt
             utilities/spack/repo.yaml utilities/spack/packages/
-        run: bash .github/scripts/build-image.sh llvm "${{ needs.spack.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh llvm "${{ needs.Spack.outputs.hash }}"
 
-  nvidia:
+  NVIDIA:
     name: NVIDIA
-    needs: spack
+    needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     outputs:
       hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
       - id: build
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.nvidia utilities/spack/compilers/nvidia/ requirements.txt
-        run: bash .github/scripts/build-image.sh nvidia "${{ needs.spack.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh nvidia "${{ needs.Spack.outputs.hash }}"
 
-  exahype:
+  ExaHyPE:
     name: ExaHyPE
-    needs: spack
+    needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     outputs:
       hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
       - id: build
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.exahype utilities/spack/repo.yaml utilities/spack/packages/exahype2/
             CMakeLists.txt cmake/ src/ api/ requirements.txt
-        run: bash .github/scripts/build-image.sh exahype "${{ needs.spack.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh exahype "${{ needs.Spack.outputs.hash }}"
 
-  tutorials:
+  Tutorials:
     name: Tutorials
-    needs: exahype
+    needs: ExaHyPE
     runs-on: ubuntu-24.04
     outputs:
       hash: ${{ steps.build.outputs.hash }}
@@ -166,11 +160,11 @@ jobs:
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.tutorials tutorials/
-        run: bash .github/scripts/build-image.sh tutorials "${{ needs.exahype.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh tutorials "${{ needs.ExaHyPE.outputs.hash }}"
 
-  applications:
+  Applications:
     name: Applications
-    needs: exahype
+    needs: ExaHyPE
     runs-on: ubuntu-24.04
     outputs:
       hash: ${{ steps.build.outputs.hash }}
@@ -186,9 +180,8 @@ jobs:
       - if: steps.cache.outputs.cache-hit != 'true'
         run: git lfs fetch
       - run: git lfs checkout
-      - run: bash .github/scripts/prepare-runner.sh
       - id: build
         env:
           SOURCES: >-
             utilities/docker/Dockerfile.applications applications/
-        run: bash .github/scripts/build-image.sh applications "${{ needs.exahype.outputs.hash }}"
+        run: bash .github/scripts/build-image.sh applications "${{ needs.ExaHyPE.outputs.hash }}"
