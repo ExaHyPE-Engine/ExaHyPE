@@ -1,0 +1,167 @@
+name: Toolchain
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        required: true
+      image:
+        type: string
+        required: true
+      cc:
+        type: string
+        required: true
+      cxx:
+        type: string
+        required: true
+      mode:
+        type: string
+        required: true
+      curve:
+        type: string
+        required: true
+      cmake-options:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      build-only:
+        type: boolean
+        required: true
+      tutorials:
+        type: boolean
+        required: true
+      lfs-key:
+        type: string
+        required: true
+
+env:
+  GHCR_TOKEN: ${{ github.token }}
+  CI_COMMIT_REF_NAME: ${{ github.head_ref || github.ref_name }}
+  PARALLEL_LAUNCH: env OMP_NUM_THREADS=2 mpirun --bind-to none -np 2
+  IMAGE: ${{ inputs.image }}
+  CC: ${{ inputs.cc }}
+  CXX: ${{ inputs.cxx }}
+
+jobs:
+  Build:
+    name: Build
+    runs-on: ubuntu-24.04
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CMAKE_CUDA_COMPILER_LAUNCHER: ccache
+      CMAKE_HIP_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_MAXSIZE: 100M
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-${{ github.workflow }}-${{ inputs.name }}-${{ inputs.mode }}-${{ github.sha }}
+          restore-keys: ccache-${{ github.workflow }}-${{ inputs.name }}-${{ inputs.mode }}-
+      - run: |
+          bash .github/scripts/in-image.sh "${IMAGE}" '
+            mkdir -p build && cd build
+            cmake .. -GNinja -DBUILD_TESTING=ON -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
+              -DCMAKE_INSTALL_PREFIX=../install -DSUPPORTED_BUILD_TYPES=${{ inputs.mode }} \
+              -DPEANO_WITH_SPACE_FILLING_CURVE=${{ inputs.curve }} -DPEANO_WITH_CPU_ARCH=x86-64-v3 \
+              ${{ inputs.cmake-options }}
+            ccache --zero-stats
+            ninja -j "$(nproc)"
+            ccache --show-stats
+            ninja install'
+      - if: ${{ !inputs.build-only }}
+        run: tar -cf unit-tests.tar --exclude='*.o' --exclude='*.a' build
+      - if: ${{ !inputs.build-only }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-tests-${{ inputs.name }}-${{ inputs.mode }}
+          path: unit-tests.tar
+          retention-days: 1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: install-${{ inputs.name }}-${{ inputs.mode }}
+          path: install/
+          retention-days: 1
+
+  Unit-Tests:
+    name: Unit Tests
+    needs: Build
+    if: ${{ !inputs.build-only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/download-artifact@v8
+        with:
+          name: unit-tests-${{ inputs.name }}-${{ inputs.mode }}
+      - run: tar -xf unit-tests.tar
+      - run: >-
+          bash .github/scripts/in-image.sh "${IMAGE}"
+          "cd build && env ${{ inputs.environment }} ctest --output-on-failure --timeout 1800"
+
+  Examples:
+    name: Examples
+    needs: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.name }}-${{ inputs.mode }}
+          path: install/
+      - run: >-
+          bash .github/scripts/in-image.sh "${IMAGE}"
+          "env ${{ inputs.environment }} python3 tests/test_examples.py --build-mode ${{ inputs.mode }}
+          --curve ${{ inputs.curve }} ${{ inputs.build-only && '--build-only' || '' }}"
+
+  Tutorials:
+    name: Tutorials
+    needs: Build
+    if: ${{ inputs.tutorials }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.name }}-${{ inputs.mode }}
+          path: install/
+      - run: >-
+          bash .github/scripts/in-image.sh "${IMAGE}"
+          "env ${{ inputs.environment }} python3 tests/test_tutorials.py --build-mode ${{ inputs.mode }}
+          ${{ inputs.build-only && '--build-only' || '' }}"
+
+  Applications:
+    name: Applications
+    needs: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
+        with:
+          path: .git/lfs
+          key: ${{ inputs.lfs-key }}
+          fail-on-cache-miss: true
+      - run: git lfs checkout
+      - run: bash .github/scripts/prepare-runner.sh
+      - uses: actions/download-artifact@v8
+        with:
+          name: install-${{ inputs.name }}-${{ inputs.mode }}
+          path: install/
+      - run: >-
+          bash .github/scripts/in-image.sh "${IMAGE}"
+          "env ${{ inputs.environment }} python3 tests/test_applications.py --build-mode ${{ inputs.mode }}
+          --curve ${{ inputs.curve }} ${{ inputs.build-only && '--build-only' || '' }}"

@@ -16,17 +16,6 @@ permissions:
 
 env:
   GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  CI_COMMIT_REF_NAME: ${{ github.head_ref || github.ref_name }}
-  PARALLEL_LAUNCH: env OMP_NUM_THREADS=2 mpirun --bind-to none -np 2
-  ASAN_OPTIONS: detect_leaks=0
-  UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
-  OMPI_MCA_pml: ob1
-  OMPI_MCA_osc: ^ucx
-  OMPI_MCA_btl: self,sm,tcp
-  # The binary memory patcher of Open MPI rewrites the allocator entry points that the address sanitizer
-  # interposes. MPI_Init_thread then raises a segmentation fault.
-  OMPI_MCA_memory: ^patcher
-  UCX_TLS: tcp,sm
 
 jobs:
   Images:
@@ -57,134 +46,36 @@ jobs:
           key: ${{ steps.key.outputs.key }}
       - run: git lfs fetch
 
-  Build:
-    name: Build ${{ matrix.toolchain.name }}
-    needs: Images
-    runs-on: ubuntu-24.04
+  Toolchains:
+    name: ${{ matrix.toolchain.name }}
+    needs: [Images, LFS]
     strategy:
       fail-fast: false
       matrix:
-        toolchain: &compilers
+        toolchain:
           - { name: GCC, image: gcc, cc: gcc, cxx: g++, curve: Hilbert }
           - { name: LLVM, image: llvm, cc: clang, cxx: clang++, curve: Peano }
-    env:
-      IMAGE: ${{ needs.Images.outputs[matrix.toolchain.image] }}
-      CC: ${{ matrix.toolchain.cc }}
-      CXX: ${{ matrix.toolchain.cxx }}
-      CMAKE_C_COMPILER_LAUNCHER: ccache
-      CMAKE_CXX_COMPILER_LAUNCHER: ccache
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_BASEDIR: ${{ github.workspace }}
-      CCACHE_NOHASHDIR: "true"
-      CCACHE_MAXSIZE: 100M
-    steps:
-      - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
-      - uses: actions/cache@v6
-        with:
-          path: .ccache
-          key: ccache-${{ github.workflow }}-${{ matrix.toolchain.name }}-${{ github.sha }}
-          restore-keys: ccache-${{ github.workflow }}-${{ matrix.toolchain.name }}-
-      - run: |
-          bash .github/scripts/in-image.sh "${IMAGE}" '
-            mkdir -p build && cd build
-            cmake .. -GNinja -DBUILD_TESTING=ON -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
-              -DCMAKE_INSTALL_PREFIX=../install \
-              -DSUPPORTED_BUILD_TYPES=Asserts -DPEANO_WITH_SPACE_FILLING_CURVE=${{ matrix.toolchain.curve }} \
-              -DPEANO_WITH_CPU_ARCH=x86-64-v3 -DPEANO_WITH_FPE=ON -DPEANO_WITH_SANITIZER=address+undefined
-            ccache --zero-stats
-            ninja -j "$(nproc)"
-            ccache --show-stats
-            ctest --output-on-failure --timeout 1800
-            ninja install'
-      - uses: actions/upload-artifact@v7
-        with:
-          name: install-${{ matrix.toolchain.name }}
-          path: install/
-          retention-days: 1
-
-  Examples:
-    name: Examples ${{ matrix.toolchain.name }}
-    needs: [Images, Build]
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        toolchain: *compilers
-    env:
-      IMAGE: ${{ needs.Images.outputs[matrix.toolchain.image] }}
-      CC: ${{ matrix.toolchain.cc }}
-      CXX: ${{ matrix.toolchain.cxx }}
-    steps:
-      - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
-      - uses: actions/download-artifact@v8
-        with:
-          name: install-${{ matrix.toolchain.name }}
-          path: install/
-      - run: >-
-          bash .github/scripts/in-image.sh "${IMAGE}"
-          "python3 tests/test_examples.py --build-mode Asserts --curve ${{ matrix.toolchain.curve }}"
-
-  Tutorials:
-    name: Tutorials ${{ matrix.toolchain.name }}
-    needs: [Images, Build]
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        toolchain: *compilers
-    env:
-      IMAGE: ${{ needs.Images.outputs[matrix.toolchain.image] }}
-      CC: ${{ matrix.toolchain.cc }}
-      CXX: ${{ matrix.toolchain.cxx }}
-    steps:
-      - uses: actions/checkout@v7
-      - run: bash .github/scripts/prepare-runner.sh
-      - uses: actions/download-artifact@v8
-        with:
-          name: install-${{ matrix.toolchain.name }}
-          path: install/
-      - run: bash .github/scripts/in-image.sh "${IMAGE}" "python3 tests/test_tutorials.py --build-mode Asserts"
-
-  Applications:
-    name: Applications ${{ matrix.toolchain.name }}
-    needs: [Images, LFS, Build]
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        toolchain: *compilers
-    env:
-      IMAGE: ${{ needs.Images.outputs[matrix.toolchain.image] }}
-      CC: ${{ matrix.toolchain.cc }}
-      CXX: ${{ matrix.toolchain.cxx }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/cache/restore@v6
-        with:
-          path: .git/lfs
-          key: ${{ needs.LFS.outputs.key }}
-          fail-on-cache-miss: true
-      - run: git lfs checkout
-      - run: bash .github/scripts/prepare-runner.sh
-      - uses: actions/download-artifact@v8
-        with:
-          name: install-${{ matrix.toolchain.name }}
-          path: install/
-      - run: >-
-          bash .github/scripts/in-image.sh "${IMAGE}"
-          "python3 tests/test_applications.py --build-mode Asserts --curve ${{ matrix.toolchain.curve }}"
+    uses: ./.github/workflows/toolchain.yml
+    with:
+      name: ${{ matrix.toolchain.name }}
+      image: ${{ needs.Images.outputs[matrix.toolchain.image] }}
+      cc: ${{ matrix.toolchain.cc }}
+      cxx: ${{ matrix.toolchain.cxx }}
+      mode: Asserts
+      curve: ${{ matrix.toolchain.curve }}
+      cmake-options: -DPEANO_WITH_FPE=ON -DPEANO_WITH_SANITIZER=address+undefined
+      # The binary memory patcher of Open MPI rewrites the allocator entry points that the address sanitizer
+      # interposes. MPI_Init_thread then raises a segmentation fault without OMPI_MCA_memory=^patcher.
+      environment: >-
+        ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 OMPI_MCA_pml=ob1
+        OMPI_MCA_osc=^ucx OMPI_MCA_btl=self,sm,tcp OMPI_MCA_memory=^patcher UCX_TLS=tcp,sm
+      build-only: false
+      tutorials: true
+      lfs-key: ${{ needs.LFS.outputs.key }}
 
   Sanitizers:
     name: Sanitizers
-    needs: [Images, LFS, Build, Examples, Tutorials, Applications]
+    needs: [Images, LFS, Toolchains]
     if: always()
     runs-on: ubuntu-24.04
     steps:
