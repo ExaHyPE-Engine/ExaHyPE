@@ -39,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--atol", type=float, default=0.0, help="Absolute tolerance (default: 0, exact)"
     )
-    parser.add_argument("--field", help="Compare only this field (default: all fields)")
+    parser.add_argument("--field", help="Compare only this field (default: All fields)")
     parser.add_argument(
         "--skip-fields",
         nargs="+",
@@ -156,7 +156,7 @@ def compare_snapshots(
         left_selected, right_selected = left_fields - skipped, right_fields - skipped
         if left_selected != right_selected:
             return (
-                f"Snapshot {index} fields differ: only in left {sorted(left_selected - right_selected)}, "
+                f"Snapshot {index} fields differ: Only in left {sorted(left_selected - right_selected)}, "
                 f"only in right {sorted(right_selected - left_selected)}."
             )
         selected = [name for name in left.variables if name in left_selected]

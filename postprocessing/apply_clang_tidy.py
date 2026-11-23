@@ -29,7 +29,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     add_common_arguments(parser)
     parser.add_argument(
         "--build-directory",
-        help="CMake build directory whose compile_commands.json lists the translation units (default: build below the root)",
+        help="CMake build directory whose compile_commands.json lists the translation units (default: Build below the root)",
     )
     return parser
 

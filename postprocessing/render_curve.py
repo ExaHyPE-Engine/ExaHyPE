@@ -118,7 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
         "or an output directory",
     )
     parser.add_argument(
-        "--step", type=int, default=-1, help="Snapshot index (default: last)"
+        "--step", type=int, default=-1, help="Snapshot index (default: Last)"
     )
     parser.add_argument("--output-dir", default=".", help="Where to write the image")
     parser.add_argument("--dpi", type=int, default=300, help="DPI for raster outputs")

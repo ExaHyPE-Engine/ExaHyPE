@@ -15,13 +15,8 @@ set(PEANO_CXX_FLAGS_RELEASE     -O3 -fomit-frame-pointer    CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_ASSERTS     -g -O2                      CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_DEBUG       -g -O0                      CACHE INTERNAL "")
 
-set(PEANO_Fortran_FLAGS_RELEASE -O3                         CACHE INTERNAL "")
-set(PEANO_Fortran_FLAGS_ASSERTS -g -O2                      CACHE INTERNAL "")
-set(PEANO_Fortran_FLAGS_DEBUG   -g -O0                      CACHE INTERNAL "")
-
 set(PEANO_EXTRA_C_FLAGS       "" CACHE STRING "Extra C flags (semicolon-separated)")
 set(PEANO_EXTRA_CXX_FLAGS     "" CACHE STRING "Extra C++ flags (semicolon-separated)")
-set(PEANO_EXTRA_Fortran_FLAGS "" CACHE STRING "Extra Fortran flags (semicolon-separated)")
 set(PEANO_EXTRA_CUDA_FLAGS    "" CACHE STRING "Extra CUDA flags (semicolon-separated)")
 set(PEANO_EXTRA_HIP_FLAGS     "" CACHE STRING "Extra HIP flags (semicolon-separated)")
 set(PEANO_EXTRA_DEFINITIONS   "" CACHE STRING "Extra preprocessor definitions (semicolon-separated)")
@@ -82,7 +77,6 @@ function(peano_apply_flags)
     # NVHPC follows IEEE 754 only with -Kieee.
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Kieee>
-    $<$<COMPILE_LANG_AND_ID:Fortran,NVHPC,PGI>:-Kieee>
     # NVHPC's automatic inlining drops stores of the kernels that stage a narrower storage
     # precision through the compute precision.
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Mnoautoinline>
@@ -102,7 +96,6 @@ function(peano_apply_flags)
   target_compile_options(PeanoOptions INTERFACE
     $<$<COMPILE_LANGUAGE:C>:${PEANO_EXTRA_C_FLAGS}>
     $<$<COMPILE_LANGUAGE:CXX>:${PEANO_EXTRA_CXX_FLAGS}>
-    $<$<COMPILE_LANGUAGE:Fortran>:${PEANO_EXTRA_Fortran_FLAGS}>
     $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_EXTRA_CUDA_FLAGS}>
     $<$<COMPILE_LANGUAGE:HIP>:${PEANO_EXTRA_HIP_FLAGS}>
   )

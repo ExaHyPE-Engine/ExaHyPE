@@ -27,8 +27,7 @@ class Makefile(object):
         never overwrites these files.
         """
         return set(
-            os.path.normpath(filename)
-            for filename in (self.hfiles + self.cppfiles + self.fortranfiles)
+            os.path.normpath(filename) for filename in (self.hfiles + self.cppfiles)
         )
 
     def __init__(self):
@@ -56,7 +55,6 @@ class Makefile(object):
         self.d["CMAKE_GENERATOR_TOOLSET"] = ""
         self.d["CMAKE_C_COMPILER"] = ""
         self.d["CMAKE_CXX_COMPILER"] = ""
-        self.d["CMAKE_FORTRAN_COMPILER"] = ""
         self.set_mode(Makefile.Mode.Release)
         self.available_plot_formats = {"vtu"}
         self.clear_files()
@@ -84,7 +82,6 @@ class Makefile(object):
     def clear_files(self):
         self.generated_hfiles = []
         self.generated_cppfiles = []
-        self.generated_fortranfiles = []
         self.generated_gpu_cppfiles = []
         self.clear_user_files()
 
@@ -92,7 +89,6 @@ class Makefile(object):
         """Removes the user's source files from the build."""
         self.hfiles = []
         self.cppfiles = []
-        self.fortranfiles = []
         self.generated_gpu_cppfiles = [
             filename
             for filename in self.generated_gpu_cppfiles
@@ -204,8 +200,6 @@ class Makefile(object):
                             self.d["CMAKE_C_COMPILER"] = value
                         elif key == "PEANO_CMAKE_CXX_COMPILER":
                             self.d["CMAKE_CXX_COMPILER"] = value
-                        elif key == "PEANO_CMAKE_FORTRAN_COMPILER":
-                            self.d["CMAKE_FORTRAN_COMPILER"] = value
                         elif key == "PEANO_WITH_HDF5":
                             self.d["WITH_HDF5"] = value
                         elif key == "PEANO_WITH_NETCDF":
@@ -276,25 +270,6 @@ class Makefile(object):
         if filename in self.generated_gpu_cppfiles:
             self.generated_gpu_cppfiles.remove(filename)
 
-    def add_fortran_file(self, filename, generated=False):
-        if generated:
-            if (
-                self.generated_fortranfiles.count(filename) == 0
-                and self.fortranfiles.count(filename) == 0
-            ):
-                self.generated_fortranfiles.append(filename)
-        else:
-            if self.fortranfiles.count(filename) == 0:
-                self.fortranfiles.append(filename)
-                if self.generated_fortranfiles.count(filename) > 0:
-                    self.generated_fortranfiles.remove(filename)
-
-    def remove_fortran_file(self, filename):
-        if filename in self.generated_fortranfiles:
-            self.generated_fortranfiles.remove(filename)
-        if filename in self.fortranfiles:
-            self.fortranfiles.remove(filename)
-
     def generate(self, directory, generated_subdir=None):
         """
         Overwrites the files .gitignore, CMakeLists.txt and Makefile in directory.
@@ -306,12 +281,8 @@ class Makefile(object):
         self.d["GENERATED_SUBDIR"] = generated_subdir or ""
         self.d["H_HEADERS"] = self.hfiles
         self.d["CXX_SOURCES"] = self.cppfiles
-        self.d["FORTRAN_SOURCES"] = self.fortranfiles
         self.d["GENERATED_H_HEADERS"] = [prefix + f for f in self.generated_hfiles]
         self.d["GENERATED_CXX_SOURCES"] = [prefix + f for f in self.generated_cppfiles]
-        self.d["GENERATED_FORTRAN_SOURCES"] = [
-            prefix + f for f in self.generated_fortranfiles
-        ]
         self.d["GENERATED_GPU_SOURCES"] = [
             prefix + filename if filename in self.generated_cppfiles else filename
             for filename in self.generated_gpu_cppfiles

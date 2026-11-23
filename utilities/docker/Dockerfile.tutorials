@@ -1,7 +1,7 @@
 ARG IMAGE_PREFIX=ghcr.io/exahype-engine
-ARG IMAGE_TAG=latest
+ARG EXAHYPE_TAG=latest
 
-FROM ${IMAGE_PREFIX}/exahype:${IMAGE_TAG}
+FROM ${IMAGE_PREFIX}/exahype:${EXAHYPE_TAG}
 
 COPY tutorials/ /exahype2/tutorials
 

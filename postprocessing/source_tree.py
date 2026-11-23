@@ -174,14 +174,14 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     """Adds the repository root and the number of parallel jobs to a parser."""
     parser.add_argument(
         "--root",
-        help=f"Repository to analyse (default: the closest directory above the working directory that contains {STYLE_FILE})",
+        help=f"Repository to analyse (default: The closest directory above the working directory that contains {STYLE_FILE})",
     )
     parser.add_argument(
         "-j",
         "--jobs",
         type=positive_integer,
         default=os.cpu_count() or 1,
-        help="Number of tool processes that run at the same time (default: the number of processors)",
+        help="Number of tool processes that run at the same time (default: The number of processors)",
     )
 
 

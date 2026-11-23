@@ -1,187 +1,112 @@
 name: Images
 
 on:
-  workflow_call:
-    inputs:
-      branch:
-        type: string
-        required: true
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
-    inputs:
-      images:
-        description: Images to build, separated by spaces (empty builds every outdated image)
-        default: ""
-        type: string
+
+concurrency:
+  group: images-${{ github.ref }}
 
 permissions:
   contents: read
   packages: write
 
 env:
-  IMAGES: ${{ inputs.images }}
-  IMAGE_PREFIXES: ${{ vars.IMAGE_PREFIXES }}
-  IMAGE_BRANCH: ${{ inputs.branch || github.ref_name }}
-  GHCR_USERNAME: ${{ github.actor }}
   GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
 jobs:
   Base:
     name: Base
+    # A pull request from a fork cannot push images. Its tests use the images that already exist.
+    if: ${{ !github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-24.04
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.base
-        run: bash .github/scripts/build-image.sh base
+      - run: bash .github/scripts/build-image.sh base
 
   Spack:
     name: Spack
     needs: Base
     runs-on: ubuntu-24.04
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.spack
-        run: bash .github/scripts/build-image.sh spack "${{ needs.Base.outputs.hash }}"
+      - run: bash .github/scripts/build-image.sh spack
 
   AMD:
     name: AMD
     needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.amd utilities/spack/compilers/amd/ requirements.txt utilities/spack/repo.yaml
-            utilities/spack/packages/
-        run: bash .github/scripts/build-image.sh amd "${{ needs.Spack.outputs.hash }}"
+      - run: bash .github/scripts/build-image.sh amd
 
   GCC:
     name: GCC
     needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.gcc utilities/spack/compilers/gcc/ requirements.txt
-        run: bash .github/scripts/build-image.sh gcc "${{ needs.Spack.outputs.hash }}"
+      - run: bash .github/scripts/build-image.sh gcc
 
   Intel:
     name: Intel
     needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.intel utilities/spack/compilers/intel/ requirements.txt
-            utilities/spack/repo.yaml utilities/spack/packages/
-        run: bash .github/scripts/build-image.sh intel "${{ needs.Spack.outputs.hash }}"
+      - run: bash .github/scripts/build-image.sh intel
 
   LLVM:
     name: LLVM
     needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.llvm utilities/spack/compilers/llvm/ requirements.txt
-            utilities/spack/repo.yaml utilities/spack/packages/
-        run: bash .github/scripts/build-image.sh llvm "${{ needs.Spack.outputs.hash }}"
+      - run: bash .github/scripts/build-image.sh llvm
 
   NVIDIA:
     name: NVIDIA
     needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.nvidia utilities/spack/compilers/nvidia/ requirements.txt
-        run: bash .github/scripts/build-image.sh nvidia "${{ needs.Spack.outputs.hash }}"
+      - run: bash .github/scripts/build-image.sh nvidia
 
   ExaHyPE:
     name: ExaHyPE
     needs: Spack
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.exahype utilities/spack/repo.yaml utilities/spack/packages/exahype2/
-            CMakeLists.txt cmake/ src/ api/ requirements.txt
-        run: bash .github/scripts/build-image.sh exahype "${{ needs.Spack.outputs.hash }}"
+      - run: bash .github/scripts/build-image.sh exahype
 
   Tutorials:
     name: Tutorials
     needs: ExaHyPE
     runs-on: ubuntu-24.04
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.tutorials tutorials/
-        run: bash .github/scripts/build-image.sh tutorials "${{ needs.ExaHyPE.outputs.hash }}"
+      - run: bash .github/scripts/build-image.sh tutorials
 
   Applications:
     name: Applications
     needs: ExaHyPE
     runs-on: ubuntu-24.04
-    outputs:
-      hash: ${{ steps.build.outputs.hash }}
     steps:
       - uses: actions/checkout@v7
       - id: lfs
         run: echo "key=lfs-$(git lfs ls-files --long | sha256sum | cut -c1-16)" >>"${GITHUB_OUTPUT}"
-      - id: cache
-        uses: actions/cache@v6
+      - uses: actions/cache@v6
         with:
           path: .git/lfs
           key: ${{ steps.lfs.outputs.key }}
-      - if: steps.cache.outputs.cache-hit != 'true'
-        run: git lfs fetch
-      - run: git lfs checkout
-      - id: build
-        env:
-          SOURCES: >-
-            utilities/docker/Dockerfile.applications applications/
-        run: bash .github/scripts/build-image.sh applications "${{ needs.ExaHyPE.outputs.hash }}"
+      - run: git lfs fetch && git lfs checkout
+      - run: bash .github/scripts/build-image.sh applications

@@ -15,12 +15,6 @@ if(NOT DEFINED CMAKE_CXX_COMPILER)
 endif()
 {% endif -%}
 
-{% if CMAKE_FORTRAN_COMPILER is defined and CMAKE_FORTRAN_COMPILER != "" -%}
-if(NOT DEFINED CMAKE_Fortran_COMPILER)
-  set(CMAKE_Fortran_COMPILER "{{CMAKE_FORTRAN_COMPILER}}")
-endif()
-{% endif -%}
-
 # CMAKE_NOT_USING_CONFIG_FLAGS stops CMake from caching flags for its predefined build types.
 set(CMAKE_NOT_USING_CONFIG_FLAGS TRUE)
 project({{EXECUTABLENAME}}
@@ -37,15 +31,6 @@ file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 
 find_package(Peano CONFIG REQUIRED)
 
-{% if FORTRAN_SOURCES or GENERATED_FORTRAN_SOURCES -%}
-# Parallel HDF5 requests MPI bindings for every enabled language, so resolve Peano's C and C++
-# dependencies before enabling Fortran.
-enable_language(Fortran)
-if(IPO_SUPPORTED)
-  check_ipo_supported(RESULT IPO_SUPPORTED LANGUAGES Fortran)
-endif()
-{% endif -%}
-
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -61,12 +46,6 @@ list(APPEND CXX_SOURCES
 {% endfor %}
 )
 
-list(APPEND FORTRAN_SOURCES
-{% for item in FORTRAN_SOURCES %}
-  "{{item}}"
-{% endfor %}
-)
-
 list(APPEND GENERATED_H_HEADERS
 {% for item in GENERATED_H_HEADERS %}
   "{{item}}"
@@ -75,12 +54,6 @@ list(APPEND GENERATED_H_HEADERS
 
 list(APPEND GENERATED_CXX_SOURCES
 {% for item in GENERATED_CXX_SOURCES %}
-  "{{item}}"
-{% endfor %}
-)
-
-list(APPEND GENERATED_FORTRAN_SOURCES
-{% for item in GENERATED_FORTRAN_SOURCES %}
   "{{item}}"
 {% endfor %}
 )
@@ -142,11 +115,9 @@ peano_add_target(
   SOURCES
     ${H_HEADERS}
     ${CXX_SOURCES}
-    ${FORTRAN_SOURCES}
   GENERATED_SOURCES
     ${GENERATED_H_HEADERS}
     ${GENERATED_CXX_SOURCES}
-    ${GENERATED_FORTRAN_SOURCES}
   COMPILE_DEFINITIONS
     ${GENERATED_COMPILE_DEFINITIONS}
   COMPILE_OPTIONS
@@ -160,26 +131,3 @@ peano_add_target(
     ${GENERATED_LINK_OPTIONS}
   OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
-
-{% if FORTRAN_SOURCES or GENERATED_FORTRAN_SOURCES -%}
-# The executable is linked with the C++ driver, which does not add the Fortran runtime libraries,
-# so forward them explicitly. Classic Flang and nvfortran inject an empty OpenMP stub (libompstub)
-# into their implicit link libraries, which is pulled in ahead of the real OpenMP runtime and turns
-# every parallel region into an empty one, so it is stripped here.
-set(PEANO_FORTRAN_IMPLICIT_LINK_LIBRARIES ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
-list(REMOVE_ITEM PEANO_FORTRAN_IMPLICIT_LINK_LIBRARIES ompstub libompstub)
-target_link_libraries({{EXECUTABLENAME}} PRIVATE ${PEANO_FORTRAN_IMPLICIT_LINK_LIBRARIES})
-
-find_package(OpenMP REQUIRED COMPONENTS Fortran)
-target_link_libraries({{EXECUTABLENAME}} PRIVATE OpenMP::OpenMP_Fortran)
-
-# Some MPI installations omit Fortran bindings, so link them only when the probe creates a target.
-find_package(MPI QUIET COMPONENTS Fortran)
-if(TARGET MPI::MPI_Fortran)
-  target_link_libraries({{EXECUTABLENAME}} PRIVATE MPI::MPI_Fortran)
-endif()
-
-target_compile_options({{EXECUTABLENAME}} PRIVATE
-  $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<Fortran_COMPILER_ID:GNU>>:-ffat-lto-objects>
-)
-{% endif -%}

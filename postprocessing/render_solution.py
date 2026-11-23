@@ -82,7 +82,7 @@ def _component_or_magnitude(values: np.ndarray, component: int | None) -> np.nda
 def cell_scalar(
     snapshot: MeshSnapshot, field: str, component: int | None = None
 ) -> np.ndarray:
-    """One colour value per cell: the field component, or its magnitude.
+    """One colour value per cell: The field component, or its magnitude.
 
     Node values are averaged onto their cell.
     """
@@ -488,7 +488,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=IMAGE_FORMATS, default="png", help="Image format"
     )
     parser.add_argument(
-        "--field", help="Field to render (default: first non-housekeeping)"
+        "--field", help="Field to render (default: First non-housekeeping)"
     )
     parser.add_argument("--component", type=int, help="Component of a vector field")
     parser.add_argument("--colormap", default="viridis", help="Matplotlib colormap")
@@ -515,7 +515,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--slice-width", type=float, default=0.0, help="Slice band width"
     )
     parser.add_argument(
-        "--frame", type=int, help="Render only this frame index (default: all frames)"
+        "--frame", type=int, help="Render only this frame index (default: All frames)"
     )
     parser.add_argument(
         "-j",
@@ -558,7 +558,7 @@ def main(argv: list[str] | None = None) -> None:
         frame = args.frame + source.count if args.frame < 0 else args.frame
         if not 0 <= frame < source.count:
             parser.error(
-                f"--frame {args.frame} is out of range: this source has "
+                f"--frame {args.frame} is out of range: This source has "
                 f"{source.count} frame(s) (valid indices 0..{source.count - 1})"
             )
         indices = [frame]

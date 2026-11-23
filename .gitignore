@@ -5,14 +5,12 @@ CMakeCache.txt
 CMakeFiles/
 compile_commands.json
 
-# C / C++ / Fortran artefacts
+# C / C++ artefacts
 *.o
 *.d
 *.a
 *.so
 *.dylib
-*.mod
-*.smod
 
 # Python
 __pycache__/
