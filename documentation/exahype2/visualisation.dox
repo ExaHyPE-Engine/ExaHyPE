@@ -17,7 +17,8 @@ Each snapshot contains the patches of the cells the solver owns and the named
 unknowns and auxiliary variables in its project description. The cell fields
 `RefinementLevel` and `Subdomain` record the level and the MPI rank of the
 patch, and `CurveIndex` numbers the patches along the space-filling curve over
-all ranks; limiting solvers also write `LimiterStatus`.
+all ranks; limiting solvers also write `LimiterStatus` (`0 = Regular`,
+`1 = Halo`, `2 = Limited`, `3 = Troubled`).
 
 The plotter assigns each patch a fixed range of plot cells and points before
 parallel filling. A snapshot stores the patches in the order the solver
@@ -30,7 +31,9 @@ colours the cells by `Subdomain` and joins the patch centres in the order of
 
 ## Finite Volumes
 
-Each finite volume becomes one plot cell with cell-associated fields.
+Godunov writes one piecewise-constant cell per volume and shares corners between
+adjacent volumes. MUSCL-Hancock writes its reconstruction instead: the limited
+linear state at the corners of every volume.
 Patch boundaries appear where the refinement level or cell spacing changes.
 Cell outlines are drawn by default; pass `--no-edges` to
 `postprocessing/render_solution.py` to turn them off when you only want the field.
@@ -38,11 +41,10 @@ Cell outlines are drawn by default; pass `--no-edges` to
 
 ## Discontinuous Galerkin
 
-Each DG node becomes one plot point at its quadrature position, and plot
-cells connect neighbouring nodes within the patch. Gauss-Legendre nodes lie
-inside a cell, so adjacent patches show visible gaps. A cell whose limiter
-status selects the subcell solution plots the value of the containing subcell
-at each DG node.
+The DG polynomial of every cell is evaluated at max(2N - 1, 2) equidistant points
+per axis from face to face, where N is the number of nodes per axis, so
+adjacent cells meet without gaps. A cell whose limiter status selects the
+subcell solution plots the value of the containing subcell at each plot point.
 
 
 As with the Finite Volume output, cell outlines are drawn by default; pass

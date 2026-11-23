@@ -216,8 +216,11 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
 }
 
 /**
- * Writes one snapshot of the solution. Every rank calls this at the same time. In a build with a
- * GPU backend the plot reads a copy of the solution in _solutionOnHost.
+ * Writes one snapshot. A limited linear reconstruction writes the reconstructed states at the
+ * corners of every volume, computed from the volume average and the face deviations at the time
+ * stamp. Every other reconstruction writes one piecewise-constant cell per volume. Every rank
+ * calls this at the same time. In a build with a GPU backend the plot reads host copies of the
+ * solution and, when plotting reconstructed corners, the halo.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 template <typename RuntimeParameters>
@@ -228,10 +231,157 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
   const std::string&                        outputDirectory,
   [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  _plotter.template plotVolumes<Derived::PatchSize, Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables>(
+  constexpr int PatchSize    = Derived::PatchSize;
+  constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+  if constexpr (HasLimitedLinearCorners<Derived, StoragePrecision, ComputePrecision, RuntimeParameters>) {
+    const double timeStamp = _timeStepping.getTimeStamp();
+    plotPatch<PatchSize, 2>(
+      cellConnectivity,
+      format,
+      outputDirectory,
+      [&](
+        const int                            cell,
+        const StoragePrecision* const        patch,
+        const StoragePrecision* const* const faces,
+        double* const                        values
+      ) {
+        evaluateVolumeCorners(
+          patch,
+          faces,
+          cellConnectivity.getCellCentre(cell),
+          cellConnectivity.getCellWidth(cell),
+          timeStamp,
+          parameters,
+          values
+        );
+      },
+      parameters
+    );
+  } else {
+    _plotter.template plotVolumes<PatchSize, NumberOfData>(
+      cellConnectivity,
+      cellConnectivity.getCells(),
+      std::as_const(_solution).download(_solutionOnHost),
+      _timeStepping.getTimeStamp(),
+      format,
+      outputDirectory
+    );
+  }
+}
+
+/**
+ * Writes the reconstructed limited linear state at the corners of every volume of patch into
+ * values, ordered by volume and then by corner within the volume.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::evaluateVolumeCorners(
+  const StoragePrecision* const                patch,
+  const StoragePrecision* const* const         faces,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const RuntimeParameters&                     parameters,
+  double* const                                values
+) {
+  constexpr int PatchSize    = Derived::PatchSize;
+  constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+  constexpr int Corners      = peano4::VerticesPerCell;
+  using Terms                = typename Derived::Reconstruction::template StateTerms<
+    Derived,
+    PatchSize,
+    Derived::NumberOfUnknowns,
+    Derived::NumberOfAuxiliaryVariables,
+    false,
+    false,
+    false,
+    false,
+    StoragePrecision,
+    ComputePrecision>;
+  const auto volumeSize = exahype2::fv::getVolumeSize(cellSize, PatchSize);
+  for (int volume = 0; volume < peano4::power(PatchSize, DIMENSIONS); volume++) {
+    const auto volumeIndex = peano4::dDelinearised(volume, PatchSize);
+    Terms      terms;
+    terms.evaluate(
+      patch,
+      faces,
+      volumeIndex,
+      volume * NumberOfData,
+      cellCentre,
+      cellSize,
+      exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, volumeIndex),
+      volumeSize,
+      timeStamp,
+      0.0,
+      parameters
+    );
+    const StoragePrecision* const average = patch + volume * NumberOfData;
+    for (int corner = 0; corner < Corners; corner++) {
+      const auto    cornerIndex = peano4::dDelinearised(corner, 2);
+      double* const state       = values + (volume * Corners + corner) * NumberOfData;
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        const ComputePrecision centre = static_cast<ComputePrecision>(average[entry]);
+        state[entry]                  = static_cast<double>(average[entry]);
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          const ComputePrecision face = cornerIndex(axis) == 0 ? terms.minus[axis][entry] : terms.plus[axis][entry];
+          state[entry] += static_cast<double>(face - centre);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Fills the halo for a plot outside a time step as performTimeStep() does.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::fillHalo(
+  const peano4::CellConnectivity& cellConnectivity,
+  const RuntimeParameters&        parameters
+) {
+  const exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision> interpolateHalo{
+    cellConnectivity.onDevice(),
+    _halo.getView()
+  };
+  _haloExchange.post();
+  applyBoundaryConditions(cellConnectivity, parameters);
+  exahype2::interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Local, interpolateHalo);
+  _haloExchange.wait();
+  exahype2::interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Remote, interpolateHalo);
+}
+
+/**
+ * Writes one snapshot with ElementsPerAxis elements and PointsPerAxis equidistant points per axis.
+ * The call evaluatePatch(cell, patch, faces, values) writes the values at these points from the
+ * patch and the halos on its faces into values. A fresh halo precedes the plot.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <int ElementsPerAxis, int PointsPerAxis, typename EvaluatePatch, typename RuntimeParameters>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plotPatch(
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory,
+  const EvaluatePatch&            evaluatePatch,
+  const RuntimeParameters&        parameters
+) {
+  constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+  fillHalo(cellConnectivity, parameters);
+  const Patches& solution = std::as_const(_solution).download(_solutionOnHost);
+  const Faces&   halo     = std::as_const(_halo).download(_haloOnHost);
+  _plotter.template plotPatch<ElementsPerAxis, PointsPerAxis, NumberOfData>(
     cellConnectivity,
     cellConnectivity.getCells(),
-    std::as_const(_solution).download(_solutionOnHost),
+    [&](const int cell, double* const values) {
+      const StoragePrecision* faces[peano4::FacesPerCell];
+      for (int face = 0; face < peano4::FacesPerCell; face++) {
+        faces[face] = halo.getChunk(cellConnectivity.getCellFace(cell, face));
+      }
+      evaluatePatch(cell, solution.getChunk(cell), faces, values);
+    },
     _timeStepping.getTimeStamp(),
     format,
     outputDirectory
@@ -251,6 +401,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
   _votes.release();
   _errorMeasurement.release();
   _solutionOnHost.release();
+  _haloOnHost.release();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -299,16 +450,22 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getSolution()
   return _solution;
 }
 
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD const typename exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::Faces&
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getHalo() const {
+  return _halo;
+}
+
 /**
- * Returns the bytes of the pools, the exchanges and the copy of the solution that a plot in a build
- * with a GPU backend reads.
+ * Returns the bytes of the pools, the exchanges and the copies of the solution and the halo that a
+ * plot in a build with a GPU backend reads.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD tarch::AllocatedBytes
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return _solution.getAllocatedBytes() + _halo.getAllocatedBytes() + _haloExchange.getAllocatedBytes()
     + _migration.getAllocatedBytes() + _votes.getAllocatedBytes() + _errorMeasurement.getAllocatedBytes()
-    + _solutionOnHost.getAllocatedBytes();
+    + _solutionOnHost.getAllocatedBytes() + _haloOnHost.getAllocatedBytes();
 }
 
 /**

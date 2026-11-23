@@ -19,6 +19,7 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/la/Vector.h"
 #include "tarch/plotter/Format.h"
 
 namespace tarch::mpi {
@@ -38,6 +39,44 @@ namespace exahype2::fv {
           { SolverType::NumberOfAuxiliaryVariables } -> std::convertible_to<int>;
           { SolverType::PeriodicBoundaries[0] } -> std::convertible_to<bool>;
         };
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename RuntimeParameters>
+  concept HasLimitedLinearCorners = requires {
+    typename Derived::Reconstruction::template StateTerms<
+      Derived,
+      Derived::PatchSize,
+      Derived::NumberOfUnknowns,
+      Derived::NumberOfAuxiliaryVariables,
+      false,
+      false,
+      false,
+      false,
+      StoragePrecision,
+      ComputePrecision>;
+  } and requires(
+    typename Derived::Reconstruction::template StateTerms<
+      Derived,
+      Derived::PatchSize,
+      Derived::NumberOfUnknowns,
+      Derived::NumberOfAuxiliaryVariables,
+      false,
+      false,
+      false,
+      false,
+      StoragePrecision,
+      ComputePrecision>&                         terms,
+    const StoragePrecision*                      patch,
+    const StoragePrecision* const*               faces,
+    const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
+    int                                          centreOffset,
+    const tarch::la::Vector<DIMENSIONS, double>& vector,
+    double                                       time,
+    const RuntimeParameters&                     parameters
+  ) {
+    terms.evaluate(patch, faces, volumeIndex, centreOffset, vector, vector, vector, vector, time, time, parameters);
+    terms.minus[0][0];
+    terms.plus[0][0];
+  };
 } // namespace exahype2::fv
 
 /**
@@ -122,8 +161,20 @@ public:
   INLINE_METHOD void openErrorMeasurement(const std::string& fileName, double timeDeltaBetweenSnapshots);
   [[nodiscard]] INLINE_METHOD const exahype2::TimeStepping& getTimeStepping() const;
   [[nodiscard]] INLINE_METHOD const Patches& getSolution() const;
+  [[nodiscard]] INLINE_METHOD const Faces& getHalo() const;
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] INLINE_METHOD int getNumberOfDoFs() const;
+
+  template <typename RuntimeParameters>
+  static INLINE_METHOD void evaluateVolumeCorners(
+    const StoragePrecision*                      patch,
+    const StoragePrecision* const*               faces,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    const RuntimeParameters&                     parameters,
+    double*                                      values
+  );
 
 private:
   template <typename RuntimeParameters>
@@ -159,6 +210,18 @@ private:
   [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
   [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;
 
+  template <typename RuntimeParameters>
+  INLINE_METHOD void fillHalo(const peano4::CellConnectivity& cellConnectivity, const RuntimeParameters& parameters);
+
+  template <int ElementsPerAxis, int PointsPerAxis, typename EvaluatePatch, typename RuntimeParameters>
+  INLINE_METHOD void plotPatch(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory,
+    const EvaluatePatch&            evaluatePatch,
+    const RuntimeParameters&        parameters
+  );
+
   Patches _solution{FiniteVolumeScheme::ValuesPerPatch};
   Faces   _halo{FiniteVolumeScheme::ValuesPerFace};
 
@@ -172,6 +235,7 @@ private:
   exahype2::ErrorMeasurement      _errorMeasurement{};
   exahype2::plotter::PatchPlotter _plotter;
   Patches                         _solutionOnHost{FiniteVolumeScheme::ValuesPerPatch, tarch::MemoryLocation::Heap};
+  Faces                           _haloOnHost{FiniteVolumeScheme::ValuesPerFace, tarch::MemoryLocation::Heap};
 };
 
 #include "exahype2/fv/Solver.cpph"

@@ -214,7 +214,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
 }
 
 /**
- * Writes one snapshot with one plot point per node. Every rank calls this at the same time.
+ * Writes one snapshot of the nodal polynomial at max(2 NodesPerAxis - 1, 2) equidistant points per
+ * axis from face to face of every cell. Every rank calls this at the same time.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 template <typename RuntimeParameters>
@@ -225,16 +226,104 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
   const std::string&              outputDirectory,
   const RuntimeParameters&        parameters
 ) {
-  _plotter.template plotNodes<NodesPerAxis, NumberOfData>(
-    cellConnectivity,
-    getCellsOnHost(cellConnectivity),
-    downloadSolution(),
-    _nodePositionsOnHost.data(),
-    _timeStepping.getTimeStamp(),
-    format,
-    outputDirectory
-  );
+  plotPolynomial<std::max(2 * NodesPerAxis - 1, 2)>(cellConnectivity, format, outputDirectory);
   plotFaces(cellConnectivity, format, outputDirectory, parameters);
+}
+
+/**
+ * Writes one snapshot of the nodal polynomial at PointsPerAxis equidistant points per axis from
+ * face to face of every cell. With statuses, every plot cell stores the status of its cell in the
+ * cell field statusName, and a cell with status at least subcellStatus plots at every point the
+ * subcell of subcells that contains the point.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <int PointsPerAxis, int SubcellsPerAxis>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plotPolynomial(
+  const peano4::CellConnectivity&                   cellConnectivity,
+  const tarch::plotter::Format                      format,
+  const std::string&                                outputDirectory,
+  const CellPool* const                             subcells,
+  const tarch::accelerator::ChunkedMemoryPool<int>* statuses,
+  const int                                         subcellStatus,
+  const char* const                                 statusName
+) {
+  constexpr int PointsPerCell = peano4::power(PointsPerAxis, DIMENSIONS);
+  constexpr int ScratchValues =
+    exahype2::dg::getScratchValuesOfTensorProduct<DIMENSIONS, NodesPerAxis, PointsPerAxis, NumberOfData>();
+  ASSERTION(_nodePositionsOnHost.size() == static_cast<std::size_t>(NodesPerAxis), _nodePositionsOnHost.size());
+  ASSERTION(statuses == nullptr or (subcells != nullptr and subcells->isHostAccessible()));
+  ASSERTION(statuses == nullptr or statuses->isHostAccessible());
+  ASSERTION(statuses == nullptr or statusName != nullptr);
+
+  const auto matrix1D =
+    exahype2::dg::getEquidistantInterpolationMatrix1D<NodesPerAxis, PointsPerAxis>(_nodePositionsOnHost.data());
+  const auto weights = exahype2::dg::getProjectionWeightsOfDofPairs<NodesPerAxis, PointsPerAxis>(matrix1D.data());
+  std::array<int, PointsPerCell> subcellOfPoint{};
+  if (statuses != nullptr) {
+    std::array<double, PointsPerAxis> pointPositions{};
+    for (int point = 0; point < PointsPerAxis; point++) {
+      pointPositions[static_cast<std::size_t>(point)] = static_cast<double>(point) / (PointsPerAxis - 1);
+    }
+    subcellOfPoint = exahype2::dg::getContainingSubcells<PointsPerAxis, SubcellsPerAxis>(pointPositions.data());
+  }
+  const CellPool& solution = downloadSolution();
+  const auto      evaluate = [&](const int cell, double* const values) {
+    if (statuses != nullptr and statuses->getChunk(cell)[0] >= subcellStatus) {
+      for (int point = 0; point < PointsPerCell; point++) {
+        const StoragePrecision* const subcell =
+          subcells->getChunk(cell) + subcellOfPoint[static_cast<std::size_t>(point)] * NumberOfData;
+        std::copy_n(subcell, NumberOfData, values + point * NumberOfData);
+      }
+    } else {
+      const StoragePrecision* const cellNodes = solution.getChunk(cell);
+      const double*                 input     = nullptr;
+      if constexpr (std::is_same_v<StoragePrecision, double>) {
+        input = cellNodes;
+      } else {
+        thread_local std::vector<double> nodalValues;
+        nodalValues.resize(static_cast<std::size_t>(NodesPerCell) * NumberOfData);
+        for (int entry = 0; entry < NodesPerCell * NumberOfData; entry++) {
+          nodalValues[static_cast<std::size_t>(entry)] = static_cast<double>(cellNodes[entry]);
+        }
+        input = nodalValues.data();
+      }
+      thread_local std::vector<double> scratch;
+      scratch.resize(static_cast<std::size_t>(ScratchValues > 0 ? ScratchValues : 1));
+      for (int stage = 0; stage < exahype2::dg::getStagesOfTensorProduct<DIMENSIONS>(); stage++) {
+        exahype2::dg::projectTensorProductStage<
+          DIMENSIONS,
+          NodesPerAxis,
+          PointsPerAxis,
+          NumberOfData,
+          exahype2::dg::ProjectionRule::Butterfly,
+          exahype2::dg::ProjectionItem::Line
+        >(stage, input, values, matrix1D.data(), weights, scratch.data(), 0, 1);
+      }
+    }
+  };
+  const auto cells = getCellsOnHost(cellConnectivity);
+  if (statuses == nullptr) {
+    _plotter.template plotPatch<1, PointsPerAxis, NumberOfData>(
+      cellConnectivity,
+      cells,
+      evaluate,
+      _timeStepping.getTimeStamp(),
+      format,
+      outputDirectory
+    );
+  } else {
+    _plotter.template plotPatch<1, PointsPerAxis, NumberOfData>(
+      cellConnectivity,
+      cells,
+      evaluate,
+      _timeStepping.getTimeStamp(),
+      format,
+      outputDirectory,
+      [&](const int cell, int) { return statuses->getChunk(cell)[0]; },
+      statusName
+    );
+  }
 }
 
 /**

@@ -45,7 +45,7 @@ exahype2::plotter::PatchPlotter::plotVolumes(
   const FaceCornerPoints faceCornerPoints = numberFaceCorners<VolumesPerAxis>(cellConnectivity, cells, corners);
   const std::size_t      interiorCorners  = static_cast<std::size_t>(cells.size) * InteriorCornersPerPatch;
   const auto             facePoints       = static_cast<std::size_t>(faceCornerPoints.firstPointOfPatch.back());
-  tarch::plotter::Mesh   mesh = createMesh(cells.size, CellsPerPatch, interiorCorners + facePoints, false, false);
+  tarch::plotter::Mesh   mesh = createMesh(cells.size, CellsPerPatch, interiorCorners + facePoints, false, nullptr);
   const double           rank = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
 
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
@@ -106,106 +106,136 @@ exahype2::plotter::PatchPlotter::plotVolumes(
 }
 
 /**
- * Writes a snapshot of the nodal values. Each chunk in values stores ValuesPerNode values per node.
- * The array nodePositions stores the NodesPerAxis node coordinates within the unit interval.
+ * Writes one snapshot in which ElementsPerAxis elements per axis tile every patch and every element
+ * owns PointsPerAxis equidistant points per axis from face to face. The call evaluate(cell, values)
+ * writes the ValuesPerPoint values of every point of the patch of cell into values, ordered by
+ * element, then by point within the element.
  */
-template <int NodesPerAxis, int ValuesPerNode, typename Precision>
+template <int ElementsPerAxis, int PointsPerAxis, int ValuesPerPoint, typename Evaluate>
 INLINE_METHOD void
-exahype2::plotter::PatchPlotter::plotNodes(
-  const peano4::CellConnectivity&                         cellConnectivity,
-  const tarch::Span<const int>                            cells,
-  const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
-  const double* const                                     nodePositions,
-  const double                                            timeStamp,
-  const tarch::plotter::Format                            format,
-  const std::string&                                      outputDirectory
+exahype2::plotter::PatchPlotter::plotPatch(
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::Span<const int>    cells,
+  const Evaluate&                 evaluate,
+  const double                    timeStamp,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory
 ) {
-  plotNodes<NodesPerAxis, ValuesPerNode, NodesPerAxis, Precision>(
+  plotPatchImpl<ElementsPerAxis, PointsPerAxis, ValuesPerPoint>(
     cellConnectivity,
     cells,
-    values,
-    nodePositions,
-    nullptr,
-    nullptr,
-    0,
+    evaluate,
     timeStamp,
     format,
-    outputDirectory
+    outputDirectory,
+    nullptr,
+    nullptr
   );
 }
 
 /**
- * Writes nodal values at their node positions or repeats a single node at the patch corners.
- * A patch with status at least subcellStatus reads each node from its containing subcell.
- * The function writes the status field only if statuses is non-null.
+ * Writes one snapshot as above and adds a cell field statusName whose entries come from
+ * status(cell, element).
  */
-template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
+template <int ElementsPerAxis, int PointsPerAxis, int ValuesPerPoint, typename Evaluate, typename Status>
+  requires(not std::is_same_v<std::remove_cvref_t<Status>, std::nullptr_t>)
 INLINE_METHOD void
-exahype2::plotter::PatchPlotter::plotNodes(
-  const peano4::CellConnectivity&                                                     cellConnectivity,
-  const tarch::Span<const int>                                                        cells,
-  const tarch::accelerator::ChunkedMemoryPool<Precision>&                             values,
-  const double* const                                                                 nodePositions,
-  const tarch::accelerator::ChunkedMemoryPool<std::type_identity_t<Precision>>* const subcellValues,
-  const tarch::accelerator::ChunkedMemoryPool<int>* const                             statuses,
-  const int                                                                           subcellStatus,
-  const double                                                                        timeStamp,
-  const tarch::plotter::Format                                                        format,
-  const std::string&                                                                  outputDirectory
+exahype2::plotter::PatchPlotter::plotPatch(
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::Span<const int>    cells,
+  const Evaluate&                 evaluate,
+  const double                    timeStamp,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory,
+  const Status&                   status,
+  const char* const               statusName
 ) {
-  static_assert(NodesPerAxis > 0 and ValuesPerNode > 0 and SubcellsPerAxis > 0);
-  constexpr int PointsPerAxis  = std::max(NodesPerAxis, 2);
-  constexpr int PointsPerPatch = peano4::power(PointsPerAxis, DIMENSIONS);
-  constexpr int CellsPerPatch  = peano4::power(PointsPerAxis - 1, DIMENSIONS);
+  ASSERTION(statusName != nullptr);
+  plotPatchImpl<ElementsPerAxis, PointsPerAxis, ValuesPerPoint>(
+    cellConnectivity,
+    cells,
+    evaluate,
+    timeStamp,
+    format,
+    outputDirectory,
+    status,
+    statusName
+  );
+}
+
+template <int ElementsPerAxis, int PointsPerAxis, int ValuesPerPoint, typename Evaluate, typename Status>
+INLINE_METHOD void
+exahype2::plotter::PatchPlotter::plotPatchImpl(
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::Span<const int>    cells,
+  const Evaluate&                 evaluate,
+  const double                    timeStamp,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory,
+  const Status&                   status,
+  const char* const               statusName
+) {
+  static_assert(ElementsPerAxis > 0 and PointsPerAxis > 1 and ValuesPerPoint > 0);
+  constexpr bool HasStatus        = not std::is_same_v<Status, std::nullptr_t>;
+  constexpr int  ElementsPerPatch = peano4::power(ElementsPerAxis, DIMENSIONS);
+  constexpr int  PointsPerElement = peano4::power(PointsPerAxis, DIMENSIONS);
+  constexpr int  CellsPerElement  = peano4::power(PointsPerAxis - 1, DIMENSIONS);
+  constexpr int  PointsPerPatch   = ElementsPerPatch * PointsPerElement;
+  constexpr int  CellsPerPatch    = ElementsPerPatch * CellsPerElement;
   ASSERTION(
     cells.size >= 0 and cells.size <= cellConnectivity.getNumberOfSlots(),
     cells.size,
     cellConnectivity.getNumberOfSlots()
   );
-  ASSERTION(values.isHostAccessible());
-  ASSERTION(values.getChunkSize() >= peano4::power(NodesPerAxis, DIMENSIONS) * ValuesPerNode, values.getChunkSize());
-  ASSERTION(nodePositions != nullptr);
-  ASSERTION(statuses == nullptr or (statuses->isHostAccessible() and subcellValues != nullptr));
-  ASSERTION(statuses == nullptr or subcellValues->isHostAccessible());
-  ASSERTION(
-    statuses == nullptr or subcellValues->getChunkSize() >= peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerNode,
-    subcellValues->getChunkSize()
-  );
 
-  const auto           subcellOfNode = containingSubcells<NodesPerAxis, SubcellsPerAxis>(nodePositions);
-  const bool           hasStatus     = statuses != nullptr;
-  const std::size_t    points        = static_cast<std::size_t>(cells.size) * PointsPerPatch;
-  tarch::plotter::Mesh mesh          = createMesh(cells.size, CellsPerPatch, points, true, hasStatus);
-  const std::size_t    statusField   = mesh.cellFields.size() - 1;
-  const double         rank          = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
+  const std::size_t    points      = static_cast<std::size_t>(cells.size) * PointsPerPatch;
+  tarch::plotter::Mesh mesh = createMesh(cells.size, CellsPerPatch, points, true, HasStatus ? statusName : nullptr);
+  const std::size_t    statusField = mesh.cellFields.size() - 1;
+  const double         rank        = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
-    const int              cell          = cells[patch];
-    const std::size_t      firstCell     = static_cast<std::size_t>(patch) * CellsPerPatch;
-    const std::size_t      firstPoint    = static_cast<std::size_t>(patch) * PointsPerPatch;
-    const int              status        = hasStatus ? statuses->getChunk(cell)[0] : 0;
-    const bool             plotsSubcells = hasStatus and status >= subcellStatus;
-    const Precision* const states        = plotsSubcells ? subcellValues->getChunk(cell) : values.getChunk(cell);
-    const auto             centre        = cellConnectivity.getCellCentre(cell);
-    const auto             width         = cellConnectivity.getCellWidth(cell);
-    peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
-      const int point = peano4::dLinearised(pointIndex, PointsPerAxis);
-      const int node  = NodesPerAxis == 1 ? 0 : point;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        const double position =
-          NodesPerAxis == 1 ? static_cast<double>(pointIndex(axis)) : nodePositions[pointIndex(axis)];
-        mesh.pointsXYZ[(firstPoint + point) * 3 + axis] = centre(axis) - 0.5 * width(axis) + position * width(axis);
+    const int         cell       = cells[patch];
+    const std::size_t firstCell  = static_cast<std::size_t>(patch) * CellsPerPatch;
+    const std::size_t firstPoint = static_cast<std::size_t>(patch) * PointsPerPatch;
+    const auto        centre     = cellConnectivity.getCellCentre(cell);
+    const auto        width      = cellConnectivity.getCellWidth(cell);
+    thread_local std::vector<double> values;
+    values.resize(static_cast<std::size_t>(PointsPerPatch) * ValuesPerPoint);
+    evaluate(cell, values.data());
+    peano4::dForEach(ElementsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& elementIndex) {
+      const int         element           = peano4::dLinearised(elementIndex, ElementsPerAxis);
+      const std::size_t firstElementPoint = firstPoint + static_cast<std::size_t>(element) * PointsPerElement;
+      const std::size_t firstElementCell  = firstCell + static_cast<std::size_t>(element) * CellsPerElement;
+      peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
+        const int         point     = peano4::dLinearised(pointIndex, PointsPerAxis);
+        const std::size_t meshPoint = firstElementPoint + static_cast<std::size_t>(point);
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          const double position = static_cast<double>(pointIndex(axis)) / (PointsPerAxis - 1);
+          const double fraction = (elementIndex(axis) + position) / ElementsPerAxis;
+          mesh.pointsXYZ[meshPoint * 3 + axis] = centre(axis) - 0.5 * width(axis) + fraction * width(axis);
+        }
+        for (int axis = DIMENSIONS; axis < 3; axis++) {
+          mesh.pointsXYZ[meshPoint * 3 + axis] = 0.0;
+        }
+        copyState(
+          values.data() + (static_cast<std::size_t>(element) * PointsPerElement + point) * ValuesPerPoint,
+          ValuesPerPoint,
+          meshPoint,
+          mesh.pointFields
+        );
+      });
+      connectPatch<PointsPerAxis>(
+        [&](const int point) { return static_cast<std::int32_t>(firstElementPoint + point); },
+        firstElementCell,
+        mesh
+      );
+      if constexpr (HasStatus) {
+        std::fill_n(
+          mesh.cellFields[statusField].values.begin() + firstElementCell,
+          CellsPerElement,
+          static_cast<double>(status(cell, element))
+        );
       }
-      for (int axis = DIMENSIONS; axis < 3; axis++) {
-        mesh.pointsXYZ[(firstPoint + point) * 3 + axis] = 0.0;
-      }
-      const int stateOfNode = plotsSubcells ? subcellOfNode[static_cast<std::size_t>(node)] : node;
-      copyState(states + stateOfNode * ValuesPerNode, ValuesPerNode, firstPoint + point, mesh.pointFields);
     });
-    connectPatch<PointsPerAxis>(
-      [&](const int node) { return static_cast<std::int32_t>(firstPoint + node); },
-      firstCell,
-      mesh
-    );
     std::fill_n(
       mesh.cellFields[RefinementLevelField].values.begin() + firstCell,
       CellsPerPatch,
@@ -217,36 +247,8 @@ exahype2::plotter::PatchPlotter::plotNodes(
       CellsPerPatch,
       static_cast<double>(cellConnectivity.getCellCurveIndex(cell))
     );
-    if (hasStatus) {
-      std::fill_n(mesh.cellFields[statusField].values.begin() + firstCell, CellsPerPatch, static_cast<double>(status));
-    }
   });
   write(mesh, timeStamp, format, outputDirectory);
-}
-
-/**
- * Returns for every node of a patch the linearised index of the subcell that contains the node.
- * SubcellsPerAxis subcells per axis tile the patch. A node on the boundary between two subcells
- * belongs to the upper one.
- */
-template <int NodesPerAxis, int SubcellsPerAxis>
-INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)>
-exahype2::plotter::PatchPlotter::containingSubcells(const double* const nodePositions) {
-  static_assert(NodesPerAxis > 0 and SubcellsPerAxis > 0);
-  constexpr int NodesPerPatch = peano4::power(NodesPerAxis, DIMENSIONS);
-  ASSERTION(nodePositions != nullptr);
-  std::array<int, NodesPerPatch> result{};
-  peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
-    const int                          node = peano4::dLinearised(nodeIndex, NodesPerAxis);
-    tarch::la::Vector<DIMENSIONS, int> subcell;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      const double position = nodePositions[nodeIndex(axis)];
-      ASSERTION(position >= 0.0 and position <= 1.0, node, axis, position);
-      subcell(axis) = std::clamp(static_cast<int>(position * SubcellsPerAxis), 0, SubcellsPerAxis - 1);
-    }
-    result[static_cast<std::size_t>(node)] = peano4::dLinearised(subcell, SubcellsPerAxis);
-  });
-  return result;
 }
 
 /**

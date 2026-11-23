@@ -221,6 +221,16 @@ protected:
     const std::string&              outputDirectory,
     const RuntimeParameters&        parameters
   );
+  template <int PointsPerAxis, int SubcellsPerAxis = 1>
+  INLINE_METHOD void plotPolynomial(
+    const peano4::CellConnectivity&                   cellConnectivity,
+    tarch::plotter::Format                            format,
+    const std::string&                                outputDirectory,
+    const CellPool*                                   subcells      = nullptr,
+    const tarch::accelerator::ChunkedMemoryPool<int>* statuses      = nullptr,
+    int                                               subcellStatus = 0,
+    const char*                                       statusName    = nullptr
+  );
 
   exahype2::TimeStepping _timeStepping;
 

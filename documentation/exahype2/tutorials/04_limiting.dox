@@ -103,9 +103,10 @@ limiter keeps the solution physical (positive density and pressure) right throug
 these discontinuities, quietly swapping troubled ADER-DG cells for Finite Volume
 ones.
 
-The limiter also writes a `LimiterStatus` field beside the solution. Pick it in the
-dropdown to see which cells ran on the Finite Volume subgrid at each snapshot.
-Expect a thin band tracking the shocks and the contact.
+The limiter also writes a `LimiterStatus` field (`0 = Regular`, `1 = Halo`,
+`2 = Limited`, `3 = Troubled`) beside the solution. Pick it in the dropdown to
+see which cells ran on the Finite Volume subgrid at each snapshot. Expect a thin
+band tracking the shocks and the contact.
 
 # Why We Need the Limiter
 

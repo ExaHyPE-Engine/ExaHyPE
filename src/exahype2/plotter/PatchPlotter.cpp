@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PatchPlotter.h"
 
+#include "tarch/Termination.h"
+
 exahype2::plotter::PatchPlotter::PatchPlotter(std::string filename, std::vector<DataField> fields) :
   _filename(std::move(filename)),
   _fields(std::move(fields)) {
@@ -54,8 +56,8 @@ exahype2::plotter::PatchPlotter::hashLatticeKey(const std::array<std::int64_t, D
 /**
  * Returns a mesh with numberOfPoints points and uninitialised arrays that the caller writes. The
  * data fields become point fields or cell fields, followed by the cell fields RefinementLevel,
- * Subdomain, CurveIndex and, with writesStatus, LimiterStatus. A single-precision plot file stores
- * the curve indices of up to 2^24 grid cells exactly.
+ * Subdomain, CurveIndex and, with a statusName, the status field of that name. A single-precision
+ * plot file stores the curve indices of up to 2^24 grid cells exactly.
  */
 tarch::plotter::Mesh
 exahype2::plotter::PatchPlotter::createMesh(
@@ -63,12 +65,19 @@ exahype2::plotter::PatchPlotter::createMesh(
   const int         cellsPerPatch,
   const std::size_t numberOfPoints,
   const bool        writesPointData,
-  const bool        writesStatus
+  const char* const statusName
 ) const {
-  using Values = tarch::plotter::MeshArray<double>;
+  using Values                    = tarch::plotter::MeshArray<double>;
+  constexpr std::size_t MaxInt32  = static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max());
   ASSERTION(numberOfPatches >= 0, numberOfPatches);
   ASSERTION(cellsPerPatch > 0, cellsPerPatch);
   const auto numberOfCells = static_cast<std::size_t>(numberOfPatches) * cellsPerPatch;
+  if (numberOfPoints > MaxInt32 or numberOfCells > MaxInt32 / peano4::VerticesPerCell) {
+    tarch::terminateWithError(
+      "Plot mesh exceeds the 32-bit point or connectivity limit of one rank (" + std::to_string(numberOfPoints)
+      + " points, " + std::to_string(numberOfCells) + " cells)."
+    );
+  }
 
   tarch::plotter::Mesh mesh;
   mesh.pointsXYZ.resize(numberOfPoints * 3);
@@ -83,8 +92,8 @@ exahype2::plotter::PatchPlotter::createMesh(
   mesh.cellFields.push_back({"RefinementLevel", 1, Values(numberOfCells)});
   mesh.cellFields.push_back({"Subdomain", 1, Values(numberOfCells)});
   mesh.cellFields.push_back({"CurveIndex", 1, Values(numberOfCells)});
-  if (writesStatus) {
-    mesh.cellFields.push_back({"LimiterStatus", 1, Values(numberOfCells)});
+  if (statusName != nullptr) {
+    mesh.cellFields.push_back({statusName, 1, Values(numberOfCells)});
   }
   return mesh;
 }

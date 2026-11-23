@@ -1189,6 +1189,62 @@ exahype2::dg::differentiateFluxInPlace(
 TARGET_DECLARE_END
 
 /**
+ * Returns the matrix whose entry [node][point] is basis function node at point, where the
+ * PointsPerAxis points lie equidistantly on the unit interval and include both ends. The nodes lie
+ * on the unit interval, symmetric about one half.
+ */
+template <int NodesPerAxis, int PointsPerAxis>
+INLINE_METHOD constexpr std::array<double, static_cast<std::size_t>(PointsPerAxis * NodesPerAxis)>
+exahype2::dg::getEquidistantInterpolationMatrix1D(const double* const nodes) {
+  static_assert(PointsPerAxis > 1);
+  std::array<double, static_cast<std::size_t>(PointsPerAxis * NodesPerAxis)> result{};
+  for (int node = 0; node < NodesPerAxis; node++) {
+    for (int point = 0; point < PointsPerAxis; point++) {
+      const double offsetFromCentre = (static_cast<double>(point) - 0.5 * (PointsPerAxis - 1)) / (PointsPerAxis - 1);
+      result[static_cast<std::size_t>(node * PointsPerAxis + point)] =
+        exahype2::dg::getLagrangeBasisFunction1D<NodesPerAxis>(nodes, node, offsetFromCentre);
+    }
+  }
+  for (int node = 0; node < NodesPerAxis; node++) {
+    for (int point = 0; point < PointsPerAxis; point++) {
+      const int index       = node * PointsPerAxis + point;
+      const int mirrorIndex = (NodesPerAxis - 1 - node) * PointsPerAxis + PointsPerAxis - 1 - point;
+      if (index < mirrorIndex) {
+        const double average = 0.5 * (result[index] + result[mirrorIndex]);
+        result[index]        = average;
+        result[mirrorIndex]  = average;
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Returns for every tensor-product point of a cell the linearised index of the subcell that
+ * contains the point. SubcellsPerAxis subcells per axis tile the cell. A point on the boundary
+ * between two subcells belongs to the upper one.
+ */
+template <int PointsPerAxis, int SubcellsPerAxis>
+INLINE_METHOD std::array<int, peano4::power(PointsPerAxis, DIMENSIONS)>
+exahype2::dg::getContainingSubcells(const double* const pointPositions) {
+  static_assert(PointsPerAxis > 0 and SubcellsPerAxis > 0);
+  constexpr int PointsPerCell = peano4::power(PointsPerAxis, DIMENSIONS);
+  ASSERTION(pointPositions != nullptr);
+  std::array<int, PointsPerCell> result{};
+  peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
+    const int                          point = peano4::dLinearised(pointIndex, PointsPerAxis);
+    tarch::la::Vector<DIMENSIONS, int> subcell;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const double position = pointPositions[pointIndex(axis)];
+      ASSERTION(position >= 0.0 and position <= 1.0, point, axis, position);
+      subcell(axis) = std::clamp(static_cast<int>(position * SubcellsPerAxis), 0, SubcellsPerAxis - 1);
+    }
+    result[static_cast<std::size_t>(point)] = peano4::dLinearised(subcell, SubcellsPerAxis);
+  });
+  return result;
+}
+
+/**
  * Returns the interpolation matrices. Entry [child][fine][coarse] is basis function coarse at
  * node fine of the child interval. The nodes lie on the unit interval, symmetric about one half.
  */
