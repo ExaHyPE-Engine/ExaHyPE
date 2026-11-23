@@ -574,8 +574,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
   };
 
   for (int item = workers.thread; item < DIMENSIONS * CellLayout::NodesPerFace; item += workers.threads) {
-    const int axis        = item / CellLayout::NodesPerFace;
-    const int nodeStride  = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
+    const int axis       = item / CellLayout::NodesPerFace;
+    const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
     const int firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, item % CellLayout::NodesPerFace);
     exahype2::dg::differentiateAlongAxisSoA2AoS<FluxStride, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
       lineGradient,

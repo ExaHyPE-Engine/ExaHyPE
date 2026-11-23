@@ -439,7 +439,7 @@ UNIT_TEST("A nonlinear system without terms keeps the cell state, copies it to t
               value
             );
             VALIDATE_EQUALS(
-              scratch[InertScratch::TimeAveragedStateOffset + cellNode * CellLayout::PaddedNumberOfData + value],
+              scratch[InertScratch::TimeAveragedStateOffset + value * CellLayout::PaddedNodesPerCell + cellNode],
               getVaryingCellStateEntry(cellNode, value),
               cellNode,
               value

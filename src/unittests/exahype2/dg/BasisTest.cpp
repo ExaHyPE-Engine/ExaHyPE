@@ -1100,6 +1100,7 @@ UNIT_TEST("The operator along an axis sums the products of the source values and
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1142,6 +1143,7 @@ UNIT_TEST("The operator along an axis adds its product to the result or overwrit
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1153,6 +1155,7 @@ UNIT_TEST("The operator along an axis adds its product to the result or overwrit
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1183,6 +1186,7 @@ UNIT_TEST("The scaling of the operator along an axis multiplies every product") 
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1194,6 +1198,7 @@ UNIT_TEST("The scaling of the operator along an axis multiplies every product") 
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1241,6 +1246,7 @@ UNIT_TEST("The strides of the operator along an axis address the entries of ever
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         ValueStride,
         OperatorStride,
         ResultStride,
@@ -1277,7 +1283,7 @@ UNIT_TEST("The operator along an axis rounds the product of doubles once into a 
     float        result[1]         = {0.0F};
 
     WHEN("The operator adds its product to the float result in double precision") {
-      exahype2::dg::applyOperatorAlongAxis<1, 1, 1, 1, 1, 1, false, float, double>(result, values, operatorMatrix, 1.0);
+      exahype2::dg::applyOperatorAlongAxis<1, 1, 1, 1, 1, 1, 1, false, float, double>(result, values, operatorMatrix, 1.0);
 
       THEN("The result is the double product rounded to float") {
         const auto expected = static_cast<double>(static_cast<float>(Operand * Operand));
@@ -1426,6 +1432,7 @@ UNIT_TEST("The derivative along an axis acts on the differences from the centre 
         NumberOfEntries,
         NodesPerAxis,
         NodesPerAxis,
+        1,
         NumberOfEntries,
         NodesPerAxis,
         NumberOfEntries,

@@ -50,10 +50,10 @@ public:
     EvaluateNonconservativeProduct or EvaluateDiffusiveFlux or EvaluateDiffusiveSource;
 
   struct Scratch final {
-    static constexpr int SpaceTimeStateSize = CellLayout::PaddedNumberOfData * CellLayout::SpaceTimeNodes;
-    static constexpr int RightHandSideSize  = CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes;
+    static constexpr int SpaceTimeStateSize = CellLayout::NodesPerAxis * CellLayout::NumberOfData * CellLayout::PaddedNodesPerCell;
+    static constexpr int RightHandSideSize  = CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell;
     static constexpr int FluxSize =
-      EvaluateFlux ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
+      EvaluateFlux ? CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell * DIMENSIONS : 0;
     static constexpr int FirstFluxSize        = FluxSize;
     static constexpr int TimeAveragedFluxSize = FluxSize;
     static constexpr int FirstSourceSize =
@@ -61,7 +61,7 @@ public:
     static constexpr int TimeAveragedSourceSize = FirstSourceSize;
     static constexpr int StateGradientSize =
       NeedsStateGradient ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
-    static constexpr int NodeResidualSize = exahype2::dg::getPaddedCountOf(CellLayout::NodesPerCell);
+    static constexpr int NodeResidualSize = CellLayout::PaddedNodesPerCell;
 
     static constexpr int SpaceTimeStateOffset     = 0;
     static constexpr int TimeAveragedStateOffset  = SpaceTimeStateOffset;

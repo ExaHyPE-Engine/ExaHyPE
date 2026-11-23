@@ -248,7 +248,8 @@ template <
   int  NumberOfEntries,
   int  NumberOfTargetNodes,
   int  NumberOfSourceNodes,
-  int  ValueStride,
+  int  ValueEntryStride,
+  int  ValueNodeStride,
   int  OperatorStride,
   int  ResultStride,
   bool OverwriteResult,
@@ -265,49 +266,24 @@ exahype2::dg::applyOperatorAlongAxis(
 ) {
   using AccumulatePrecision = std::common_type_t<ResultPrecision, ComputePrecision>;
 
-  constexpr bool Scaled      = sizeof...(Scalings) > 0;
-  constexpr int  BlockStride = Scaled ? NumberOfEntries : ValueStride;
+  for (int entry = 0; entry < NumberOfEntries; entry++) {
+    for (int targetNode = 0; targetNode < NumberOfTargetNodes; targetNode++) {
+      ResultPrecision* NOALIAS const resultNode = result + targetNode * ResultStride;
 
-  [[maybe_unused]] ComputePrecision scaledValues[Scaled ? NumberOfSourceNodes * NumberOfEntries : 1];
-  const ComputePrecision* NOALIAS   block = values;
-  if constexpr (Scaled) {
-    for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
-      const ComputePrecision* NOALIAS const sourceValues = values + sourceNode * ValueStride;
-      SIMD()
-      for (int entry = 0; entry < NumberOfEntries; entry++) {
-        scaledValues[sourceNode * NumberOfEntries + entry] =
-          (sourceValues[entry] * ... * static_cast<ComputePrecision>(scalings));
-      }
-    }
-    block = scaledValues;
-  }
-
-  for (int targetNode = 0; targetNode < NumberOfTargetNodes; targetNode++) {
-    ResultPrecision* NOALIAS const resultNode = result + targetNode * ResultStride;
-
-    AccumulatePrecision accumulator[NumberOfEntries];
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      AccumulatePrecision accumulator;
       if constexpr (OverwriteResult) {
-        accumulator[entry] = static_cast<AccumulatePrecision>(0);
+        accumulator = static_cast<AccumulatePrecision>(0);
       } else {
-        accumulator[entry] = static_cast<AccumulatePrecision>(resultNode[entry]);
+        accumulator = static_cast<AccumulatePrecision>(resultNode[entry]);
       }
-    }
 
-    for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
-      const ComputePrecision* NOALIAS const sourceValues   = block + sourceNode * BlockStride;
-      const ComputePrecision                operatorWeight = operatorMatrix[targetNode * OperatorStride + sourceNode];
-      SIMD()
-      for (int entry = 0; entry < NumberOfEntries; entry++) {
-        accumulator[entry] =
-          accumulator[entry] + static_cast<AccumulatePrecision>(sourceValues[entry] * operatorWeight);
+      for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
+        const ComputePrecision sourceValue    = values[entry * ValueEntryStride + sourceNode * ValueNodeStride];
+        const ComputePrecision operatorWeight = (operatorMatrix[targetNode * OperatorStride + sourceNode] * ... * static_cast<ComputePrecision>(scalings));
+        accumulator = accumulator + static_cast<AccumulatePrecision>(sourceValue * operatorWeight);
       }
-    }
 
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
-      resultNode[entry] = static_cast<ResultPrecision>(accumulator[entry]);
+      resultNode[entry] = static_cast<ResultPrecision>(accumulator);
     }
   }
 }
@@ -1512,8 +1488,7 @@ exahype2::dg::differentiateFluxInPlaceSoA(
     const int                       nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
     const int                       firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, line);
     ComputePrecision* NOALIAS const fluxLine   = flux + axis * AxisStride + entry * CellLayout::PaddedNodesPerCell + firstNode;
-    exahype2::dg::differentiateAlongAxisSoA<
-    NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+    exahype2::dg::differentiateAlongAxisSoA<NodesPerAxis, true, ComputePrecision, ComputePrecision>(
       fluxLine,
       nodeStride,
       fluxLine,

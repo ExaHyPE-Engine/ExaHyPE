@@ -82,17 +82,9 @@ public:
   );
 
 private:
-  template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegral(
-    StoragePrecision* NOALIAS cellState,
-    ComputePrecision* NOALIAS timeAveragedFlux,
-    const SourceOfNode&       sourceOfNode,
-    double                    timeStepSize,
-    const TeamWorkers&        workers = TeamWorkers{}
-  );
 
   template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegralSoA(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegral(
     StoragePrecision* NOALIAS cellState,
     ComputePrecision* NOALIAS timeAveragedFlux,
     const SourceOfNode&       sourceOfNode,
