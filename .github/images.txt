@@ -1,0 +1,13 @@
+# Each image of utilities/docker with its parent and the files it is built from.
+#
+# Image        Parent    Files
+base           -         utilities/docker/Dockerfile.base
+spack          base      utilities/docker/Dockerfile.spack
+amd            spack     utilities/docker/Dockerfile.amd utilities/spack/compilers/amd/ utilities/spack/repo.yaml utilities/spack/packages/ requirements.txt
+gcc            spack     utilities/docker/Dockerfile.gcc utilities/spack/compilers/gcc/ requirements.txt
+intel          spack     utilities/docker/Dockerfile.intel utilities/spack/compilers/intel/ utilities/spack/repo.yaml utilities/spack/packages/ requirements.txt
+llvm           spack     utilities/docker/Dockerfile.llvm utilities/spack/compilers/llvm/ utilities/spack/repo.yaml utilities/spack/packages/ requirements.txt
+nvidia         spack     utilities/docker/Dockerfile.nvidia utilities/spack/compilers/nvidia/ requirements.txt
+exahype        spack     utilities/docker/Dockerfile.exahype utilities/spack/repo.yaml utilities/spack/packages/exahype2/ CMakeLists.txt cmake/ src/ api/ requirements.txt
+tutorials      exahype   utilities/docker/Dockerfile.tutorials tutorials/
+applications   exahype   utilities/docker/Dockerfile.applications applications/

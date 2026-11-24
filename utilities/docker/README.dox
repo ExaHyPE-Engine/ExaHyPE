@@ -13,18 +13,23 @@ Our images target `linux/amd64`.
 Docker Desktop runs them on M-series Macs through its built-in emulation.
 Add `--platform linux/amd64` to the `docker run` command:
 ```shell
-docker run --platform linux/amd64 -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler>
+docker run --platform linux/amd64 -it -v ${PWD}:/work --rm --privileged ghcr.io/exahype-engine/<compiler>
 ```
 </div>
 
-We recommend that users pull the prebuilt images from [Dockerhub](https://hub.docker.com/u/peanoframework).
+We recommend that users pull the prebuilt images from the [GitHub Container Registry](https://github.com/orgs/ExaHyPE-Engine/packages).
 The images `gcc`, `intel`, `nvidia`, `llvm` and `amd` contain the same dependencies to build, run and visualise Peano applications.
-Spack installs every dependency of the images.
+Spack installs every dependency of the images apart from ROCm.
+The `amd` image installs ROCm 7.2.3 from the package repository of AMD.
 Each image adds one compiler and one MPI library.
 Both support GPU offloading.
 Pull the image whose compiler fits your hardware.
 
 Only the image builds use the images `base` and `spack`.
+The image `exahype` contains the installed ExaHyPE engine and its Python API.
+The images `tutorials` and `applications` start from it.
+`tutorials` adds the tutorials and starts JupyterLab on them.
+`applications` adds the applications.
 
 The `gcc` and `llvm` images also contain Kokkos for `sm_75`.
 `sm_75` is the oldest architecture that CUDA 13 supports.
@@ -44,19 +49,19 @@ In the `intel` image, Peano builds with AdaptiveCpp only when `/opt/views/acpp/b
 To use a prebuilt image, clone Peano, change into the checkout and start the container with the checkout mounted at `/work`:
 
 ```shell
-docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler>
+docker run -it -v ${PWD}:/work --rm --privileged ghcr.io/exahype-engine/<compiler>
 ```
 
 ### With GPU Support
 
 ```shell
-docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<compiler>
+docker run -it -v ${PWD}:/work --rm --gpus=all --privileged ghcr.io/exahype-engine/<compiler>
 ```
 
 ### With Port Forwarding (JupyterLab)
 
 ```shell
-docker run -it -v ${PWD}:/work -p 8888:8888 --rm --privileged peanoframework/<compiler>
+docker run -it -v ${PWD}:/work -p 8888:8888 --rm --privileged ghcr.io/exahype-engine/<compiler>
 ```
 
 Then start JupyterLab inside the container:
@@ -69,31 +74,33 @@ jupyter lab --allow-root --port=8888 --no-browser --ip=0.0.0.0
 
 This section addresses developers who change or add dependencies of the Docker images.
 An image build takes hours and requires root access.
+The Dockerfiles require BuildKit, the default builder of Docker since version 23.
 
 Run the following commands in the Peano root directory to build the Docker images.
 
 ### Building Base Images
 
 ```shell
-docker build -t peanoframework/base -f utilities/docker/Dockerfile.base .
-docker build -t peanoframework/spack -f utilities/docker/Dockerfile.spack .
+docker build -t ghcr.io/exahype-engine/base -f utilities/docker/Dockerfile.base .
+docker build -t ghcr.io/exahype-engine/spack -f utilities/docker/Dockerfile.spack .
 ```
 
 ### Building Compiler Images
 
 ```shell
-docker build -t peanoframework/gcc -f utilities/docker/Dockerfile.gcc .
-docker build -t peanoframework/intel -f utilities/docker/Dockerfile.intel .
-docker build -t peanoframework/nvidia -f utilities/docker/Dockerfile.nvidia .
-docker build -t peanoframework/amd -f utilities/docker/Dockerfile.amd .
-docker build -t peanoframework/llvm -f utilities/docker/Dockerfile.llvm .
+docker build -t ghcr.io/exahype-engine/gcc -f utilities/docker/Dockerfile.gcc .
+docker build -t ghcr.io/exahype-engine/intel -f utilities/docker/Dockerfile.intel .
+docker build -t ghcr.io/exahype-engine/nvidia -f utilities/docker/Dockerfile.nvidia .
+docker build -t ghcr.io/exahype-engine/amd -f utilities/docker/Dockerfile.amd .
+docker build -t ghcr.io/exahype-engine/llvm -f utilities/docker/Dockerfile.llvm .
 ```
 
 ### Building Extension Images
 
 ```shell
-docker build -t peanoframework/exahype2 -f utilities/docker/Dockerfile.exahype2 .
-docker build -t peanoframework/exahype2-tutorials -f utilities/docker/Dockerfile.exahype2-tutorials .
+docker build -t ghcr.io/exahype-engine/exahype -f utilities/docker/Dockerfile.exahype .
+docker build -t ghcr.io/exahype-engine/tutorials -f utilities/docker/Dockerfile.tutorials .
+docker build -t ghcr.io/exahype-engine/applications -f utilities/docker/Dockerfile.applications .
 ```
 
 */

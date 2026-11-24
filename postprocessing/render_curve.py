@@ -4,20 +4,23 @@
 from __future__ import annotations
 
 import argparse
+
 from pathlib import Path
 
-import numpy as np
-
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt  # noqa: E402
+
 from matplotlib.collections import PolyCollection  # noqa: E402
 
 try:
-    from postprocessing.solution_io import MeshSnapshot, SolutionSource
+    from postprocessing.solution_io import MeshSnapshot
+    from postprocessing.solution_io import SolutionSource
 except ImportError:
-    from solution_io import MeshSnapshot, SolutionSource
+    from solution_io import MeshSnapshot
+    from solution_io import SolutionSource
 
 LABEL_FIELD = "Subdomain"
 CURVE_INDEX_FIELD = "CurveIndex"
@@ -115,7 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
         "or an output directory",
     )
     parser.add_argument(
-        "--step", type=int, default=-1, help="Snapshot index (default: last)"
+        "--step", type=int, default=-1, help="Snapshot index (default: Last)"
     )
     parser.add_argument("--output-dir", default=".", help="Where to write the image")
     parser.add_argument("--dpi", type=int, default=300, help="DPI for raster outputs")

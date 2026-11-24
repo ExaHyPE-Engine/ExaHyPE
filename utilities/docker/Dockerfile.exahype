@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1
+ARG IMAGE_PREFIX=ghcr.io/exahype-engine
+ARG BASE_TAG=latest
+ARG SPACK_TAG=latest
+
+FROM ${IMAGE_PREFIX}/spack:${SPACK_TAG} AS builder
+
+ARG SPACK_BUILDCACHE
+
+WORKDIR /opt/spack-environment
+
+COPY utilities/spack/repo.yaml .
+COPY utilities/spack/packages/exahype2 packages/exahype2
+
+RUN --mount=type=bind,target=/opt/exahype-source,rw \
+    --mount=type=secret,id=spack_buildcache_user,env=SPACK_BUILDCACHE_USER \
+    --mount=type=secret,id=spack_buildcache_token,env=SPACK_BUILDCACHE_TOKEN \
+    . /opt/spack/share/spack/setup-env.sh && \
+    if [ -n "${SPACK_BUILDCACHE}" ] && [ -n "${SPACK_BUILDCACHE_TOKEN}" ]; then \
+      spack mirror add --scope site --unsigned --autopush --oci-username-variable SPACK_BUILDCACHE_USER \
+        --oci-password-variable SPACK_BUILDCACHE_TOKEN buildcache "${SPACK_BUILDCACHE}"; \
+    fi && \
+    spack config add config:install_tree:root:/opt/software && \
+    spack config add "packages:all:target:[x86_64]" && \
+    spack repo add . && \
+    spack install --fail-fast --concurrent-packages 1 --use-buildcache package:never,dependencies:auto \
+      exahype2@main dev_path=/opt/exahype-source && \
+    spack gc -y && \
+    spack clean -a
+
+RUN . /opt/spack/share/spack/setup-env.sh && \
+    spack load --sh exahype2 | \
+      sed 's/^spack load.*//' > /etc/profile.d/exahype2.sh
+
+FROM ${IMAGE_PREFIX}/base:${BASE_TAG}
+
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /etc/profile.d/exahype2.sh /etc/profile.d/
+
+CMD ["/bin/bash", "-l"]

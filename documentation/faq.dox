@@ -155,20 +155,6 @@ cmake .. -DPEANO_EXTRA_LINK_FLAGS="-ltbb"
   ~~~~~~~~~~~~~~~~~~~
   and you should be fine.
 
-- ***If I use Fortran as well, I get errors alike***
-  ~~~~~~~~~~~~~~~~~~~
-undefined reference to for_stop_core
-undefined reference to for_write_seq_list
-  ~~~~~~~~~~~~~~~~~~~
-  This tells you
-  that the linker failed to find the Fortran standard libraries. For the GNU
-  compilers, you need for example the flag -lgfortran while Intel requires
-  -lifcore. Pass them to your build via `-DPEANO_EXTRA_LINK_FLAGS="-lgfortran"`
-  (or `-lifcore`).
-  You can add these flags manually via your Python script to the code, but
-  this is a flaw. They belong into the build configuration, not into your
-  Python script.
-
 - ***The linker complains about some routines/classes from the technical
   architectures, but they are definitely there***
   GCC/C++ is extremely sensitive when it comes to the order of the libraries

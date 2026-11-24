@@ -4,13 +4,11 @@
 
 #ifdef __cplusplus
 // NVC++ 25.7 exposes std::bit_cast only if <bit> precedes <algorithm> and <array>.
-#if defined(__NVCOMPILER)
 #include <bit>
-#endif
+// The remaining headers of the standard library.
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <bit>
 #include <bitset>
 #include <cassert>
 #include <cctype>

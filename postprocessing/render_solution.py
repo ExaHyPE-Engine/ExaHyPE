@@ -4,16 +4,16 @@
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor
-from io import BytesIO
 import math
 import multiprocessing
 import os
+
+from concurrent.futures import ProcessPoolExecutor
+from io import BytesIO
 from pathlib import Path
 
-import numpy as np
-
 import matplotlib
+import numpy as np
 
 # Render head-less when running as a plain script or worker process, but leave
 # the backend untouched inside an IPython kernel, where forcing Agg would
@@ -50,19 +50,15 @@ LABELLED_CBAR_RECT = (0.85, 0.09, 0.03, 0.84)
 # solution_io defines the mesh model and the readers of every format. The second import serves a
 # run of this script from the postprocessing/ directory with solution_io as a sibling module.
 try:
-    from postprocessing.solution_io import (
-        MeshSnapshot,
-        SnapshotRef,
-        SolutionSource,
-        load_snapshot_ref,
-    )
+    from postprocessing.solution_io import MeshSnapshot
+    from postprocessing.solution_io import SnapshotRef
+    from postprocessing.solution_io import SolutionSource
+    from postprocessing.solution_io import load_snapshot_ref
 except ImportError:
-    from solution_io import (
-        MeshSnapshot,
-        SnapshotRef,
-        SolutionSource,
-        load_snapshot_ref,
-    )
+    from solution_io import MeshSnapshot
+    from solution_io import SnapshotRef
+    from solution_io import SolutionSource
+    from solution_io import load_snapshot_ref
 
 
 # --------------------------------------------------------------------------- #
@@ -86,7 +82,7 @@ def _component_or_magnitude(values: np.ndarray, component: int | None) -> np.nda
 def cell_scalar(
     snapshot: MeshSnapshot, field: str, component: int | None = None
 ) -> np.ndarray:
-    """One colour value per cell: the field component, or its magnitude.
+    """One colour value per cell: The field component, or its magnitude.
 
     Node values are averaged onto their cell.
     """
@@ -492,7 +488,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=IMAGE_FORMATS, default="png", help="Image format"
     )
     parser.add_argument(
-        "--field", help="Field to render (default: first non-housekeeping)"
+        "--field", help="Field to render (default: First non-housekeeping)"
     )
     parser.add_argument("--component", type=int, help="Component of a vector field")
     parser.add_argument("--colormap", default="viridis", help="Matplotlib colormap")
@@ -519,7 +515,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--slice-width", type=float, default=0.0, help="Slice band width"
     )
     parser.add_argument(
-        "--frame", type=int, help="Render only this frame index (default: all frames)"
+        "--frame", type=int, help="Render only this frame index (default: All frames)"
     )
     parser.add_argument(
         "-j",
@@ -562,7 +558,7 @@ def main(argv: list[str] | None = None) -> None:
         frame = args.frame + source.count if args.frame < 0 else args.frame
         if not 0 <= frame < source.count:
             parser.error(
-                f"--frame {args.frame} is out of range: this source has "
+                f"--frame {args.frame} is out of range: This source has "
                 f"{source.count} frame(s) (valid indices 0..{source.count - 1})"
             )
         indices = [frame]
@@ -869,6 +865,7 @@ def show_solution(
 
     try:
         import ipywidgets as widgets
+
         from IPython.display import display
     except ImportError:
         return render(chosen, last)
@@ -1087,6 +1084,7 @@ def show_solution_3D(
 
     try:
         import ipywidgets as widgets
+
         from IPython.display import display
     except ImportError:
         layers = slice_layers(base, axis)

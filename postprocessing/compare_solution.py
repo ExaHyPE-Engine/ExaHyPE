@@ -8,14 +8,17 @@ import math
 import sys
 
 import numpy as np
+
 from scipy.spatial import cKDTree
 
 # The dual import works both as a package and when this script is
 # run directly from the postprocessing/ directory (see render_solution.py).
 try:
-    from postprocessing.solution_io import MeshSnapshot, SolutionSource
+    from postprocessing.solution_io import MeshSnapshot
+    from postprocessing.solution_io import SolutionSource
 except ImportError:
-    from solution_io import MeshSnapshot, SolutionSource
+    from solution_io import MeshSnapshot
+    from solution_io import SolutionSource
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--atol", type=float, default=0.0, help="Absolute tolerance (default: 0, exact)"
     )
-    parser.add_argument("--field", help="Compare only this field (default: all fields)")
+    parser.add_argument("--field", help="Compare only this field (default: All fields)")
     parser.add_argument(
         "--skip-fields",
         nargs="+",
@@ -153,7 +156,7 @@ def compare_snapshots(
         left_selected, right_selected = left_fields - skipped, right_fields - skipped
         if left_selected != right_selected:
             return (
-                f"Snapshot {index} fields differ: only in left {sorted(left_selected - right_selected)}, "
+                f"Snapshot {index} fields differ: Only in left {sorted(left_selected - right_selected)}, "
                 f"only in right {sorted(right_selected - left_selected)}."
             )
         selected = [name for name in left.variables if name in left_selected]

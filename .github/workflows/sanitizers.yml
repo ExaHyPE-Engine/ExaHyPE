@@ -1,0 +1,86 @@
+name: Sanitizers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: sanitizers-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  Images:
+    name: Wait for Images
+    runs-on: ubuntu-24.04
+    outputs:
+      gcc: ${{ steps.images.outputs.gcc }}
+      llvm: ${{ steps.images.outputs.llvm }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: images
+        run: >-
+          bash .github/scripts/wait-for-images.sh
+          ${{ github.event.pull_request.head.repo.fork && '--no-wait' || '' }} gcc llvm
+
+  LFS:
+    name: LFS
+    runs-on: ubuntu-24.04
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: key
+        run: echo "key=lfs-$(git lfs ls-files --long | sha256sum | cut -c1-16)" >>"${GITHUB_OUTPUT}"
+      - uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: ${{ steps.key.outputs.key }}
+      - run: git lfs fetch
+
+  Toolchains:
+    name: ${{ matrix.toolchain.name }}
+    needs: [Images, LFS]
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - { name: GCC, image: gcc, cc: gcc, cxx: g++, curve: Hilbert }
+          - { name: LLVM, image: llvm, cc: clang, cxx: clang++, curve: Peano }
+    uses: ./.github/workflows/toolchain.yml
+    with:
+      name: ${{ matrix.toolchain.name }}
+      image: ${{ needs.Images.outputs[matrix.toolchain.image] }}
+      cc: ${{ matrix.toolchain.cc }}
+      cxx: ${{ matrix.toolchain.cxx }}
+      mode: Asserts
+      curve: ${{ matrix.toolchain.curve }}
+      cmake-options: -DPEANO_WITH_FPE=ON -DPEANO_WITH_SANITIZER=address+undefined
+      # The binary memory patcher of Open MPI rewrites the allocator entry points that the address sanitizer
+      # interposes. MPI_Init_thread then raises a segmentation fault without OMPI_MCA_memory=^patcher.
+      environment: >-
+        ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 OMPI_MCA_pml=ob1
+        OMPI_MCA_osc=^ucx OMPI_MCA_btl=self,sm,tcp OMPI_MCA_memory=^patcher UCX_TLS=tcp,sm
+      build-only: false
+      tutorials: true
+      lfs-key: ${{ needs.LFS.outputs.key }}
+
+  Sanitizers:
+    name: Sanitizers
+    needs: [Images, LFS, Toolchains]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: ${RESULTS}"
+          [[ " ${RESULTS} " != *" failure "* && " ${RESULTS} " != *" cancelled "* && " ${RESULTS} " != *" skipped "* ]]

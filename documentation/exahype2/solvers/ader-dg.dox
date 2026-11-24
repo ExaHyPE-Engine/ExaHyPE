@@ -58,7 +58,7 @@ Two ADER-DG solvers of one project can own complementary parts of the domain
 through `restrict_to_cells()`, and `project.couple(first, second)` runs both
 with the smaller of their time step sizes; the traces of the faces between
 their cells are copied from the partner's face pools, mapped onto the other
-solver's face nodes and compute precision. `tests/aderdg-coupling` couples a
+solver's face nodes and compute precision. `examples/aderdg-coupling` couples a
 double and a single precision solver of the same equation.
 
 */

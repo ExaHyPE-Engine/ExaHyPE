@@ -2,31 +2,30 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 import argparse
-from pathlib import Path
 import tempfile
 import unittest
+
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
 from postprocessing import plot_probe_data
-from postprocessing.plot_probe_data import (
-    BASE_COLUMNS_2D,
-    BASE_COLUMNS_3D,
-    _build_argument_parser,
-    _create_plot,
-    _format_probe_label,
-    _load_csv,
-    _normalise_header,
-    _read_header,
-    _resolve_output_path,
-    _resolve_title,
-    _select_data_columns,
-    _select_probe,
-    _validate_base_columns,
-    _write_outputs,
-    main,
-)
+from postprocessing.plot_probe_data import BASE_COLUMNS_2D
+from postprocessing.plot_probe_data import BASE_COLUMNS_3D
+from postprocessing.plot_probe_data import _build_argument_parser
+from postprocessing.plot_probe_data import _create_plot
+from postprocessing.plot_probe_data import _format_probe_label
+from postprocessing.plot_probe_data import _load_csv
+from postprocessing.plot_probe_data import _normalise_header
+from postprocessing.plot_probe_data import _read_header
+from postprocessing.plot_probe_data import _resolve_output_path
+from postprocessing.plot_probe_data import _resolve_title
+from postprocessing.plot_probe_data import _select_data_columns
+from postprocessing.plot_probe_data import _select_probe
+from postprocessing.plot_probe_data import _validate_base_columns
+from postprocessing.plot_probe_data import _write_outputs
+from postprocessing.plot_probe_data import main
 
 HEADER_2D = "number(0),number(1),t,x(0),x(1),data(0)\n"
 HEADER_3D = "number(0),number(1),t,x(0),x(1),x(2),data(0)\n"

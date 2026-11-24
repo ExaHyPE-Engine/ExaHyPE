@@ -12,6 +12,7 @@ import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 from obspy.signal.tf_misfit import plot_tf_misfits
 from scipy.interpolate import interp1d
 

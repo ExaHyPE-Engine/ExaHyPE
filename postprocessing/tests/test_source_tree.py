@@ -84,7 +84,7 @@ class RepositoryTreeTest(unittest.TestCase):
 
     def test_hidden_directories_except_the_ci_directory_are_excluded(self):
         self.assert_excluded(".git", ".ipynb_checkpoints", ".ruff_cache", ".vscode")
-        self.assert_walked(".gitlab")
+        self.assert_walked(".github")
 
     def test_source_directories_are_walked(self):
         self.assert_walked("src", "api", "tests", "buildings", "installation")
@@ -94,6 +94,11 @@ class RepositoryTreeTest(unittest.TestCase):
         write(os.path.join(environment, "pyvenv.cfg"))
         self.assertTrue(is_excluded_directory(environment))
 
+    def test_a_spack_package_repository_is_excluded(self):
+        repository = os.path.join(self.root, "spack")
+        write(os.path.join(repository, "repo.yaml"))
+        self.assertTrue(is_excluded_directory(repository))
+
     def test_the_walk_returns_the_sorted_sources_outside_excluded_directories(self):
         write(os.path.join(self.root, "src", "b.cpp"))
         write(os.path.join(self.root, "src", "a.h"))
@@ -101,11 +106,11 @@ class RepositoryTreeTest(unittest.TestCase):
         write(os.path.join(self.root, "build", "src", "c.cpp"))
         write(os.path.join(self.root, "tests", "Euler.generated", "d.cpp"))
         write(os.path.join(self.root, ".cache", "e.cpp"))
-        write(os.path.join(self.root, ".gitlab", "f.h"))
+        write(os.path.join(self.root, ".github", "f.h"))
         self.assertEqual(
             source_files(self.root, (".cpp", ".h")),
             [
-                os.path.join(self.root, ".gitlab", "f.h"),
+                os.path.join(self.root, ".github", "f.h"),
                 os.path.join(self.root, "src", "a.h"),
                 os.path.join(self.root, "src", "b.cpp"),
             ],

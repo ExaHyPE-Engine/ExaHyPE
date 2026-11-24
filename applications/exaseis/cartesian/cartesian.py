@@ -2,9 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
 
-import exahype2
-
 import Elastic
+
+import exahype2
 
 
 def parse_arguments():

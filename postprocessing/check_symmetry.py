@@ -6,17 +6,21 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import sys
+
 from collections.abc import Collection
 
 import numpy as np
+
 from scipy.spatial import cKDTree
 
 # The first import works in the package. The second one works in a direct run from the
 # postprocessing/ directory.
 try:
-    from postprocessing.solution_io import MeshSnapshot, SolutionSource
+    from postprocessing.solution_io import MeshSnapshot
+    from postprocessing.solution_io import SolutionSource
 except ImportError:
-    from solution_io import MeshSnapshot, SolutionSource
+    from solution_io import MeshSnapshot
+    from solution_io import SolutionSource
 
 
 MIRRORS = ("x", "y", "z", "xy", "xz", "yz")
@@ -38,14 +42,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--centre",
         type=float,
         nargs="+",
-        help="Symmetry centre (default: the midpoint of the mesh bounding box)",
+        help="Symmetry centre (default: The midpoint of the mesh bounding box)",
     )
     parser.add_argument(
         "--mirrors",
         nargs="+",
         choices=MIRRORS,
-        help="Mirrors to check: an axis name reflects that axis, a pair swaps the two axes "
-        "(default: every axis of the mesh plus the xy swap)",
+        help="Mirrors to check. An axis name reflects that axis, a pair swaps the two axes "
+        "(default: Every axis of the mesh plus the xy swap)",
     )
     parser.add_argument(
         "--rtol", type=float, default=0.0, help="Relative tolerance (default: 0)"
@@ -57,27 +61,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Absolute tolerance (default: 0, bitwise symmetry)",
     )
     parser.add_argument(
-        "--frame", type=int, help="Check only this snapshot index (default: all)"
+        "--frame", type=int, help="Check only this snapshot index (default: All)"
     )
     parser.add_argument(
         "--skip-fields",
         nargs="+",
         default=["Subdomain", "CurveIndex", "Number"],
-        help="Fields to ignore (default: the decomposition fields Subdomain and CurveIndex and the "
+        help="Fields to ignore (default: The decomposition fields Subdomain and CurveIndex and the "
         "particle identifier Number)",
     )
     parser.add_argument(
         "--vector-fields",
         nargs="+",
         default=[],
-        help="Fields to transform as geometric vectors (default: every field with two or three "
+        help="Fields to transform as geometric vectors (default: Every field with two or three "
         "components)",
     )
     parser.add_argument(
         "--tensor-fields",
         nargs="+",
         default=[],
-        help="Fields to transform as rank-2 tensors (default: every 9-component field)",
+        help="Fields to transform as rank-2 tensors (default: Every 9-component field)",
     )
     parser.add_argument(
         "--symmetric-tensor-fields",

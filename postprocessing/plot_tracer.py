@@ -1,6 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import csv, argparse, sys
+import argparse
+import csv
+import sys
 
 
 def PlotTracer(argv=None):

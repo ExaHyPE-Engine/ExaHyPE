@@ -28,12 +28,13 @@ CPP_SUFFIXES = (
 PYTHON_SUFFIXES = (".py",)
 STYLE_FILE = ".clang-format"
 
-SOURCE_HIDDEN_DIRECTORIES = frozenset({".gitlab"})
+SOURCE_HIDDEN_DIRECTORIES = frozenset({".github"})
 CACHE_DIRECTORIES = frozenset({"CMakeFiles", "__pycache__"})
 EXTERNAL_DIRECTORIES = frozenset({"node_modules", "submodules"})
 BUILD_DIRECTORY = re.compile(r"^(build|install)(-.+)?$")
 APPLICATION_OUTPUT_DIRECTORY = re.compile(r"\.(build|generated|output)$")
 VIRTUAL_ENVIRONMENT_MARKER = "pyvenv.cfg"
+SPACK_REPOSITORY_MARKER = "repo.yaml"
 
 PRECOMPILED_HEADER_ARGUMENTS = ("-Winvalid-pch", "-Werror")
 
@@ -73,7 +74,8 @@ def find_repository_root(start: str) -> str:
 
 
 def is_excluded_directory(path: str) -> bool:
-    """Returns whether a directory contains tool state, build output, external code or a virtual environment."""
+    """Returns whether a directory contains tool state, build output, external code, a virtual environment or
+    Spack recipes."""
     name = os.path.basename(os.path.abspath(path))
     if name.startswith("."):
         return name not in SOURCE_HIDDEN_DIRECTORIES
@@ -83,6 +85,7 @@ def is_excluded_directory(path: str) -> bool:
         or BUILD_DIRECTORY.match(name) is not None
         or APPLICATION_OUTPUT_DIRECTORY.search(name) is not None
         or os.path.isfile(os.path.join(path, VIRTUAL_ENVIRONMENT_MARKER))
+        or os.path.isfile(os.path.join(path, SPACK_REPOSITORY_MARKER))
     )
 
 
@@ -171,14 +174,14 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     """Adds the repository root and the number of parallel jobs to a parser."""
     parser.add_argument(
         "--root",
-        help=f"Repository to analyse (default: the closest directory above the working directory that contains {STYLE_FILE})",
+        help=f"Repository to analyse (default: The closest directory above the working directory that contains {STYLE_FILE})",
     )
     parser.add_argument(
         "-j",
         "--jobs",
         type=positive_integer,
         default=os.cpu_count() or 1,
-        help="Number of tool processes that run at the same time (default: the number of processors)",
+        help="Number of tool processes that run at the same time (default: The number of processors)",
     )
 
 

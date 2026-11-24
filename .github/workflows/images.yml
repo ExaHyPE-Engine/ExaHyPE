@@ -1,0 +1,112 @@
+name: Images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: images-${{ github.ref }}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  Base:
+    name: Base
+    # A pull request from a fork cannot push images. Its tests use the images that already exist.
+    if: ${{ !github.event.pull_request.head.repo.fork }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh base
+
+  Spack:
+    name: Spack
+    needs: Base
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh spack
+
+  AMD:
+    name: AMD
+    needs: Spack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh amd
+
+  GCC:
+    name: GCC
+    needs: Spack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh gcc
+
+  Intel:
+    name: Intel
+    needs: Spack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh intel
+
+  LLVM:
+    name: LLVM
+    needs: Spack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh llvm
+
+  NVIDIA:
+    name: NVIDIA
+    needs: Spack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh nvidia
+
+  ExaHyPE:
+    name: ExaHyPE
+    needs: Spack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh exahype
+
+  Tutorials:
+    name: Tutorials
+    needs: ExaHyPE
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build-image.sh tutorials
+
+  Applications:
+    name: Applications
+    needs: ExaHyPE
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - id: lfs
+        run: echo "key=lfs-$(git lfs ls-files --long | sha256sum | cut -c1-16)" >>"${GITHUB_OUTPUT}"
+      - uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: ${{ steps.lfs.outputs.key }}
+      - run: git lfs fetch && git lfs checkout
+      - run: bash .github/scripts/build-image.sh applications
