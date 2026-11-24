@@ -19,7 +19,7 @@ env:
 
 jobs:
   Images:
-    name: Images
+    name: Wait for Images
     runs-on: ubuntu-24.04
     outputs:
       gcc: ${{ steps.images.outputs.gcc }}

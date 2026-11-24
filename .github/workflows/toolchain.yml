@@ -56,6 +56,7 @@ jobs:
       CMAKE_HIP_COMPILER_LAUNCHER: ccache
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_DEPEND: "true"
       CCACHE_NOHASHDIR: "true"
       CCACHE_MAXSIZE: 100M
     steps:
