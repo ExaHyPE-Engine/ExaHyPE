@@ -2440,6 +2440,133 @@ UNIT_TEST("The interpolation matrices evaluate the coarse polynomial at the chil
   }
 }
 
+UNIT_TEST("The equidistant interpolation evaluates the polynomial from face to face") {
+  GIVEN("A cubic polynomial at the four matrix nodes") {
+    const auto interpolate = [](const auto& matrix, const int points, const int point) {
+      double interpolated = 0.0;
+      for (int node = 0; node < MatrixNodesPerAxis; node++) {
+        interpolated += matrix[static_cast<std::size_t>(node * points + point)] * getCubicValue(MatrixNodes[node]);
+      }
+      return interpolated;
+    };
+
+    WHEN("The matrices for as many equidistant points as nodes and for more points multiply the nodal values") {
+      constexpr int FewPoints  = MatrixNodesPerAxis;
+      constexpr int ManyPoints = 2 * MatrixNodesPerAxis - 1;
+      const auto    few = exahype2::dg::getEquidistantInterpolationMatrix1D<MatrixNodesPerAxis, FewPoints>(MatrixNodes);
+      const auto many = exahype2::dg::getEquidistantInterpolationMatrix1D<MatrixNodesPerAxis, ManyPoints>(MatrixNodes);
+
+      THEN("Every point, the faces included, receives the cubic at its position and mirror entries are bitwise equal") {
+        for (int point = 0; point < FewPoints; point++) {
+          const double x = static_cast<double>(point) / (FewPoints - 1);
+          VALIDATE_NUMERICAL_EQUALS(interpolate(few, FewPoints, point), getCubicValue(x), FewPoints, point);
+          for (int node = 0; node < MatrixNodesPerAxis; node++) {
+            const int mirror = (MatrixNodesPerAxis - 1 - node) * FewPoints + FewPoints - 1 - point;
+            VALIDATE_EQUALS(
+              few[static_cast<std::size_t>(node * FewPoints + point)],
+              few[static_cast<std::size_t>(mirror)]
+            );
+          }
+        }
+        for (int point = 0; point < ManyPoints; point++) {
+          const double x = static_cast<double>(point) / (ManyPoints - 1);
+          VALIDATE_NUMERICAL_EQUALS(interpolate(many, ManyPoints, point), getCubicValue(x), ManyPoints, point);
+          for (int node = 0; node < MatrixNodesPerAxis; node++) {
+            const int mirror = (MatrixNodesPerAxis - 1 - node) * ManyPoints + ManyPoints - 1 - point;
+            VALIDATE_EQUALS(
+              many[static_cast<std::size_t>(node * ManyPoints + point)],
+              many[static_cast<std::size_t>(mirror)]
+            );
+          }
+        }
+      }
+    }
+  }
+}
+
+UNIT_TEST("The tensor product of the equidistant interpolation matrix evaluates a nodal field from face to face") {
+  GIVEN("A smooth polynomial field sampled on the four matrix nodes along every axis") {
+    constexpr int PointsPerAxis = 2 * MatrixNodesPerAxis - 1;
+    const auto    getField      = [](const tarch::la::Vector<DIMENSIONS, double>& position) {
+      double value = 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        value *= getCubicValue(position(axis) + 0.1 * axis);
+      }
+      return value;
+    };
+    std::vector<double> nodal(static_cast<std::size_t>(peano4::power(MatrixNodesPerAxis, DIMENSIONS)));
+    peano4::dForEach(MatrixNodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
+      tarch::la::Vector<DIMENSIONS, double> position;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        position(axis) = MatrixNodes[nodeIndex(axis)];
+      }
+      nodal[static_cast<std::size_t>(peano4::dLinearised(nodeIndex, MatrixNodesPerAxis))] = getField(position);
+    });
+
+    WHEN("projectTensorProduct evaluates the nodal field at equidistant face-to-face points") {
+      const auto matrix1D =
+        exahype2::dg::getEquidistantInterpolationMatrix1D<MatrixNodesPerAxis, PointsPerAxis>(MatrixNodes);
+      std::vector<double> paired(static_cast<std::size_t>(peano4::power(PointsPerAxis, DIMENSIONS)));
+      std::vector<double> butterfly(static_cast<std::size_t>(peano4::power(PointsPerAxis, DIMENSIONS)));
+      exahype2::dg::projectTensorProduct<
+        DIMENSIONS,
+        MatrixNodesPerAxis,
+        PointsPerAxis,
+        1,
+        ProjectionRule::PairedProducts
+      >(nodal.data(), paired.data(), matrix1D.data());
+      exahype2::dg::projectTensorProduct<DIMENSIONS, MatrixNodesPerAxis, PointsPerAxis, 1, ProjectionRule::Butterfly>(
+        nodal.data(),
+        butterfly.data(),
+        matrix1D.data()
+      );
+
+      THEN("Every plot point, the faces included, receives the polynomial at its position under both rules") {
+        peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
+          tarch::la::Vector<DIMENSIONS, double> position;
+          for (int axis = 0; axis < DIMENSIONS; axis++) {
+            position(axis) = static_cast<double>(pointIndex(axis)) / (PointsPerAxis - 1);
+          }
+          const int point = peano4::dLinearised(pointIndex, PointsPerAxis);
+          VALIDATE_NUMERICAL_EQUALS(paired[static_cast<std::size_t>(point)], getField(position), point);
+          VALIDATE_NUMERICAL_EQUALS(butterfly[static_cast<std::size_t>(point)], getField(position), point);
+        });
+      }
+    }
+  }
+}
+
+UNIT_TEST("Every point maps to its containing subcell and a boundary point maps to the upper one") {
+  GIVEN("Three Gauss-Legendre points and three boundary points across five subcells per axis") {
+    constexpr int                   PointsPerAxis   = 3;
+    constexpr int                   SubcellsPerAxis = 5;
+    constexpr int                   PointsPerCell   = peano4::power(PointsPerAxis, DIMENSIONS);
+    constexpr std::array<double, 3> GaussLegendrePoints{0.1127016653792583, 0.5, 0.8872983346207417};
+    constexpr std::array<double, 3> BoundaryPoints{0.0, 0.4, 1.0};
+    constexpr std::array<int, 3>    SubcellsAlongAxis{0, 2, 4};
+
+    WHEN("getContainingSubcells assigns each tensor-product point to a subcell") {
+      const auto gaussLegendre =
+        exahype2::dg::getContainingSubcells<PointsPerAxis, SubcellsPerAxis>(GaussLegendrePoints.data());
+      const auto boundary = exahype2::dg::getContainingSubcells<PointsPerAxis, SubcellsPerAxis>(BoundaryPoints.data());
+
+      THEN("Both point sets select the same subcell at every point") {
+        for (int point = 0; point < PointsPerCell; point++) {
+          const auto pointIndex = peano4::dDelinearised(point, PointsPerAxis);
+          int        stride     = 1;
+          int        expected   = 0;
+          for (int axis = 0; axis < DIMENSIONS; axis++) {
+            expected += SubcellsAlongAxis[static_cast<std::size_t>(pointIndex(axis))] * stride;
+            stride *= SubcellsPerAxis;
+          }
+          VALIDATE_EQUALS(gaussLegendre[static_cast<std::size_t>(point)], expected, point);
+          VALIDATE_EQUALS(boundary[static_cast<std::size_t>(point)], expected, point);
+        }
+      }
+    }
+  }
+}
+
 UNIT_TEST("The restriction matrices are the interpolation matrices transposed and divided by the subdivision factor") {
   GIVEN("The interpolation and the restriction matrices of the four matrix nodes") {
     THEN("Every restriction entry equals the transposed interpolation entry over the subdivision factor") {

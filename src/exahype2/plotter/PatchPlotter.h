@@ -35,9 +35,10 @@ struct exahype2::plotter::DataField final {
 };
 
 /**
- * Writes the patches of the grid cells of a rank into the snapshots of one plot series. The function
- * plotVolumes() writes one plot cell per finite volume and every volume corner once. The function
- * plotNodes() writes nodal values at the plot points of every patch.
+ * Writes the patches of the grid cells of a rank into the snapshots of one plot series. The
+ * function plotVolumes() writes one plot cell per finite volume and every volume corner once. The
+ * function plotPatch() writes the solution that a solver evaluates at equidistant points from face
+ * to face of every element of a patch.
  */
 class exahype2::plotter::PatchPlotter final {
 public:
@@ -58,35 +59,40 @@ public:
     const std::string&                                      outputDirectory
   );
 
-  template <int NodesPerAxis, int ValuesPerNode, typename Precision>
-  INLINE_METHOD void plotNodes(
-    const peano4::CellConnectivity&                         cellConnectivity,
-    tarch::Span<const int>                                  cells,
-    const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
-    const double*                                           nodePositions,
-    double                                                  timeStamp,
-    tarch::plotter::Format                                  format,
-    const std::string&                                      outputDirectory
+  template <int ElementsPerAxis, int PointsPerAxis, int ValuesPerPoint, typename Evaluate>
+  INLINE_METHOD void plotPatch(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::Span<const int>          cells,
+    const Evaluate&                 evaluate,
+    double                          timeStamp,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
 
-  template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
-  INLINE_METHOD void plotNodes(
-    const peano4::CellConnectivity&                                               cellConnectivity,
-    tarch::Span<const int>                                                        cells,
-    const tarch::accelerator::ChunkedMemoryPool<Precision>&                       values,
-    const double*                                                                 nodePositions,
-    const tarch::accelerator::ChunkedMemoryPool<std::type_identity_t<Precision>>* subcellValues,
-    const tarch::accelerator::ChunkedMemoryPool<int>*                             statuses,
-    int                                                                           subcellStatus,
-    double                                                                        timeStamp,
-    tarch::plotter::Format                                                        format,
-    const std::string&                                                            outputDirectory
+  template <int ElementsPerAxis, int PointsPerAxis, int ValuesPerPoint, typename Evaluate, typename Status>
+    requires(not std::is_same_v<std::remove_cvref_t<Status>, std::nullptr_t>)
+  INLINE_METHOD void plotPatch(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::Span<const int>          cells,
+    const Evaluate&                 evaluate,
+    double                          timeStamp,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory,
+    const Status&                   status,
+    const char*                     statusName
   );
 
 private:
-  template <int NodesPerAxis, int SubcellsPerAxis>
-  [[nodiscard]] static INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)> containingSubcells(
-    const double* nodePositions
+  template <int ElementsPerAxis, int PointsPerAxis, int ValuesPerPoint, typename Evaluate, typename Status>
+  INLINE_METHOD void plotPatchImpl(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::Span<const int>          cells,
+    const Evaluate&                 evaluate,
+    double                          timeStamp,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory,
+    const Status&                   status,
+    const char*                     statusName
   );
 
   static constexpr const char* OutputSubdirectory = "patch/";
@@ -121,7 +127,7 @@ private:
     int         cellsPerPatch,
     std::size_t numberOfPoints,
     bool        writesPointData,
-    bool        writesStatus
+    const char* statusName
   ) const;
 
   void write(

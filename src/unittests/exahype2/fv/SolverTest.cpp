@@ -7,7 +7,9 @@
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/limiter/SlopeLimiter.h"
 #include "exahype2/fv/reconstruction/Constant.h"
+#include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
 #include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
@@ -43,20 +45,50 @@ namespace {
 
   struct RuntimeParameters final {};
 
+  struct CustomReconstructionWithoutEvaluate final {
+    template <
+      typename SolverType,
+      int  NumberOfVolumesPerAxis,
+      int  NumberOfUnknowns,
+      int  NumberOfAuxiliaryVariables,
+      bool EvaluateFlux,
+      bool EvaluateNonconservativeProduct,
+      bool EvaluateSource,
+      bool EvaluateCustomRiemann,
+      typename StoragePrecision,
+      typename ComputePrecision>
+    struct StateTerms final {
+      ComputePrecision minus[DIMENSIONS][NumberOfUnknowns + NumberOfAuxiliaryVariables]{};
+      ComputePrecision plus[DIMENSIONS][NumberOfUnknowns + NumberOfAuxiliaryVariables]{};
+    };
+  };
+
+  struct CustomSolverStub final {
+    static constexpr int PatchSize                  = ::PatchSize;
+    static constexpr int NumberOfUnknowns           = 1;
+    static constexpr int NumberOfAuxiliaryVariables = 0;
+    using Reconstruction                            = CustomReconstructionWithoutEvaluate;
+  };
+
   /**
-   * LinearSolverFor evolves one unknown on constant subcells from a linear initial condition without
-   * flux. Under the fixed rule it reports the wave speed zero.
+   * LinearSolverFor evolves one unknown from a linear initial condition without flux. Under the
+   * fixed rule it reports the wave speed zero.
    */
-  template <exahype2::TimeStepping::Rule Rule>
-  struct LinearSolverFor final : exahype2::fv::Solver<LinearSolverFor<Rule>, double, double> {
-    using Base = exahype2::fv::Solver<LinearSolverFor<Rule>, double, double>;
+  template <
+    exahype2::TimeStepping::Rule Rule,
+    typename ReconstructionScheme = exahype2::fv::reconstruction::Constant,
+    typename ComputePrecision     = double>
+  struct LinearSolverFor final
+    : exahype2::fv::Solver<LinearSolverFor<Rule, ReconstructionScheme, ComputePrecision>, double, ComputePrecision> {
+    using Base =
+      exahype2::fv::Solver<LinearSolverFor<Rule, ReconstructionScheme, ComputePrecision>, double, ComputePrecision>;
 
     static constexpr int PatchSize                  = ::PatchSize;
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
     using RuntimeParameters = ::RuntimeParameters;
-    using Reconstruction    = exahype2::fv::reconstruction::Constant;
+    using Reconstruction    = ReconstructionScheme;
     using TimeIntegration   = exahype2::fv::timestepping::SingleStep;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = Rule;
@@ -662,7 +694,9 @@ UNIT_TEST("The postprocessing of the updated patch writes every volume and sets 
   }
 }
 
-UNIT_TEST("A plot writes the file of every rank and allocates a host copy of the solution only with a GPU backend") {
+UNIT_TEST(
+  "A Godunov plot writes the file of every rank and allocates a host copy of the solution only with a GPU backend"
+) {
   GIVEN("A solver initialised on a regular grid over every rank and an output directory") {
     const auto&  cellConnectivity = buildGrid();
     const auto&  rank             = tarch::mpi::Rank::getInstance();
@@ -692,13 +726,181 @@ UNIT_TEST("A plot writes the file of every rank and allocates a host copy of the
         std::filesystem::remove_all(outputDirectory);
       }
 
-      THEN("The file exists, the host bytes grow by the host copy and the device bytes stay") {
+      THEN("The file exists, the host bytes grow by the host copy of the solution and the device bytes stay") {
         VALIDATE(fileExists, vtuPath.string());
         VALIDATE_EQUALS(bytesAfterThePlot.host, bytesBeforeThePlot.host + solutionCopy.getAllocatedBytes().host);
         VALIDATE_EQUALS(bytesAfterThePlot.device, bytesBeforeThePlot.device);
       }
     }
     solver.release();
+  }
+}
+
+UNIT_TEST(
+  "A limited linear plot writes the file of every rank and allocates host copies of solution and halo only on GPU"
+) {
+  GIVEN("A limited linear solver initialised on a regular grid over every rank and an output directory") {
+    using LimitedLinearSolver = LinearSolverFor<
+      exahype2::TimeStepping::Rule::Fixed,
+      exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>>;
+    const auto&         cellConnectivity = buildGrid();
+    const auto&         rank             = tarch::mpi::Rank::getInstance();
+    LimitedLinearSolver solver;
+    solver.setLimits(getLimitsOfTheDomain());
+    solver.allocate(cellConnectivity, RuntimeParameters{});
+    exahype2::RefinementRequests requests;
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
+    finishStep(solver);
+    const std::string outputDirectory =
+      (tarch::testing::getWritableTestDirectory() / "FiniteVolumeLimitedLinearPlotTest").string() + "/";
+    const std::string           vtuName = "LinearSolver-0_000000-rank-" + std::to_string(rank.getRank()) + ".vtu";
+    const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch" / vtuName;
+    std::filesystem::create_directories(outputDirectory + "patch/");
+
+    WHEN("The solver plots its patches and every rank checks its file and host allocation") {
+      const tarch::AllocatedBytes bytesBeforeThePlot = solver.getAllocatedBytes();
+      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory, RuntimeParameters{});
+      const tarch::AllocatedBytes  bytesAfterThePlot = solver.getAllocatedBytes();
+      const auto&                  solution          = solver.getSolution();
+      LimitedLinearSolver::Patches solutionCopy(solution.getChunkSize(), tarch::MemoryLocation::Heap);
+      static_cast<void>(solution.download(solutionCopy));
+      LimitedLinearSolver::Faces haloCopy(solver.getHalo().getChunkSize(), tarch::MemoryLocation::Heap);
+      static_cast<void>(solver.getHalo().download(haloCopy));
+      const bool fileExists = std::filesystem::exists(vtuPath);
+      tarch::mpi::barrier(rank.getCommunicator());
+      if (rank.isGlobalMaster()) {
+        std::filesystem::remove_all(outputDirectory);
+      }
+
+      THEN("The file exists, the host bytes grow by the host copies and the device bytes stay") {
+        VALIDATE(fileExists, vtuPath.string());
+        VALIDATE_EQUALS(
+          bytesAfterThePlot.host,
+          bytesBeforeThePlot.host + solutionCopy.getAllocatedBytes().host + haloCopy.getAllocatedBytes().host
+        );
+        VALIDATE_EQUALS(bytesAfterThePlot.device, bytesBeforeThePlot.device);
+      }
+    }
+    solver.release();
+  }
+}
+
+UNIT_TEST("The limited linear reconstruction reproduces a linear profile at every corner of every volume") {
+  GIVEN("A linear profile on the patch of the unit cell and on the halo beyond its faces") {
+    using LimitedLinearSolver = LinearSolverFor<
+      exahype2::TimeStepping::Rule::Fixed,
+      exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>>;
+    using Patch                   = LimitedLinearSolver::FiniteVolumeScheme;
+    constexpr int HaloSize        = Patch::HaloSize;
+    constexpr int Corners         = peano4::VerticesPerCell;
+    const auto    getVolumeCentre = [](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+      tarch::la::Vector<DIMENSIONS, double> x;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        x(axis) = (volume(axis) + 0.5) / PatchSize;
+      }
+      return x;
+    };
+
+    std::vector<double> patch(ValuesPerPatch);
+    peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+      patch[static_cast<std::size_t>(peano4::dLinearised(volume, PatchSize))] =
+        LimitedLinearSolver::getProfile(getVolumeCentre(volume));
+    });
+    std::vector<std::vector<double>> faces(peano4::FacesPerCell, std::vector<double>(Patch::ValuesPerFace));
+    const double*                    facePointers[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      const int                          normal = face % DIMENSIONS;
+      const int                          shift  = face < DIMENSIONS ? -HaloSize : PatchSize - HaloSize;
+      tarch::la::Vector<DIMENSIONS, int> extent(PatchSize);
+      extent(normal) = 2 * HaloSize;
+      peano4::dForEach(extent, [&](const tarch::la::Vector<DIMENSIONS, int>& layer) {
+        auto volume = layer;
+        volume(normal) += shift;
+        faces[static_cast<std::size_t>(face)]
+             [static_cast<std::size_t>(exahype2::fv::getFaceVolumeIndex(layer, PatchSize, HaloSize, normal))] =
+               LimitedLinearSolver::getProfile(getVolumeCentre(volume));
+      });
+      facePointers[face] = faces[static_cast<std::size_t>(face)].data();
+    }
+
+    WHEN("The solver evaluates the reconstructed volume corners of the patch") {
+      std::vector<double> values(static_cast<std::size_t>(ValuesPerPatch * Corners));
+      LimitedLinearSolver::evaluateVolumeCorners(
+        patch.data(),
+        facePointers,
+        tarch::la::Vector<DIMENSIONS, double>(0.5),
+        tarch::la::Vector<DIMENSIONS, double>(1.0),
+        0.0,
+        RuntimeParameters{},
+        values.data()
+      );
+
+      THEN("Every corner of every volume receives the linear profile") {
+        for (int volume = 0; volume < ValuesPerPatch; volume++) {
+          const auto volumeIndex = peano4::dDelinearised(volume, PatchSize);
+          for (int corner = 0; corner < Corners; corner++) {
+            const auto                            cornerIndex = peano4::dDelinearised(corner, 2);
+            tarch::la::Vector<DIMENSIONS, double> x;
+            for (int axis = 0; axis < DIMENSIONS; axis++) {
+              x(axis) = static_cast<double>(volumeIndex(axis) + cornerIndex(axis)) / PatchSize;
+            }
+            VALIDATE_NUMERICAL_EQUALS(
+              values[static_cast<std::size_t>(volume * Corners + corner)],
+              LimitedLinearSolver::getProfile(x),
+              volume,
+              corner,
+              x
+            );
+          }
+        }
+      }
+    }
+  }
+}
+
+UNIT_TEST("The limited linear corner evaluation keeps a constant double field exact in float compute precision") {
+  GIVEN("A constant field above single-precision integer resolution on a patch and its halo") {
+    using MixedPrecisionSolver = LinearSolverFor<
+      exahype2::TimeStepping::Rule::Fixed,
+      exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>,
+      float>;
+    using Patch               = MixedPrecisionSolver::FiniteVolumeScheme;
+    constexpr int    Corners  = peano4::VerticesPerCell;
+    constexpr double Constant = 16777217.0;
+
+    static_assert(exahype2::fv::HasLimitedLinearCorners<MixedPrecisionSolver, double, float, RuntimeParameters>);
+    static_assert(not exahype2::fv::HasLimitedLinearCorners<LinearSolver, double, double, RuntimeParameters>);
+    static_assert(not exahype2::fv::HasLimitedLinearCorners<CustomSolverStub, double, double, RuntimeParameters>);
+
+    const std::vector<double>              patch(ValuesPerPatch, Constant);
+    const std::vector<std::vector<double>> faces(
+      peano4::FacesPerCell,
+      std::vector<double>(Patch::ValuesPerFace, Constant)
+    );
+    const double* facePointers[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      facePointers[face] = faces[static_cast<std::size_t>(face)].data();
+    }
+
+    WHEN("The solver evaluates the reconstructed volume corners of the patch") {
+      std::vector<double> values(static_cast<std::size_t>(ValuesPerPatch * Corners));
+      MixedPrecisionSolver::evaluateVolumeCorners(
+        patch.data(),
+        facePointers,
+        tarch::la::Vector<DIMENSIONS, double>(0.5),
+        tarch::la::Vector<DIMENSIONS, double>(1.0),
+        0.0,
+        RuntimeParameters{},
+        values.data()
+      );
+
+      THEN("Every corner of every volume preserves the exact double constant") {
+        for (std::size_t entry = 0; entry < values.size(); entry++) {
+          VALIDATE_EQUALS(values[entry], Constant, entry);
+        }
+      }
+    }
   }
 }
 

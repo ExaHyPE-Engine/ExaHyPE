@@ -14,6 +14,11 @@ namespace exahype2::dg::limiting {
   enum class LimiterStatus : int { Regular = 0, Halo = 1, Limited = 2, Troubled = 3 };
 
   /**
+   * The name of the plotted LimiterStatus field.
+   */
+  constexpr const char* LimiterStatusFieldName = "LimiterStatus";
+
+  /**
    * The entries of the status chunk of one cell.
    */
   enum class StatusEntry : int { Status = 0, PreviousStatus = 1, WasTroubled = 2, PredictorDiverged = 3 };
