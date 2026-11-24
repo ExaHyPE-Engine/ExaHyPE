@@ -5,7 +5,7 @@ import argparse
 import exahype2
 
 import Elastic
-
+import numpy as np
 
 def parse_arguments():
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
@@ -99,15 +99,28 @@ theSolver.add_subcell_limiter(
 project.add_solver(theSolver)
 project.output.makefile.add_include_directory("../../../..")
 
+
+
+def surface_tracer_grid(dx, x_range=(-3.0, 7.0), z_range=(-3.0, 7.0),
+                        y=0.0, margin=0.05):
+    xs = np.arange(x_range[0] + margin, x_range[1] - margin + 1e-9, dx)
+    zs = np.arange(z_range[0] + margin, z_range[1] - margin + 1e-9, dx)
+    return [[round(float(x), 4), y, round(float(z), 4)] for x in xs for z in zs]
+
 if args.use_tracers:
-    tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
-    tracer_particles.insert_by_coordinates(
-        [
-            [0.000, 0.0, 14.0],     #ELE
-            [0.000, 0.0, 2.7],      #ASS1
-            [0.000, 0.0, 6.6],      #ASS2
-        ]
-    )
+    tracer_coordinates = surface_tracer_grid(0.1)
+    for station in [            
+                [0.000, 0.0, 0.6],     #ELE
+                [0.000, 0.0, 2.7],      #ASS1
+                [0.000, 0.0, 6.6],      #ASS2
+                ]: 
+        tracer_coordinates.append(station)
+        tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
+        tracer_particles.insert_by_coordinates(tracer_coordinates)
+
+
+
+
     tracer_particles.dump_into_database(
         filename="Station",
         time_delta_between_two_snapshots=0.01,
