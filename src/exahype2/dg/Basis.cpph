@@ -677,7 +677,8 @@ exahype2::dg::extrapolateNodalFieldToFaces(
 template <
   int NodesPerAxis,
   int NumberOfEntries,
-  int UnknownStride,
+  int FaceNodeStride,
+  int FieldEntryStride,
   int DirectionStride,
   typename FieldPrecision,
   typename FacePrecision,
@@ -702,15 +703,15 @@ exahype2::dg::extrapolateNodeMajorNodalFieldToFaces(
     exahype2::dg::extrapolateLineToFacePair<
       NodesPerAxis,
       1,
-      NumberOfEntries,
+      FaceNodeStride,
       1,
-      UnknownStride,
+      FieldEntryStride,
       FieldPrecision,
       FacePrecision,
       CoefficientPrecision
     >(faces[direction] + entry,
       faces[direction + DIMENSIONS] + entry,
-      field + direction * DirectionStride + entry * UnknownStride,
+      field + direction * DirectionStride + entry * FieldEntryStride,
       leftFaceCoefficients,
       rightFaceCoefficients,
       direction,

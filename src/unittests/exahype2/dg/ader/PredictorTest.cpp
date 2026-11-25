@@ -236,12 +236,12 @@ namespace {
     }
   };
 
-  using InertScratch           = exahype2::dg::ader::Predictor<InertNonlinearSolver, double>::Nonlinear::Scratch;
-  using TermScratch            = exahype2::dg::ader::Predictor<TermSolver, double>::Nonlinear::Scratch;
-  using DivergingScratch       = exahype2::dg::ader::Predictor<DivergingSolver, double>::Nonlinear::Scratch;
-  using InertLinearScratch     = exahype2::dg::ader::Predictor<InertLinearSolver, double>::Linear::Scratch;
-  using TransportScratch       = exahype2::dg::ader::Predictor<TransportSolver, double>::Linear::Scratch;
-  using SourceTransportScratch = exahype2::dg::ader::Predictor<SourceTransportSolver, double>::Linear::Scratch;
+  using InertScratch           = exahype2::dg::ader::Predictor<InertNonlinearSolver, double, double>::Nonlinear::Scratch;
+  using TermScratch            = exahype2::dg::ader::Predictor<TermSolver, double, double>::Nonlinear::Scratch;
+  using DivergingScratch       = exahype2::dg::ader::Predictor<DivergingSolver, double, double>::Nonlinear::Scratch;
+  using InertLinearScratch     = exahype2::dg::ader::Predictor<InertLinearSolver, double, double>::Linear::Scratch;
+  using TransportScratch       = exahype2::dg::ader::Predictor<TransportSolver, double, double>::Linear::Scratch;
+  using SourceTransportScratch = exahype2::dg::ader::Predictor<SourceTransportSolver, double, double>::Linear::Scratch;
 
   struct FaceBuffers final {
     double  state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
@@ -342,7 +342,7 @@ namespace {
   template <typename Derived>
   int predict(const Tables& tables, FaceBuffers& faces, double (&cellState)[CellStateSize], double* const scratch) {
     const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
-    return exahype2::dg::ader::Predictor<Derived, double>::predict(
+    return exahype2::dg::ader::Predictor<Derived, double, double>::predict(
       cellCentre,
       getCellSize(),
       faces.statePointers,
@@ -363,7 +363,7 @@ namespace {
   template <typename Derived>
   void predictCellState(const Tables& tables, double (&cellState)[CellStateSize]) {
     FaceBuffers         faces;
-    std::vector<double> scratch(exahype2::dg::ader::Predictor<Derived, double>::ScratchSize, 0.0);
+    std::vector<double> scratch(exahype2::dg::ader::Predictor<Derived, double, double>::ScratchSize, 0.0);
     predict<Derived>(tables, faces, cellState, scratch.data());
   }
 
@@ -606,7 +606,7 @@ UNIT_TEST(
 }
 
 UNIT_TEST("A predictor launch runs at least one team and at most one team per group of cells that a team advances") {
-  using Kernel = exahype2::dg::ader::Predictor<InertNonlinearSolver, double>;
+  using Kernel = exahype2::dg::ader::Predictor<InertNonlinearSolver, double, double>;
 
   GIVEN("The threads of a predictor team, the threads per cell and the groups of cells of one team") {
     const int threads        = Kernel::getTeamThreads();

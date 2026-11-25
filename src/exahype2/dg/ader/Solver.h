@@ -150,7 +150,7 @@ private:
 
   using LimiterSlot = std::conditional_t<HasLimiter, std::optional<Limiter>, exahype2::dg::ader::NoLimiter>;
 
-  using Predictor = exahype2::dg::ader::Predictor<Derived, ComputePrecision>;
+  using Predictor = exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>;
   using Corrector = exahype2::dg::ader::Corrector<Derived, StoragePrecision, ComputePrecision>;
   template <bool ReportEigenvalues>
   using CorrectorCells =

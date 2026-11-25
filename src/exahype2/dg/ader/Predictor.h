@@ -15,7 +15,7 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::ader {
-  template <typename Derived, typename ComputePrecision>
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   class Predictor;
 
   struct PredictionCounts;
@@ -29,12 +29,12 @@ TARGET_DECLARE
  * The predictor phase of one cell of an ADER-DG solver. Derived::IsLinear selects LinearPredictor
  * or NonlinearPredictor.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::dg::ader::Predictor final {
 public:
   using CellLayout = exahype2::dg::PaddedLayout<Derived>;
   using Tables     = exahype2::dg::BasisTables<ComputePrecision>;
-  using Linear     = exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>;
+  using Linear     = exahype2::dg::ader::LinearPredictor<Derived, StoragePrecision, ComputePrecision>;
   using Nonlinear  = exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>;
 
   static constexpr int ScratchSize = Derived::IsLinear ? Linear::Scratch::Size : Nonlinear::Scratch::Size;
@@ -50,7 +50,6 @@ public:
   [[nodiscard]] static INLINE_METHOD int getNumberOfScratchChunks(int cells);
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTeamScratchBytes(int teamThreads);
 
-  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD int predict(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -65,7 +64,6 @@ public:
     const typename Derived::RuntimeParameters&   parameters
   );
 
-  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD int predictInTeam(
     const TeamWorkers&                           workers,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -83,7 +81,7 @@ public:
 
 private:
 
-  template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
+  template <bool AccumulatesFlux, bool AccumulatesSource, typename SourceOfNode>
   static INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegral(
     StoragePrecision* NOALIAS cellState,
     ComputePrecision* NOALIAS timeAveragedFlux,
@@ -117,7 +115,7 @@ struct exahype2::dg::ader::PredictionCounts final {
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
 struct exahype2::dg::ader::PredictCells final {
-  using Kernel     = exahype2::dg::ader::Predictor<Derived, ComputePrecision>;
+  using Kernel     = exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>;
   using CellLayout = typename Kernel::CellLayout;
 
   static constexpr bool HasLimiter = not std::is_empty_v<DivergenceMarks>;

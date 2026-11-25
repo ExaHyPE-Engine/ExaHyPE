@@ -24,7 +24,8 @@ namespace {
   using CellLayout        = Setup::CellLayout;
 
   template <typename Solver>
-  using Predictor = exahype2::dg::ader::LinearPredictor<Solver, double>;
+  using Predictor = exahype2::dg::ader::LinearPredictor<Solver, double, double>;
+
 
   TARGET_DECLARE
   constexpr int NodesPerAxis              = CellLayout::NodesPerAxis;
@@ -481,7 +482,7 @@ namespace {
    * parameter matrix.
    */
   template <typename Solver>
-  std::vector<double> getTermsOf(const Tables& tables, const double* const timeAveragedState) {
+  std::vector<double> getTermsOf(const Tables& tables, const double* const timeAveragedState, const double* const cellState) {
     const auto          cellCentre      = getCellCentre();
     const auto          cellSize        = getCellSize();
     const auto          inverseCellSize = getInverseCellSize();
@@ -490,8 +491,11 @@ namespace {
     double flux[NumberOfUnknowns];
     if constexpr (Predictor<Solver>::EvaluateFlux) {
       for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-        for (int value = 0; value < NumberOfData; value++) {
+        for (int value = 0; value < NumberOfUnknowns; value++) {
           state[value] = timeAveragedState[value * UnknownStride + cellNode];
+        }
+        for (int value = NumberOfUnknowns; value < NumberOfData; value++) {
+          state[value] = cellState[cellNode * NumberOfData + value];
         }
         for (int value = 0; value < NumberOfUnknowns; value++) {
           flux[value] = 0;
@@ -736,7 +740,7 @@ namespace {
         cellCentre,
         cellSize
       );
-      Predictor<exahype2::dg::ader::unittests::StubSolver>::predict(
+      exahype2::dg::ader::LinearPredictor<exahype2::dg::ader::unittests::StubSolver, StoragePrecision, double>::predict(
         faceState,
         faceFlux,
         cellStates + stateOffset,
@@ -887,7 +891,7 @@ UNIT_TEST("A system without terms starts the time average from the cell state an
       const double* const flux              = scratch.data() + InertScratch::FluxOffset;
 
       THEN("The time-averaged state stores the cell state and a zero in every padding lane") {
-        for (int value = 0; value < NumberOfData; value++) {
+        for (int value = 0; value < NumberOfUnknowns; value++) {
           for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
             VALIDATE_NUMERICAL_EQUALS(
               timeAveragedState[value * CellLayout::PaddedNodesPerCell + cellNode],
@@ -932,7 +936,7 @@ UNIT_TEST("After the prediction the flux stores the terms of the time-averaged s
       const double* const flux              = scratch.data() + MarkerScratch::FluxOffset;
 
       THEN("Every entry of the flux equals the terms evaluated at the time-averaged state") {
-        const std::vector<double> terms = getTermsOf<MarkerSolver>(tables, timeAveragedState);
+        const std::vector<double> terms = getTermsOf<MarkerSolver>(tables, timeAveragedState, cellState);
         for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
           VALIDATE_NUMERICAL_EQUALS(flux[entry], terms[entry], entry);
         }
@@ -1058,7 +1062,7 @@ UNIT_TEST("The flux of every node and axis reaches the block of that axis") {
       const double* const flux              = scratch.data() + FluxScratch::FluxOffset;
 
       THEN("Every node and axis stores its differentiated flux of the time-averaged state and zero padding lanes") {
-        const std::vector<double> differentiatedFlux = getTermsOf<FluxSolver>(tables, timeAveragedState);
+        const std::vector<double> differentiatedFlux = getTermsOf<FluxSolver>(tables, timeAveragedState, cellState);
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
             const int base = axis * AxisStride + unknown * UnknownStride;
@@ -1156,7 +1160,7 @@ UNIT_TEST("The material parameter matrix multiplies the unknowns of every node a
       const double* const flux              = scratch.data() + FluxMaterialScratch::FluxOffset;
 
       THEN("Every node and axis stores two plus the axis number times its differentiated flux and zero padding lanes") {
-        const std::vector<double> differentiatedFlux = getTermsOf<FluxSolver>(tables, timeAveragedState);
+        const std::vector<double> differentiatedFlux = getTermsOf<FluxSolver>(tables, timeAveragedState, cellState);
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
             const int base = axis * AxisStride + unknown * UnknownStride;
@@ -1385,7 +1389,7 @@ UNIT_TEST("An empty list of point sources keeps the time averages of the cell st
       const double* const flux              = scratch.data() + PointSourceScratch::FluxOffset;
 
       THEN("The time-averaged state stores the padded cell state and the flux stores zeros") {
-        for (int value = 0; value < NumberOfData; value++) {
+        for (int value = 0; value < NumberOfUnknowns; value++) {
           for (int cellNode = 0; cellNode < CellLayout::PaddedNodesPerCell; cellNode++) {
             VALIDATE_NUMERICAL_EQUALS(
               timeAveragedState[value * UnknownStride + cellNode],
@@ -1561,8 +1565,8 @@ UNIT_TEST("The block of the scratch places every buffer behind its predecessor w
     using Scratch = Predictor<FullSolver>::Scratch;
 
     THEN("Every buffer reserves the entries of its quantity and starts where its predecessor ends") {
-      VALIDATE_EQUALS(Scratch::StateSize, UnknownStride * NumberOfData);
-      VALIDATE_EQUALS(Scratch::TimeAveragedStateSize, UnknownStride * NumberOfData);
+      VALIDATE_EQUALS(Scratch::StateSize, UnknownStride * NumberOfUnknowns);
+      VALIDATE_EQUALS(Scratch::TimeAveragedStateSize, UnknownStride * NumberOfUnknowns);
       VALIDATE_EQUALS(Scratch::FluxSize, DIMENSIONS * UnknownStride * NumberOfUnknowns);
       VALIDATE_EQUALS(Scratch::PointSourceSize, (NodesPerAxis + 1) * UnknownStride * NumberOfUnknowns);
 
@@ -1659,7 +1663,7 @@ UNIT_TEST("The predictor writes the time averages of the Taylor series of a line
           }
         }
 
-        for (int value = 0; value < NumberOfData; value++) {
+        for (int value = 0; value < NumberOfUnknowns; value++) {
           for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
             VALIDATE_NUMERICAL_EQUALS(
               timeAveragedState[value * UnknownStride + cellNode],

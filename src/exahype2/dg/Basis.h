@@ -225,7 +225,8 @@ namespace exahype2::dg {
   template <
     int NodesPerAxis,
     int NumberOfEntries,
-    int UnknownStride,
+    int FaceNodeStride,
+    int FieldEntryStride,
     int DirectionStride,
     typename FieldPrecision,
     typename FacePrecision,

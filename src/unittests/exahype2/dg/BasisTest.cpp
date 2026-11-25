@@ -2147,6 +2147,7 @@ UNIT_TEST("Threads that divide the items of the face extrapolation write the fac
         exahype2::dg::extrapolateNodeMajorNodalFieldToFaces<
           NodesPerAxis,
           NumberOfData,
+          NumberOfData,
           CellNodes,
           FieldSize,
           double,

@@ -13,9 +13,9 @@
 /**
  * Returns the threads per team of a predictor launch that asks for one thread per node of a cell.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
-exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getTeamThreads() {
+exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::getTeamThreads() {
   return tarch::accelerator::getTeamThreads(CellLayout::NodesPerCell);
 }
 
@@ -23,9 +23,9 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getTeamThreads() {
  * Returns the number of threads that advance one cell in a predictor launch. Every group of this
  * many threads of a team advances its own cell.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
-exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getThreadsPerCell() {
+exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::getThreadsPerCell() {
   return std::min(CellLayout::NodesPerCell, getTeamThreads());
 }
 
@@ -34,9 +34,9 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getThreadsPerCell() {
  * cell. A device launches at most as many teams as it runs at once and at most one team per
  * getTeamThreads() / getThreadsPerCell() cells.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
-exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getNumberOfTeams(const int cells) {
+exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::getNumberOfTeams(const int cells) {
   ASSERTION(cells >= 0, cells);
   const int teamThreads = getTeamThreads();
   const int groups      = teamThreads / getThreadsPerCell();
@@ -47,9 +47,9 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getNumberOfTeams(const
  * Returns the number of scratch chunks of a predictor dispatch over cells. Every cell group of a
  * running team takes one chunk.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
-exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getNumberOfScratchChunks(const int cells) {
+exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::getNumberOfScratchChunks(const int cells) {
   const int groups = getTeamThreads() / getThreadsPerCell();
   return tarch::accelerator::getNumberOfScratchChunks(getNumberOfTeams(cells)) * groups;
 }
@@ -58,10 +58,9 @@ TARGET_DECLARE
 /**
  * Runs predictInTeam() on one thread.
  */
-template <typename Derived, typename ComputePrecision>
-template <typename StoragePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
-exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
+exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::predict(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   ComputePrecision* const* const               faceStates,
@@ -96,10 +95,9 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
  * this call reads and writes while it runs. Returns the outcome of NonlinearPredictor::predict(), or
  * zero for a linear Derived and for a thread without a cell.
  */
-template <typename Derived, typename ComputePrecision>
-template <typename StoragePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
-exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
+exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::predictInTeam(
   const TeamWorkers&                           workers,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -180,7 +178,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
       [&](const int cellNode, ComputePrecision* const values) {
         if constexpr (Linear::AccumulatesSource) {
           ComputePrecision nodeState[CellLayout::NumberOfData];
-          for (int value = 0; value < CellLayout::NumberOfData; value++) {
+          for (int value = 0; value < CellLayout::NumberOfUnknowns; value++) {
             nodeState[value] = timeAveragedState[value * CellLayout::PaddedNodesPerCell + cellNode];
           }
           for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
@@ -240,9 +238,9 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
 /**
  * Returns the team scratch bytes a predictor launch with teams of teamThreads threads asks for.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
-exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getTeamScratchBytes(const int teamThreads) {
+exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::getTeamScratchBytes(const int teamThreads) {
   return Nonlinear::getTeamScratchBytes(teamThreads);
 }
 
@@ -253,10 +251,10 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getTeamScratchBytes(co
  * on one thread overwrites the block of the first axis with the divergence. sourceOfNode(cellNode,
  * values) writes the time-averaged source of one node.
  */
-template <typename Derived, typename ComputePrecision>
-template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <bool AccumulatesFlux, bool AccumulatesSource, typename SourceOfNode>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::Predictor<Derived, ComputePrecision>::subtractTimeAveragedVolumeIntegral(
+exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::subtractTimeAveragedVolumeIntegral(
   StoragePrecision* NOALIAS const                  cellState,
   [[maybe_unused]] ComputePrecision* NOALIAS const timeAveragedFlux,
   [[maybe_unused]] const SourceOfNode&             sourceOfNode,

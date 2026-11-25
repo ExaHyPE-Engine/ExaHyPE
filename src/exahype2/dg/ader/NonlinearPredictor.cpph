@@ -196,6 +196,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
     exahype2::dg::extrapolateNodeMajorNodalFieldToFaces<
       NodesPerAxis,
       CellLayout::NumberOfData,
+      CellLayout::NumberOfData,
       CellLayout::PaddedNodesPerCell,
       0,
       ComputePrecision,
@@ -210,6 +211,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
     if constexpr (EvaluateFlux) {
       exahype2::dg::extrapolateNodeMajorNodalFieldToFaces<
         NodesPerAxis,
+        NumberOfUnknowns,
         NumberOfUnknowns,
         CellLayout::PaddedNodesPerCell,
         CellLayout::PaddedNodesPerCell * NumberOfUnknowns,
