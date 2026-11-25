@@ -133,7 +133,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
       exahype2::dg::ader::teamBarrier(workers);
       if (WritesFaceFluxes and isLastPass) {
         if (workers.hasCell) {
-          exahype2::dg::extrapolateNodalFieldToFacesSoA2AoS<
+          exahype2::dg::extrapolateNodeMajorNodalFieldToFaces<
             NodesPerAxis,
             NumberOfUnknowns,
             CellLayout::PaddedNodesPerCell,
@@ -152,7 +152,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
         exahype2::dg::ader::teamBarrier(workers);
       }
       if (workers.hasCell) {
-        exahype2::dg::differentiateFluxInPlaceSoA<Derived>(
+        exahype2::dg::differentiateFluxInPlace<Derived>(
           flux,
           tables.derivativeOperator,
           inverseCellSize,
@@ -233,7 +233,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::extrapolateToFac
   const Tables&                         tables,
   const TeamWorkers&                    workers
 ) {
-  exahype2::dg::extrapolateNodalFieldToFacesSoA2AoS<
+  exahype2::dg::extrapolateNodeMajorNodalFieldToFaces<
     CellLayout::NodesPerAxis,
     CellLayout::NumberOfData,
     CellLayout::PaddedNodesPerCell,
@@ -577,7 +577,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
     const int axis       = item / CellLayout::NodesPerFace;
     const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
     const int firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, item % CellLayout::NodesPerFace);
-    exahype2::dg::differentiateAlongAxisSoA2AoS<FluxStride, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+    exahype2::dg::differentiateAlongAxis<FluxStride, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
       lineGradient,
       FluxStride,
       state + firstNode,

@@ -193,7 +193,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   const ComputePrecision* const timeAveragedState = spaceTimeState;
 
   if (workers.hasCell) {
-    exahype2::dg::extrapolateNodalFieldToFacesSoA2AoS<
+    exahype2::dg::extrapolateNodeMajorNodalFieldToFaces<
       NodesPerAxis,
       CellLayout::NumberOfData,
       CellLayout::PaddedNodesPerCell,
@@ -208,7 +208,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
       workers.thread,
       workers.threads);
     if constexpr (EvaluateFlux) {
-      exahype2::dg::extrapolateNodalFieldToFacesSoA2AoS<
+      exahype2::dg::extrapolateNodeMajorNodalFieldToFaces<
         NodesPerAxis,
         NumberOfUnknowns,
         CellLayout::PaddedNodesPerCell,
@@ -233,7 +233,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
 
   if constexpr (EvaluateFlux) {
     if (workers.hasCell) {
-      exahype2::dg::differentiateFluxInPlaceSoA<Derived>(
+      exahype2::dg::differentiateFluxInPlace<Derived>(
         timeAveragedFlux,
         tables.derivativeOperator,
         inverseCellSize,
@@ -458,7 +458,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::computeSpaceT
     const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
     const int firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, item % NodesPerFace);
     ComputePrecision* NOALIAS const lineGradient = stateGradient + axis * AxisStride + firstNode * GradientStride;
-    exahype2::dg::differentiateAlongAxisSoA2AoS<NumberOfUnknowns, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+    // exahype2::dg::differentiateAlongAxis<NumberOfUnknowns, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+    exahype2::dg::differentiateAlongAxis<NumberOfUnknowns, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
       lineGradient,
       nodeStride * GradientStride,
       timeSlice + firstNode,
@@ -660,10 +661,11 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::differentiate
 
     // The weights of time and of the other axes of the line multiply to entry timeNode *
     // NodesPerFace + line of the cell quadrature weights.
-    exahype2::dg::differentiateAlongAxisSoA<NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+    exahype2::dg::differentiateAlongAxis<1, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
       fluxDerivative + lineOffset,
       nodeStride,
       flux + lineOffset,
+      1,
       nodeStride,
       stiffnessWeights,
       -cellQuadratureWeights[timeNode * NodesPerFace + line],

@@ -512,7 +512,7 @@ namespace {
           }
         }
       }
-      exahype2::dg::differentiateFluxInPlaceSoA<Solver>(terms.data(), tables.derivativeOperator.data(), inverseCellSize);
+      exahype2::dg::differentiateFluxInPlace<Solver>(terms.data(), tables.derivativeOperator.data(), inverseCellSize);
     }
     if constexpr (Predictor<Solver>::EvaluateNonconservativeProduct) {
       std::vector<double> gradient(DIMENSIONS * AxisStride, 0.0);
@@ -525,7 +525,7 @@ namespace {
           }
         }
       }
-      exahype2::dg::differentiateFluxInPlaceSoA<Solver>(
+      exahype2::dg::differentiateFluxInPlace<Solver>(
         gradient.data(),
         tables.derivativeOperator.data(),
         inverseCellSize

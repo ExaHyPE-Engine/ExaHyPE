@@ -183,7 +183,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
           for (int value = 0; value < CellLayout::NumberOfData; value++) {
             nodeState[value] = timeAveragedState[value * CellLayout::PaddedNodesPerCell + cellNode];
           }
-          for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
+          for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
             values[unknown] = static_cast<ComputePrecision>(0);
           }
           Derived::sourceTerm(
@@ -226,7 +226,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
       cellState,
       scratch + Scratch::TimeAveragedFluxOffset,
       [&](const int cellNode, ComputePrecision* const values) {
-        for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
+        for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
           values[unknown] = timeAveragedSource[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown];
         }
       },

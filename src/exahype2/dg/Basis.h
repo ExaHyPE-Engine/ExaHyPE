@@ -141,40 +141,6 @@ namespace exahype2::dg {
   getProjectionWeightsOfDofPairs(const Value* NOALIAS matrix);
 
   template <
-    int  NumberOfNodes,
-    bool OverwriteResult,
-    typename ResultPrecision,
-    typename ComputePrecision,
-    typename... Scalings
-  >
-  INLINE_METHOD GPU_CALLABLE_METHOD void differentiateAlongAxisSoA(
-    ResultPrecision*                                                     result,
-    int                                                                  resultStride,
-    const ComputePrecision*                                              values,
-    int                                                                  valueNodeStride,
-    const DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>& derivativeWeights,
-    const Scalings... scalings
-  );
-
-  template <
-    int  NumberOfEntries,
-    int  NumberOfNodes,
-    bool OverwriteResult,
-    typename ResultPrecision,
-    typename ComputePrecision,
-    typename... Scalings
-  >
-  INLINE_METHOD GPU_CALLABLE_METHOD void differentiateAlongAxisSoA2AoS(
-    ResultPrecision*                                                     result,
-    int                                                                  resultStride,
-    const ComputePrecision*                                              values,
-    int                                                                  valueEntryStride,
-    int                                                                  valueNodeStride,
-    const DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>& derivativeWeights,
-    const Scalings... scalings
-  );
-
-  template <
     int  NumberOfEntries,
     int  NumberOfNodes,
     bool OverwriteResult,
@@ -186,7 +152,8 @@ namespace exahype2::dg {
     ResultPrecision*                                                     result,
     int                                                                  resultStride,
     const ComputePrecision*                                              values,
-    int                                                                  valueStride,
+    int                                                                  valueEntryStride,
+    int                                                                  valueNodeStride,
     const DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>& derivativeWeights,
     const Scalings... scalings
   );
@@ -202,25 +169,9 @@ namespace exahype2::dg {
   template <
     int NodesPerAxis,
     int NumberOfEntries,
-    int UnknownStride,
-    typename FieldPrecision,
-    typename FacePrecision,
-    typename CoefficientPrecision
-  >
-  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateLineToFacePairSoA2AoS(
-    FacePrecision* NOALIAS              lowerFace,
-    FacePrecision* NOALIAS              upperFace,
-    const FieldPrecision* NOALIAS       field,
-    const CoefficientPrecision* NOALIAS leftFaceCoefficients,
-    const CoefficientPrecision* NOALIAS rightFaceCoefficients,
-    int                                 direction,
-    int                                 faceNode
-  );
-
-  template <
-    int NodesPerAxis,
-    int NumberOfEntries,
-    int NodeStride,
+    int FaceNodeStride,
+    int FieldNodeStride,
+    int FieldEntryStride,
     typename FieldPrecision,
     typename FacePrecision,
     typename CoefficientPrecision
@@ -255,7 +206,8 @@ namespace exahype2::dg {
   template <
     int NodesPerAxis,
     int NumberOfEntries,
-    int NodeStride,
+    int FaceNodeStride,
+    int FieldNodeStride,
     int DirectionStride,
     typename FieldPrecision,
     typename FacePrecision,
@@ -279,7 +231,7 @@ namespace exahype2::dg {
     typename FacePrecision,
     typename CoefficientPrecision
   >
-  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateNodalFieldToFacesSoA2AoS(
+  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateNodeMajorNodalFieldToFaces(
     FacePrecision* const NOALIAS        faces[peano4::FacesPerCell],
     const FieldPrecision* NOALIAS       field,
     const CoefficientPrecision* NOALIAS leftFaceCoefficients,
@@ -354,15 +306,6 @@ namespace exahype2::dg {
 
   template <typename Derived, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void differentiateFluxInPlace(
-    ComputePrecision* NOALIAS                              flux,
-    const ComputePrecision* NOALIAS                        derivativeOperator,
-    const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
-    int                                                    firstItem  = 0,
-    int                                                    itemStride = 1
-  );
-
-  template <typename Derived, typename ComputePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void differentiateFluxInPlaceSoA(
     ComputePrecision* NOALIAS                              flux,
     const ComputePrecision* NOALIAS                        derivativeOperator,
     const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
