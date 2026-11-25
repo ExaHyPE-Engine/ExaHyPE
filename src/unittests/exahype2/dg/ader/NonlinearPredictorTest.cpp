@@ -1779,9 +1779,7 @@ UNIT_TEST("The scratch places every buffer behind its predecessor without a gap"
       VALIDATE_EQUALS(Scratch::FirstSourceSize, UnknownStride * CellLayout::NodesPerCell);
       VALIDATE_EQUALS(Scratch::TimeAveragedSourceSize, UnknownStride * CellLayout::NodesPerCell);
       VALIDATE_EQUALS(Scratch::StateGradientSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-      VALIDATE(Scratch::NodeResidualSize >= CellLayout::NodesPerCell, Scratch::NodeResidualSize);
-      VALIDATE(Scratch::NodeResidualSize < CellLayout::NodesPerCell + PEANO_WITH_SIMDLEN, Scratch::NodeResidualSize);
-      VALIDATE_EQUALS(Scratch::NodeResidualSize % PEANO_WITH_SIMDLEN, 0);
+      VALIDATE(Scratch::NodeResidualSize == CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns, Scratch::NodeResidualSize);
 
       VALIDATE_EQUALS(Scratch::SpaceTimeStateOffset, 0);
       VALIDATE_EQUALS(Scratch::TimeAveragedStateOffset, Scratch::SpaceTimeStateOffset);

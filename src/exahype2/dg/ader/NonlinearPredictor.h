@@ -61,7 +61,7 @@ public:
     static constexpr int TimeAveragedSourceSize = FirstSourceSize;
     static constexpr int StateGradientSize =
       NeedsStateGradient ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
-    static constexpr int NodeResidualSize = CellLayout::PaddedNodesPerCell;
+    static constexpr int NodeResidualSize = CellLayout::NumberOfUnknowns * CellLayout::NodesPerFace;
 
     static constexpr int SpaceTimeStateOffset     = 0;
     static constexpr int TimeAveragedStateOffset  = SpaceTimeStateOffset;

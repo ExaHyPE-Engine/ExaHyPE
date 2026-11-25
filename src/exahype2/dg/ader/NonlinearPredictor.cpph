@@ -66,8 +66,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   bool anyActive      = exahype2::dg::ader::isTrueInAnyThreadOfTeam(workers, active);
   while (anyActive) {
     for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-      // The other threads read the state slice and the gradient of the previous time node until
-      // here.
+      // The other threads read the state slice and the gradient of the previous time node until here.
       exahype2::dg::ader::teamBarrier(workers);
       if (active) {
         if constexpr (NeedsStateGradient) {
@@ -113,11 +112,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
             workers
           );
         }
-        // differentiateFlux() overwrites the flux that the other threads read in
-        // averageFluxOverTime().
+        // differentiateFlux() overwrites the flux that the other threads read in averageFluxOverTime().
         exahype2::dg::ader::teamBarrier(workers);
-        // Every axis reads and writes only its own slice of flux, and the lines of one axis cover
-        // disjoint nodes.
+        // Every axis reads and writes only its own slice of flux, and the lines of one axis cover disjoint nodes.
         if (active) {
           differentiateFlux(
             flux,
@@ -186,7 +183,6 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
       active = not diverged and not converged and numberOfSweeps < MaximumNumberOfSweeps;
     }
     anyActive = exahype2::dg::ader::isTrueInAnyThreadOfTeam(workers, active);
-    // anyActive = false;
   }
   exahype2::dg::ader::teamBarrier(workers);
 
@@ -197,11 +193,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   const ComputePrecision* const timeAveragedState = spaceTimeState;
 
   if (workers.hasCell) {
-    // exahype2::dg::extrapolateNodalFieldToFaces<
     exahype2::dg::extrapolateNodalFieldToFacesSoA2AoS<
       NodesPerAxis,
       CellLayout::NumberOfData,
-      // CellLayout::PaddedNumberOfData,
       CellLayout::PaddedNodesPerCell,
       0,
       ComputePrecision,
@@ -339,16 +333,16 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::sumNodeResidu
   const ComputePrecision* NOALIAS const nodeResiduals
 ) {
   std::uint64_t units = 0;
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    if (std::isinf(nodeResiduals[cellNode])) {
+  for (int nodeLine = 0; nodeLine < CellLayout::NumberOfUnknowns * CellLayout::NodesPerFace; nodeLine++) {
+    if (std::isinf(nodeResiduals[nodeLine])) {
       return std::numeric_limits<double>::infinity();
     }
     ASSERTION(
-      nodeResiduals[cellNode] >= 0 and nodeResiduals[cellNode] == std::floor(nodeResiduals[cellNode]),
-      nodeResiduals[cellNode],
-      cellNode
+      nodeResiduals[nodeLine] >= 0 and nodeResiduals[nodeLine] == std::floor(nodeResiduals[nodeLine]),
+      nodeResiduals[nodeLine],
+      nodeLine
     );
-    units += static_cast<std::uint64_t>(nodeResiduals[cellNode]);
+    units += static_cast<std::uint64_t>(nodeResiduals[nodeLine]);
   }
   return static_cast<double>(units) / ResidualUnitsOfTolerance;
 }
@@ -368,9 +362,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getSquaredTol
   const double                          picardTolerance,
   const TeamWorkers&                    workers
 ) {
-  // Each value of two converged iterates differs by up to RoundingUnits units in the last place of
-  // the largest unknown. solvePicardSystem() counts the squares of the differences of
-  // ValuesPerIterate values.
+  // Each value of two converged iterates differs by up to RoundingUnits units in the last place of the
+  // largest unknown. solvePicardSystem() counts the squares of the differences of ValuesPerIterate values.
   constexpr double RoundingUnits = 2.0;
   constexpr double RoundingOfValue =
     RoundingUnits * static_cast<double>(std::numeric_limits<ComputePrecision>::epsilon());
@@ -650,7 +643,6 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::differentiate
   constexpr int NodesPerAxis   = CellLayout::NodesPerAxis;
   constexpr int NodesPerFace   = CellLayout::NodesPerFace;
   constexpr int FluxStride     = CellLayout::NumberOfUnknowns;
-  // constexpr int NodeStride     = CellLayout::PaddedNumberOfUnknowns;
   constexpr int FluxAxisStride = CellLayout::PaddedNodesPerCell * FluxStride;
 
   ASSERTION(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
@@ -669,10 +661,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::differentiate
     // The weights of time and of the other axes of the line multiply to entry timeNode *
     // NodesPerFace + line of the cell quadrature weights.
     exahype2::dg::differentiateAlongAxisSoA<NodesPerAxis, true, ComputePrecision, ComputePrecision>(
-      // lineUpdate,
       fluxDerivative + lineOffset,
       nodeStride,
-      // flux + lineOffset,
       flux + lineOffset,
       nodeStride,
       stiffnessWeights,
@@ -724,44 +714,6 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::subtractFluxD
       addDivergence(nodeEntry);
     }
   }
-
-  // constexpr int NodeStride     = CellLayout::PaddedNumberOfUnknowns;
-  // constexpr int FluxAxisStride = CellLayout::NodesPerCell * NodeStride;
-
-  // constexpr int FluxStride     = CellLayout::NumberOfUnknowns;
-  // constexpr int newFluxAxisStride = CellLayout::PaddedNodesPerCell * FluxStride;
-
-  // ASSERTION(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
-
-  // ComputePrecision* NOALIAS const timeSlice     = rightHandSide + timeNode * FluxAxisStride;
-  // const auto                      addDivergence = [timeSlice, fluxDerivative](const int nodeEntry, const int fluxEntry) {
-  //   if constexpr (DIMENSIONS == 2) {
-  //     timeSlice[nodeEntry] += fluxDerivative[fluxEntry] + fluxDerivative[newFluxAxisStride + fluxEntry];
-  //   } else {
-  //     timeSlice[nodeEntry] += tarch::la::sumInOrderOfValue(
-  //       fluxDerivative[fluxEntry],
-  //       fluxDerivative[newFluxAxisStride + fluxEntry],
-  //       fluxDerivative[2 * newFluxAxisStride + fluxEntry]
-  //     );
-  //   }
-  // };
-  // // A cell on one thread runs one contiguous loop over the entries of all its nodes. The compiler
-  // // then loads whole vectors of consecutive entries.
-  // if (workers.threads == 1) {
-  //   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-  //     SIMD()
-  //     for (int unknown = 0; unknown < FluxStride; unknown++) {
-  //       addDivergence(cellNode * NodeStride + unknown, unknown * CellLayout::PaddedNodesPerCell + cellNode);
-  //     }
-  //   }
-  // } else {
-  //   for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
-  //     SIMD()
-  //     for (int unknown = 0; unknown < FluxStride; unknown++) {
-  //       addDivergence(cellNode * NodeStride + unknown, unknown * CellLayout::PaddedNodesPerCell + cellNode);
-  //     }
-  //   }
-  // }
 }
 
 /**
@@ -878,9 +830,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
     }
 
     if constexpr (EvaluateNonconservativeProduct) {
-      // The products of all axes add up before localSource subtracts them. The three products of an
-      // unknown add with tarch::la::sumInOrderOfValue() in 3D. Mirror-image cells then receive
-      // mirrored sources.
+      // The products of all axes add up before localSource subtracts them. The three products of an unknown
+      // add with tarch::la::sumInOrderOfValue() in 3D. Mirror-image cells then receive mirrored sources.
       UNROLL(DIMENSIONS)
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         for (int unknown = 0; unknown < SourceStride; unknown++) {
@@ -959,8 +910,10 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::solvePicardSy
   const double                          squaredTolerance,
   const TeamWorkers&                    workers
 ) {
-  constexpr int    NodesPerAxis           = CellLayout::NodesPerAxis;
-  constexpr int    NodeStride             = CellLayout::NumberOfUnknowns;
+  constexpr int NodesPerAxis      = CellLayout::NodesPerAxis;
+  constexpr int NumberOfUnknowns  = CellLayout::NumberOfUnknowns;
+  constexpr int UnknownsStride    = CellLayout::PaddedNodesPerCell;
+
   constexpr double LargestFiniteValue     = static_cast<double>(std::numeric_limits<ComputePrecision>::max());
   constexpr double SquaredDivergenceBound = LargestFiniteValue < 1e40 ? LargestFiniteValue : 1e40;
   constexpr double Infinity               = std::numeric_limits<double>::infinity();
@@ -968,28 +921,28 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::solvePicardSy
   // A square below a tolerance under the smallest normal double stays below one unit.
   const double inverseTolerance = 1.0 / std::max(squaredTolerance, std::numeric_limits<double>::min());
 
-  ComputePrecision updatedTimeSlice[NodesPerAxis * NodeStride];
-  ComputePrecision nodeCellState[NodeStride];
+  for (int item = workers.thread; item < NumberOfUnknowns * CellLayout::NodesPerFace; item += workers.threads) {
+    const int unknown  = item / CellLayout::NodesPerFace;
+    const int nodeLine = item % CellLayout::NodesPerFace;
 
-  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
-    exahype2::dg::applyOperatorAlongAxis<
-      NodeStride,
-      NodesPerAxis,
-      NodesPerAxis,
-      CellLayout::PaddedNodesPerCell,
-      NodeStride * CellLayout::PaddedNodesPerCell,
-      NodesPerAxis,
-      NodeStride,
-      true,
-      ComputePrecision,
-      ComputePrecision
-    >(updatedTimeSlice,
-      rightHandSide + cellNode,
-      inversePicardOperator,
-      inverseCellQuadratureWeights[cellNode]);
-    for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
-      nodeCellState[unknown] = static_cast<ComputePrecision>(cellState[unknown + CellLayout::NumberOfData * cellNode]);
+    ComputePrecision* NOALIAS const stateUnknownNode = spaceTimeState + unknown * UnknownsStride
+      + nodeLine * NodesPerAxis;
+
+    ComputePrecision updatedTimeSlice[NodesPerAxis * NodesPerAxis] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
+    // Solve the Picard System for one contiguous line of nodes (along normal x) at each time slice
+    for (int sourceTimeNode = 0; sourceTimeNode < NodesPerAxis; sourceTimeNode++) {
+      const ComputePrecision* NOALIAS const rightHandSideSpaceTimeNode = rightHandSide + unknown * UnknownsStride
+        + nodeLine * NodesPerAxis + sourceTimeNode * NumberOfUnknowns * UnknownsStride;
+      for (int targetTimeNode = 0; targetTimeNode < NodesPerAxis; targetTimeNode++) {
+        for (int lineNode = 0; lineNode < NodesPerAxis; lineNode++) {
+          const double weight = inversePicardOperator[targetTimeNode * NodesPerAxis + sourceTimeNode] * inverseCellQuadratureWeights[nodeLine * NodesPerAxis + lineNode];
+          updatedTimeSlice[targetTimeNode * NodesPerAxis + lineNode] +=
+            rightHandSideSpaceTimeNode[lineNode] * weight;
+        }
+      }
     }
+
+    const StoragePrecision* NOALIAS const nodeCellState = cellState + unknown + nodeLine * NodesPerAxis * CellLayout::NumberOfData;
 
     // The units of every value are integers. Their sum is exact in every order. A change that is not
     // a number counts as an infinite change. An ordered comparison with a value that is not a number
@@ -998,36 +951,30 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::solvePicardSy
     double units           = 0.0;
     int    unboundedValues = 0;
     for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-      // ComputePrecision* NOALIAS const stateNode =
-      //   spaceTimeState + CellLayout::PaddedNumberOfData * (cellNode + CellLayout::NodesPerCell * timeNode);
-      ComputePrecision* NOALIAS const stateNode =
-        spaceTimeState + CellLayout::PaddedNodesPerCell * CellLayout::NumberOfData * timeNode + cellNode;
+      ComputePrecision* NOALIAS const stateNode = stateUnknownNode + UnknownsStride * CellLayout::NumberOfData * timeNode;
       SIMD(reduction(+ : units, unboundedValues))
-      for (int unknown = 0; unknown < NodeStride; unknown++) {
-        const auto   newValue   = nodeCellState[unknown] + updatedTimeSlice[unknown + NodeStride* timeNode];
-        const double difference = static_cast<double>(newValue - stateNode[CellLayout::PaddedNodesPerCell * unknown]);
+      for (int lineNode = 0; lineNode < NodesPerAxis; lineNode++) {
+        const auto   newValue   = static_cast<ComputePrecision>(nodeCellState[lineNode * CellLayout::NumberOfData]) + updatedTimeSlice[timeNode * NodesPerAxis + lineNode];
+        const double difference = static_cast<double>(newValue - stateNode[lineNode]);
         const double square     = tarch::la::productRoundedOnce(difference, difference);
         const double change     = square != square ? Infinity : square;
         unboundedValues += change <= SquaredDivergenceBound ? 0 : 1;
         units += change < squaredTolerance ? std::floor(change * inverseTolerance * ResidualUnitsOfTolerance)
                                            : ResidualUnitsOfTolerance;
-        stateNode[CellLayout::PaddedNodesPerCell * unknown] = newValue;
+        stateNode[lineNode] = newValue;
       }
     }
     const bool bounded = unboundedValues == 0;
     if (not bounded) {
       for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-        // ComputePrecision* NOALIAS const stateNode =
-        //   spaceTimeState + CellLayout::PaddedNumberOfData * (cellNode + CellLayout::NodesPerCell * timeNode);
-        ComputePrecision* NOALIAS const stateNode =
-          spaceTimeState + timeNode * CellLayout::NumberOfData * CellLayout::PaddedNodesPerCell + cellNode;
+        ComputePrecision* NOALIAS const stateNode = stateUnknownNode + UnknownsStride * CellLayout::NumberOfData * timeNode;
         SIMD()
-        for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
-          stateNode[CellLayout::PaddedNodesPerCell * unknown] = static_cast<ComputePrecision>(cellState[unknown + CellLayout::NumberOfData * cellNode]);
+        for (int lineNode = 0; lineNode < NodesPerAxis; lineNode++) {
+          stateNode[lineNode] = static_cast<ComputePrecision>(nodeCellState[lineNode * CellLayout::NumberOfData]);
         }
       }
     }
-    nodeResiduals[cellNode] =
+    nodeResiduals[item] =
       bounded ? static_cast<ComputePrecision>(units) : std::numeric_limits<ComputePrecision>::infinity();
   }
 }
