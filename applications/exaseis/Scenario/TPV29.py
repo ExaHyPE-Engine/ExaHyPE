@@ -1,8 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .DynamicRuptureScenario import DynamicRuptureScenario
-
 import os
+
+from .DynamicRuptureScenario import DynamicRuptureScenario
 
 
 class TPV29(DynamicRuptureScenario):

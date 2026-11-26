@@ -6,12 +6,10 @@ import pathlib
 import tempfile
 import unittest
 
-from postprocessing.check_error_norms import (
-    DEFAULT_COLUMN,
-    build_parser,
-    read_error_norms,
-    worst_measurement,
-)
+from postprocessing.check_error_norms import DEFAULT_COLUMN
+from postprocessing.check_error_norms import build_parser
+from postprocessing.check_error_norms import read_error_norms
+from postprocessing.check_error_norms import worst_measurement
 
 HEADER = ["t", "l1-error", "l2-error", "linf-error"]
 ROWS = [

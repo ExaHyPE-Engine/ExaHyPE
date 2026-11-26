@@ -478,7 +478,6 @@ class Project:
         pre_generation_generated_files = (
             list(self.output.makefile.generated_hfiles),
             list(self.output.makefile.generated_cppfiles),
-            list(self.output.makefile.generated_fortranfiles),
             list(self.output.makefile.generated_gpu_cppfiles),
         )
 
@@ -506,7 +505,6 @@ class Project:
             (
                 self.output.makefile.generated_hfiles,
                 self.output.makefile.generated_cppfiles,
-                self.output.makefile.generated_fortranfiles,
                 self.output.makefile.generated_gpu_cppfiles,
             ) = pre_generation_generated_files
 

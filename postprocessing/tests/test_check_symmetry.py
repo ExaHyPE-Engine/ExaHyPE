@@ -5,14 +5,12 @@ import unittest
 
 import numpy as np
 
-from postprocessing.check_symmetry import (
-    build_parser,
-    check_snapshot,
-    field_kind,
-    mirror_values,
-    regroup_fields,
-    symmetric_tensor_components,
-)
+from postprocessing.check_symmetry import build_parser
+from postprocessing.check_symmetry import check_snapshot
+from postprocessing.check_symmetry import field_kind
+from postprocessing.check_symmetry import mirror_values
+from postprocessing.check_symmetry import regroup_fields
+from postprocessing.check_symmetry import symmetric_tensor_components
 from postprocessing.solution_io import MeshSnapshot
 
 

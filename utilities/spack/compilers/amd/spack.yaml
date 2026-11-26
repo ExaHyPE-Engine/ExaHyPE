@@ -19,6 +19,31 @@ spack:
   packages:
     all:
       target: [x86_64]
+    llvm-amdgpu:
+      buildable: false
+      externals:
+        - spec: llvm-amdgpu@7.2.3 +rocm-device-libs
+          prefix: /opt/rocm-7.2.3/llvm
+    rocm-openmp-extras:
+      buildable: false
+      externals:
+        - spec: rocm-openmp-extras@7.2.3
+          prefix: /opt/rocm-7.2.3
+    hip:
+      buildable: false
+      externals:
+        - spec: hip@7.2.3
+          prefix: /opt/rocm-7.2.3
+    hsa-rocr-dev:
+      buildable: false
+      externals:
+        - spec: hsa-rocr-dev@7.2.3
+          prefix: /opt/rocm-7.2.3
+    rocthrust:
+      buildable: false
+      externals:
+        - spec: rocthrust@7.2.3
+          prefix: /opt/rocm-7.2.3
   repos:
     builtin::
       git: https://github.com/spack/spack-packages.git
@@ -39,6 +64,10 @@ spack:
       link: roots
   env_vars:
     set:
-      ACPP_ROCM_PATH: /opt/views/view
+      ROCM_PATH: /opt/rocm-7.2.3
+      ACPP_ROCM_PATH: /opt/rocm-7.2.3
+    prepend_path:
+      PATH: /opt/rocm-7.2.3/bin:/opt/rocm-7.2.3/llvm/bin
     append_path:
-      CMAKE_PREFIX_PATH: /opt/views/acpp
+      CMAKE_PREFIX_PATH: /opt/views/acpp:/opt/rocm-7.2.3
+      LD_LIBRARY_PATH: /opt/rocm-7.2.3/lib:/opt/rocm-7.2.3/llvm/lib

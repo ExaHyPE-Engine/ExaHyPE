@@ -1,6 +1,5 @@
 [![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-silver-lightgrey)](https://api.eu.badgr.io/public/assertions/uhyUShBWT1Wfd0Vx3EoMrQ "SQAaaS silver badge achieved")
-
-[![SQAaaS badge](https://github.com/EOSC-synergy/SQAaaS/raw/master/badges/badges_150x116/badge_software_silver.png)](https://api.eu.badgr.io/public/assertions/uhyUShBWT1Wfd0Vx3EoMrQ "SQAaaS silver badge achieved")
+<a href="https://api.eu.badgr.io/public/assertions/uhyUShBWT1Wfd0Vx3EoMrQ" title="SQAaaS silver badge achieved"><img src="https://github.com/EOSC-synergy/SQAaaS/raw/master/badges/badges_150x116/badge_software_silver.png" alt="SQAaaS badge" height="20"></a>
 
 <div align="center">
   <picture>
@@ -52,7 +51,7 @@ Get started with ExaHyPE following our [Installation Guide](documentation/instal
 # Environments
 
 We maintain packaged [environments](utilities)
-for Docker, Apptainer, and [Spack](https://github.com/spack/spack/wiki) to simplify
+for Docker and [Spack](https://github.com/spack/spack/wiki) to simplify
 setup on workstations and HPC systems.
 
 # Contributing

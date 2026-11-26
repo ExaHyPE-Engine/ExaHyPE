@@ -5,15 +5,13 @@ import pathlib
 import tempfile
 import unittest
 
-from postprocessing.plot_scaling import (
-    Run,
-    _create_efficiency_plot,
-    _create_strong_scaling_plot,
-    _grid_label,
-    _parallel_efficiency,
-    _read_run,
-    _read_runs,
-)
+from postprocessing.plot_scaling import Run
+from postprocessing.plot_scaling import _create_efficiency_plot
+from postprocessing.plot_scaling import _create_strong_scaling_plot
+from postprocessing.plot_scaling import _grid_label
+from postprocessing.plot_scaling import _parallel_efficiency
+from postprocessing.plot_scaling import _read_run
+from postprocessing.plot_scaling import _read_runs
 
 LOG = """
 Rank:0 Info │     Dimensions              3                                    │

@@ -2,26 +2,31 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 import argparse
-from pathlib import Path
 import shutil
 
-import numpy as np
+from pathlib import Path
 
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg")
 
+import matplotlib.pyplot as plt
+
 from matplotlib.backend_bases import register_backend
 from matplotlib.backends.backend_pgf import FigureCanvasPgf
-from matplotlib.ticker import AutoMinorLocator, LogLocator, NullFormatter
-import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
+from matplotlib.ticker import LogLocator
+from matplotlib.ticker import NullFormatter
 
 register_backend("pgf", FigureCanvasPgf)
 
 try:
-    from postprocessing.check_error_norms import COLUMNS, read_error_norms
+    from postprocessing.check_error_norms import COLUMNS
+    from postprocessing.check_error_norms import read_error_norms
 except ImportError:
-    from check_error_norms import COLUMNS, read_error_norms
+    from check_error_norms import COLUMNS
+    from check_error_norms import read_error_norms
 
 DEFAULT_DPI = 300
 SERIES_STYLES = (

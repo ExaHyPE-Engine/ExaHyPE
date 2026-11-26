@@ -86,7 +86,7 @@ def main() -> None:
         print(f"Cannot read {args.database}: {error}")
         sys.exit(2)
     print(
-        f"{args.database}: worst {args.column} {worst:e} at t={time:e}, "
+        f"{args.database}: Worst {args.column} {worst:e} at t={time:e}, "
         f"threshold {args.threshold:e}"
     )
     if not worst <= args.threshold:

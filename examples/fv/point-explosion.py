@@ -1,0 +1,81 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+import argparse
+
+from PDE import flux
+from PDE import max_eigenvalue
+
+import exahype2
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="show this help message and continue with project help",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=0.5)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-l", "--grid-levels", type=int, default=4)
+    args, _ = parser.parse_known_args()
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
+
+initial_conditions = """
+  Q.rho  = 1.0;
+  Q.rhoU = 0.0;
+#if DIMENSIONS == 2
+  Q.rhoE = ((sqrt(pow(0.5 - x(0), 2) + pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
+#else
+  Q.rhoE = ((sqrt(pow(0.5 - x(0), 2) + pow(0.5 - x(1), 2) + pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
+#endif
+"""
+
+boundary_conditions = """
+  // Reflective boundary conditions
+  Qoutside = Qinside;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    Qoutside.rhoU(axis) = -Qinside.rhoU(axis);
+  }
+"""
+
+project = exahype2.Project(
+    namespace=["examples", "exahype2", "fv"],
+    project_name="PointExplosion",
+    dimensions=2,
+    size=[1.0, 1.0, 1.0],
+    offset=[0.0, 0.0, 0.0],
+    periodic_bc=[False, False, False],
+    min_end_time=args.end_time,
+    max_end_time=args.end_time,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
+)
+
+fv_solver = exahype2.fv.Solver(
+    name="FVSolver",
+    patch_size=args.degrees_of_freedom,
+    unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
+    auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.Godunov(),
+)
+
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
+    boundary_conditions=boundary_conditions,
+    max_eigenvalue=max_eigenvalue,
+    flux=flux,
+)
+
+project.add_solver(fv_solver)
+
+project.output.makefile.add_compile_definition("GAMMA=1.4")
+project.generate_and_build()

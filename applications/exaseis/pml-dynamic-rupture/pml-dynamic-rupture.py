@@ -11,9 +11,9 @@ sys.path.insert(0, os.path.abspath("../pml"))
 sys.path.insert(0, os.path.abspath("../dynamic-rupture"))
 
 import CurvilinearElastic
-import PMLElastic
 import DynamicRuptureElastic
 import PMLDynamicRuptureElastic
+import PMLElastic
 
 sys.path.insert(0, os.path.abspath(".."))
 import Scenario

@@ -1,19 +1,18 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-from pathlib import Path
 import tempfile
 import unittest
+
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
 
-from postprocessing.render_curve import (
-    cell_polygons,
-    label_colours,
-    patch_centres_along_curve,
-    render_curve,
-)
+from postprocessing.render_curve import cell_polygons
+from postprocessing.render_curve import label_colours
+from postprocessing.render_curve import patch_centres_along_curve
+from postprocessing.render_curve import render_curve
 from postprocessing.solution_io import MeshSnapshot
 
 

@@ -161,8 +161,8 @@ function(peano_add_target)
     ${PEANO_${mode_upper}_DEFINITIONS}
   )
 
-  # Fortran front-ends reject some C++ switches. Fortran gets its own build-mode flags. The CUDA
-  # compiler passes -Xcompiler flags to the host compiler and -Xptxas flags to the device assembler.
+  # The CUDA compiler passes -Xcompiler flags to the host compiler and -Xptxas flags to the device
+  # assembler.
   set(_peano_cuda_mode_flags "")
   foreach(_peano_flag ${PEANO_CXX_FLAGS_${mode_upper}})
     list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${_peano_flag}>")
@@ -178,7 +178,6 @@ function(peano_add_target)
     $<$<COMPILE_LANGUAGE:C>:${PEANO_C_FLAGS_${mode_upper}}>
     $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>
     $<$<COMPILE_LANGUAGE:HIP>:${PEANO_CXX_FLAGS_${mode_upper}}>
-    $<$<COMPILE_LANGUAGE:Fortran>:${PEANO_Fortran_FLAGS_${mode_upper}}>
     ${_peano_cuda_mode_flags}
   )
 

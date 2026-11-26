@@ -3,20 +3,21 @@
 
 import argparse
 import csv
-from pathlib import Path
 import shutil
+
+from pathlib import Path
 from typing import Iterable
 
+import matplotlib
 import pandas as pd
 
-import matplotlib
-
 matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt
 
 from matplotlib.backend_bases import register_backend
 from matplotlib.backends.backend_pgf import FigureCanvasPgf
 from matplotlib.ticker import AutoMinorLocator
-import matplotlib.pyplot as plt
 
 register_backend("pgf", FigureCanvasPgf)
 

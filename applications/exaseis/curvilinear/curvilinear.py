@@ -4,9 +4,9 @@ import argparse
 import os
 import sys
 
-import exahype2
-
 import CurvilinearElastic
+
+import exahype2
 
 sys.path.insert(0, os.path.abspath(".."))
 import Scenario

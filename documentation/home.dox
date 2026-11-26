@@ -30,7 +30,6 @@ balancing, sophisticated geometry representations, and other features.
   - @subpage page_conventions_home
   - @subpage page_version_control_home
   - @subpage page_documentation_home
-  - @subpage page_continuous_integration
 - The core
   - @subpage page_tarch_home
   - @subpage page_peano4_home

@@ -1,7 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
-import os, sys
+import os
+import sys
 
 import exahype2
 

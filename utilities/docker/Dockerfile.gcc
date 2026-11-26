@@ -1,10 +1,23 @@
-FROM peanoframework/spack:latest AS builder
+# syntax=docker/dockerfile:1
+ARG IMAGE_PREFIX=ghcr.io/exahype-engine
+ARG BASE_TAG=latest
+ARG SPACK_TAG=latest
+
+FROM ${IMAGE_PREFIX}/spack:${SPACK_TAG} AS builder
+
+ARG SPACK_BUILDCACHE
 
 WORKDIR /opt/spack-environment
 
 COPY utilities/spack/compilers/gcc/spack.yaml spack.yaml
 
-RUN . /opt/spack/share/spack/setup-env.sh && \
+RUN --mount=type=secret,id=spack_buildcache_user,env=SPACK_BUILDCACHE_USER \
+    --mount=type=secret,id=spack_buildcache_token,env=SPACK_BUILDCACHE_TOKEN \
+    . /opt/spack/share/spack/setup-env.sh && \
+    if [ -n "${SPACK_BUILDCACHE}" ] && [ -n "${SPACK_BUILDCACHE_TOKEN}" ]; then \
+      spack mirror add --scope site --unsigned --autopush --oci-username-variable SPACK_BUILDCACHE_USER \
+        --oci-password-variable SPACK_BUILDCACHE_TOKEN buildcache "${SPACK_BUILDCACHE}"; \
+    fi && \
     spack env activate . && \
     spack compiler find && \
     spack external find curl cmake ccache git ninja && \
@@ -23,7 +36,7 @@ RUN { \
 && chmod a+x /entrypoint.sh \
 && ln -s /opt/views/view /opt/view
 
-FROM peanoframework/base:latest
+FROM ${IMAGE_PREFIX}/base:${BASE_TAG}
 
 COPY --from=builder /opt/spack-environment /opt/spack-environment
 COPY --from=builder /opt/software /opt/software

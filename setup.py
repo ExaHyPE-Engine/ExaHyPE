@@ -2,7 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 
-from setuptools import find_packages, setup
+from setuptools import find_packages
+from setuptools import setup
 
 API_ROOT = "api"
 

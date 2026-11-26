@@ -1,35 +1,34 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-from pathlib import Path
 import json
 import tempfile
 import unittest
 
+from pathlib import Path
+
 import h5py
 import numpy as np
 
-from postprocessing.solution_io import (
-    MeshSnapshot,
-    SnapshotRef,
-    SolutionSource,
-    _cells_from_offsets,
-    _candidate_directories,
-    _decode_xdmf_topology,
-    _discover_index,
-    _discover_snapshots,
-    _drop_trivial_z,
-    _index_in_directory,
-    _local_tag,
-    _load_vtu_meshio,
-    _ordered_field_names,
-    _pack_cells,
-    _scan_path,
-    _squeeze_field,
-    _time_from_name,
-    _time_sort_key,
-    load_snapshot_ref,
-)
+from postprocessing.solution_io import MeshSnapshot
+from postprocessing.solution_io import SnapshotRef
+from postprocessing.solution_io import SolutionSource
+from postprocessing.solution_io import _candidate_directories
+from postprocessing.solution_io import _cells_from_offsets
+from postprocessing.solution_io import _decode_xdmf_topology
+from postprocessing.solution_io import _discover_index
+from postprocessing.solution_io import _discover_snapshots
+from postprocessing.solution_io import _drop_trivial_z
+from postprocessing.solution_io import _index_in_directory
+from postprocessing.solution_io import _load_vtu_meshio
+from postprocessing.solution_io import _local_tag
+from postprocessing.solution_io import _ordered_field_names
+from postprocessing.solution_io import _pack_cells
+from postprocessing.solution_io import _scan_path
+from postprocessing.solution_io import _squeeze_field
+from postprocessing.solution_io import _time_from_name
+from postprocessing.solution_io import _time_sort_key
+from postprocessing.solution_io import load_snapshot_ref
 
 QUAD_POINTS = [
     [0.0, 0.0, 0.0],

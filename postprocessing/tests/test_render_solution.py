@@ -5,14 +5,12 @@ import unittest
 
 import numpy as np
 
-from postprocessing.render_solution import (
-    _global_clim,
-    build_parser,
-    clim_of_field,
-    default_field,
-    ordered_field_options,
-    render_slice_figure,
-)
+from postprocessing.render_solution import _global_clim
+from postprocessing.render_solution import build_parser
+from postprocessing.render_solution import clim_of_field
+from postprocessing.render_solution import default_field
+from postprocessing.render_solution import ordered_field_options
+from postprocessing.render_solution import render_slice_figure
 from postprocessing.solution_io import MeshSnapshot
 
 UNIT_QUAD_POINTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]

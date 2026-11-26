@@ -10,22 +10,34 @@ from __future__ import print_function
 
 __version__ = "1.1.1"
 
-import select, socket, sys
+import select
+import socket
+import sys
 
 try:
     import http.server as hserv
-    from socketserver import ThreadingMixIn
     import urllib.parse as urlparse
 
-    print_word = lambda wd: print(wd, end="\t", flush=True)
-    _ = lambda s: s.encode("utf-8")
+    from socketserver import ThreadingMixIn
+
+    def print_word(word):
+        print(word, end="\t", flush=True)
+
+    def _(text):
+        return text.encode("utf-8")
+
 except ImportError:
     import BaseHTTPServer as hserv
-    from SocketServer import ThreadingMixIn
     import urlparse
 
-    print_word = lambda s: (print(s, end="\t"), sys.stdout.flush())
-    _ = lambda s: s
+    from SocketServer import ThreadingMixIn
+
+    def print_word(word):
+        print(word, end="\t")
+        sys.stdout.flush()
+
+    def _(text):
+        return text
 
 
 class ProxyHandler(hserv.BaseHTTPRequestHandler):
@@ -56,7 +68,7 @@ class ProxyHandler(hserv.BaseHTTPRequestHandler):
         except socket.error as arg:
             try:
                 msg = arg[1]
-            except:
+            except (IndexError, TypeError):
                 msg = arg
             self.send_error(404, msg)
             return False
