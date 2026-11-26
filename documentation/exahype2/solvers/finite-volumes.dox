@@ -93,17 +93,19 @@ The @ref page_exahype2_blockstructured "patch operations" offer the
 enumeration, the interpolation and the restriction the kernels read.
 
 
-On the Python API side, the class `exahype2.fv.Solver` describes a Finite
-Volume solver.
-The scheme of a solver, `exahype2.fv.Godunov`, `exahype2.fv.MusclHancock` or
-`exahype2.fv.Weno`, picks the reconstruction and the time stepping of the
-compute kernel. `exahype2.fv.Weno` is the ADER-WENO scheme of Dumbser et al.:
-a polynomial WENO reconstruction evolved by the space-time predictor of the
-ADER-DG solvers. Every
-Finite Volume solver advances its patches in one sequence of dispatches per
-time step: while the halo messages travel the boundary faces, the local level
-jumps and the local cells; then the remote level jumps, the remote cells, the
-face projection and the restriction of the level jumps.
+On the Python API side, the classes `exahype2.fv.singlestep.Solver` and
+`exahype2.fv.ader.Solver` describe the two Finite Volume solver families.
+The scheme of a single-step solver, `exahype2.fv.Godunov` or
+`exahype2.fv.MusclHancock`, picks the reconstruction of the compute kernel.
+The scheme of an ADER solver is `exahype2.fv.Weno`, the ADER-WENO scheme of
+Dumbser et al.: a polynomial WENO reconstruction evolved by the space-time
+predictor of the ADER-DG solvers. A single-step solver advances its patches
+in one sequence of dispatches per time step: while the halo messages travel
+the boundary faces, the local level jumps and the local cells; then the
+remote level jumps, the remote cells, the face projection and the restriction
+of the level jumps. An ADER solver predicts its patches in the same sequence,
+then solves the Riemann problems on the predicted faces and corrects its
+patches.
 
 ## Implementation
 

@@ -60,7 +60,7 @@ a Godunov-type Finite Volumes solver named `FVSolver`:
         periodic_bc  = [False, False],
     )
 
-    fv_solver = exahype2.fv.Solver(
+    fv_solver = exahype2.fv.singlestep.Solver(
         name                 = "FVSolver",
         patch_size           = 8,
         unknowns             = {"rho": 1, "j": 2, "E": 1},

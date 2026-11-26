@@ -75,11 +75,12 @@ class Solver(exahype2.solver.Solver):
             )
 
     def _scheme_includes(self):
-        """Returns the headers of the reconstruction and the time integration of the family."""
+        """Returns the headers of the reconstructions of the scheme of the family."""
         raise NotImplementedError
 
     def _scheme_constants(self):
-        """Returns the C++ type aliases of the reconstruction and the time integration."""
+        """Returns the C++ type aliases and constants of the scheme of the family, such as its
+        reconstruction."""
         raise NotImplementedError
 
     def _solver_family_includes(self):

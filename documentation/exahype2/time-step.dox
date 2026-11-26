@@ -42,30 +42,31 @@ Every rank then runs the same steps.
 
 # Finite volumes
 
-exahype2::fv::Solver::performTimeStep():
+exahype2::fv::singlestep::Solver::performTimeStep():
 
 1. exahype2::TimeStepping::startTimeStep() returns the time step size.
 2. peano4::HaloExchange::post() sends the own halves of the exchanged faces to the neighbour ranks with MPI.
 3. exahype2::fv::Solver::applyBoundaryConditions() runs exahype2::fv::ApplyBoundaryConditions on the boundary faces.
 4. exahype2::fv::Patch::applyBoundaryConditions() calls `Derived::boundaryConditions()`.
-5. exahype2::interpolateCoarseFaces() runs exahype2::fv::InterpolateHaloHalves on the local level jumps.
-6. exahype2::fv::Solver::updatePatches() updates the patches of the local cells in place.
+5. exahype2::fv::Solver::interpolateCoarseHalos() runs exahype2::fv::InterpolateHaloHalves through exahype2::interpolateCoarseFaces() on the local level jumps.
+6. exahype2::fv::singlestep::Solver::updatePatches() updates the patches of the local cells in place.
 7. peano4::HaloExchange::wait() writes the halves of the neighbour ranks.
-8. exahype2::interpolateCoarseFaces() runs on the remote level jumps.
-9. exahype2::fv::Solver::updatePatches() updates the patches of the remote cells in place.
-10. exahype2::fv::Solver::projectOntoFaces() copies the outer layers of every patch into its own face halves.
-11. exahype2::restrictFineFaces() runs exahype2::fv::RestrictHaloHalves.
-12. exahype2::TimeStepping::advanceTimeStamp() adds the time step size to the time stamp.
-13. exahype2::fv::Solver::proposeTimeStepSize() raises the wave speed maximum of this rank or sets a fixed time step size.
-14. exahype2::fv::Solver::measureError() records the error norms when a snapshot is due.
-15. exahype2::RefinementVotes::voteOnEveryCell() calls `Derived::refinementCriterion()` in every time step but the first after a regrid.
+8. exahype2::fv::Solver::interpolateCoarseHalos() runs on the remote level jumps.
+9. exahype2::fv::singlestep::Solver::updatePatches() updates the patches of the remote cells in place.
+10. exahype2::fv::Solver::closeTimeStep() finishes the step:
+    1. exahype2::fv::Solver::projectOntoFaces() copies the outer layers of every patch into its own face halves.
+    2. exahype2::restrictFineFaces() runs exahype2::fv::RestrictHaloHalves.
+    3. exahype2::TimeStepping::advanceTimeStamp() adds the time step size to the time stamp.
+    4. exahype2::fv::Solver::proposeTimeStepSize() raises the wave speed maximum of this rank or sets a fixed time step size.
+    5. exahype2::fv::Solver::measureError() records the error norms when a snapshot is due.
+    6. exahype2::RefinementVotes::voteOnEveryCell() calls `Derived::refinementCriterion()` in every time step but the first after a regrid.
 
-exahype2::fv::Solver::updatePatches():
+exahype2::fv::singlestep::Solver::updatePatches():
 
 1. exahype2::fv::singlestep::UpdatePatches calls exahype2::fv::singlestep::PatchUpdate::computeVolumeUpdate() on every volume of every listed cell.
    The host runs it through exahype2::fv::singlestep::PatchUpdate::update().
    A device runs it with one thread per volume.
-2. exahype2::fv::singlestep::SingleStep::applyToVolume() advances one volume as `Derived::TimeIntegration`:
+2. exahype2::fv::singlestep::PatchUpdate::computeVolumeUpdate() advances one volume:
    1. `Derived::sourceTerm()` adds the source.
    2. `Derived::Reconstruction::accumulateFluxDivergence()` adds the flux divergence.
    3. exahype2::fv::reconstruction::Constant::accumulateFluxDivergence() calls `Derived::diffusiveSourceTerm()`.
@@ -192,8 +193,7 @@ exahype2::dg::limiting::SubcellLimiter::recompute():
      1. exahype2::fv::singlestep::AdvanceSubgrids runs on the local cells while the halves travel, then on the remote cells.
      2. exahype2::fv::singlestep::SubcellStep::advanceSubgrid() runs exahype2::fv::singlestep::PatchUpdate::update() on the subgrid.
      3. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls the PDE terms of `Derived` and `Derived::solveSubcellRiemannProblem()` for that update.
-     4. exahype2::fv::singlestep::SubcellStep::advanceSubgrid() repeats the step with `Derived::FallbackReconstruction` when `Derived::isPhysicallyAdmissible()` rejects a subcell.
-     5. exahype2::fv::singlestep::SubcellStep::imposeAppliedFluxes() replaces, on a face with one recomputing side, the flux exahype2::fv::singlestep::PatchUpdate::computePatchFaceFlux() reports by the Galerkin flux of that side.
+     4. exahype2::fv::singlestep::SubcellStep::imposeAppliedFluxes() replaces, on a face with one recomputing side, the flux exahype2::fv::singlestep::PatchUpdate::computePatchFaceFlux() reports by the Galerkin flux of that side.
    - exahype2::fv::ader::SubcellStep for ADER-WENO, patch by patch:
      1. exahype2::fv::ader::PredictPatches predicts the local cells while the halves travel, then the remote cells.
      2. exahype2::fv::ader::SolveSubcellRiemannProblems solves the Riemann problems on the faces with two recomputing sides. On a face with one recomputing side, that side takes its Galerkin flux.
@@ -233,7 +233,7 @@ The first time step of a run sets the size of the later ones.
 1. exahype2::TimeStepping::startTimeStep() starts the step:
    - Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::startTimeStep() takes the size that the reduction of the previous step admitted.
    - Under exahype2::TimeStepping::Rule::Fixed, exahype2::TimeStepping::startTimeStep() keeps the size.
-2. exahype2::fv::Solver::performTimeStep() and exahype2::dg::Solver::closeTimeStep() end the step:
+2. exahype2::fv::Solver::closeTimeStep() and exahype2::dg::Solver::closeTimeStep() end the step:
    1. exahype2::TimeStepping::advanceTimeStamp() adds the time step size to the time stamp.
    2. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::raiseMaxEigenvalue() stores the wave speed maximum of this rank.
    3. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::raiseMaxScaledEigenvalue() stores the scaled wave speed maximum of a DG solver.

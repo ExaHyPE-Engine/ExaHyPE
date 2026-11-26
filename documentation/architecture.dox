@@ -89,7 +89,8 @@ move to another rank.
 
 The Python API models the generated program at one level: an
 exahype2.Project contains the solvers of the solver families
-(`exahype2.fv.Solver`, `exahype2.dg.ader.Solver`, `exahype2.dg.rk.Solver`),
+(`exahype2.fv.singlestep.Solver`, `exahype2.fv.ader.Solver`, `exahype2.dg.ader.Solver`,
+`exahype2.dg.rk.Solver`),
 their PDE terms, tracers, constants and runtime parameters.
 `generate_and_build()` emits the solver classes with the PDE terms as static
 device-callable methods, the operator tables, the solver repository, the
