@@ -50,7 +50,7 @@ public:
     EvaluateNonconservativeProduct or EvaluateDiffusiveFlux or EvaluateDiffusiveSource;
 
   struct Scratch final {
-    static constexpr int SpaceTimeStateSize = CellLayout::NodesPerAxis * CellLayout::NumberOfData * CellLayout::PaddedNodesPerCell;
+    static constexpr int SpaceTimeStateSize = CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell;
     static constexpr int RightHandSideSize  = CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell;
     static constexpr int FluxSize =
       EvaluateFlux ? CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell * DIMENSIONS : 0;
@@ -148,9 +148,11 @@ private:
     const TeamWorkers&                                     workers = TeamWorkers{}
   );
 
+  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeFlux(
     ComputePrecision* NOALIAS                    flux,
     const ComputePrecision* NOALIAS              spaceTimeState,
+    const StoragePrecision* NOALIAS              cellState,
     const ComputePrecision* NOALIAS              stateGradient,
     const ComputePrecision* NOALIAS              quadraturePoints,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -195,11 +197,13 @@ private:
     const TeamWorkers&              workers = TeamWorkers{}
   );
 
+  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeSource(
     ComputePrecision* NOALIAS                    rightHandSide,
     ComputePrecision* NOALIAS                    firstSource,
     ComputePrecision* NOALIAS                    timeAveragedSource,
     const ComputePrecision* NOALIAS              spaceTimeState,
+    const StoragePrecision* NOALIAS              cellState,
     const ComputePrecision* NOALIAS              stateGradient,
     const ComputePrecision* NOALIAS              quadraturePoints,
     const ComputePrecision* NOALIAS              quadratureWeights,
