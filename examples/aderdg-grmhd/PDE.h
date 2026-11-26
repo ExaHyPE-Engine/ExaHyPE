@@ -17,11 +17,7 @@ namespace examples::exahype2::aderdg::grmhd {
 
   INLINE_METHOD GPU_CALLABLE_METHOD double dotProduct(const Vector3& left, const Vector3& right);
 
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector3 crossProduct(
-    const Vector3& first,
-    const Vector3& second,
-    double         scale
-  );
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector3 crossProduct(const Vector3& first, const Vector3& second, double scale);
 
   INLINE_METHOD GPU_CALLABLE_METHOD Vector3 multiplyMatrixVector(const Matrix3x3& matrix, const Vector3& vector);
 

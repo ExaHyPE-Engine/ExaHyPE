@@ -26,7 +26,6 @@ namespace {
   template <typename Solver>
   using Predictor = exahype2::dg::ader::LinearPredictor<Solver, double, double>;
 
-
   TARGET_DECLARE
   constexpr int NodesPerAxis              = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns          = CellLayout::NumberOfUnknowns;
@@ -482,13 +481,17 @@ namespace {
    * parameter matrix.
    */
   template <typename Solver>
-  std::vector<double> getTermsOf(const Tables& tables, const double* const timeAveragedState, const double* const cellState) {
+  std::vector<double> getTermsOf(
+    const Tables&       tables,
+    const double* const timeAveragedState,
+    const double* const cellState
+  ) {
     const auto          cellCentre      = getCellCentre();
     const auto          cellSize        = getCellSize();
     const auto          inverseCellSize = getInverseCellSize();
     std::vector<double> terms(DIMENSIONS * AxisStride, 0.0);
-    double state[NumberOfData];
-    double flux[NumberOfUnknowns];
+    double              state[NumberOfData];
+    double              flux[NumberOfUnknowns];
     if constexpr (Predictor<Solver>::EvaluateFlux) {
       for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
         for (int value = 0; value < NumberOfUnknowns; value++) {
@@ -501,16 +504,7 @@ namespace {
           flux[value] = 0;
         }
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          Solver::flux(
-            state,
-            cellCentre,
-            cellSize,
-            TimeStamp,
-            TimeStepSize,
-            axis,
-            flux,
-            RuntimeParameters{}
-          );
+          Solver::flux(state, cellCentre, cellSize, TimeStamp, TimeStepSize, axis, flux, RuntimeParameters{});
           for (int value = 0; value < NumberOfUnknowns; value++) {
             terms[axis * AxisStride + value * UnknownStride + cellNode] = flux[value];
           }
@@ -520,7 +514,7 @@ namespace {
     }
     if constexpr (Predictor<Solver>::EvaluateNonconservativeProduct) {
       std::vector<double> gradient(DIMENSIONS * AxisStride, 0.0);
-      double nodeGradient[NumberOfUnknowns];
+      double              nodeGradient[NumberOfUnknowns];
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
           for (int lane = 0; lane < NumberOfUnknowns; lane++) {
@@ -592,7 +586,7 @@ namespace {
    * Returns the index of one lane of a node in a time sample of the point source samples.
    */
   int getSampleIndex(const int timeSample, const int cellNode, const int lane) {
-    return (lane * CellLayout::PaddedNodesPerCell + cellNode) * (NodesPerAxis+1) + timeSample;
+    return (lane * CellLayout::PaddedNodesPerCell + cellNode) * (NodesPerAxis + 1) + timeSample;
   }
 
   /**
@@ -969,12 +963,7 @@ UNIT_TEST("A linear source overwrites the unknowns of every Taylor coefficient a
             );
           }
           for (int cellNode = CellLayout::NodesPerCell; cellNode < CellLayout::PaddedNodesPerCell; cellNode++) {
-            VALIDATE_NUMERICAL_EQUALS(
-              lastCoefficient[unknown * UnknownStride + cellNode],
-              0,
-              cellNode,
-              unknown
-            );
+            VALIDATE_NUMERICAL_EQUALS(lastCoefficient[unknown * UnknownStride + cellNode], 0, cellNode, unknown);
           }
         }
       }
@@ -990,12 +979,7 @@ UNIT_TEST("A linear source overwrites the unknowns of every Taylor coefficient a
             );
           }
           for (int cellNode = CellLayout::NodesPerCell; cellNode < CellLayout::PaddedNodesPerCell; cellNode++) {
-            VALIDATE_NUMERICAL_EQUALS(
-              timeAveragedState[unknown * UnknownStride + cellNode],
-              0,
-              cellNode,
-              unknown
-            );
+            VALIDATE_NUMERICAL_EQUALS(timeAveragedState[unknown * UnknownStride + cellNode], 0, cellNode, unknown);
           }
         }
       }
@@ -1470,12 +1454,7 @@ UNIT_TEST("The point sources inside a cell reach the samples, the Taylor coeffic
             );
           }
           for (int cellNode = CellLayout::NodesPerCell; cellNode < CellLayout::PaddedNodesPerCell; cellNode++) {
-            VALIDATE_NUMERICAL_EQUALS(
-              lastCoefficient[unknown * UnknownStride + cellNode],
-              0,
-              cellNode,
-              unknown
-            );
+            VALIDATE_NUMERICAL_EQUALS(lastCoefficient[unknown * UnknownStride + cellNode], 0, cellNode, unknown);
           }
         }
       }
@@ -1498,12 +1477,7 @@ UNIT_TEST("The point sources inside a cell reach the samples, the Taylor coeffic
             );
           }
           for (int cellNode = CellLayout::NodesPerCell; cellNode < CellLayout::PaddedNodesPerCell; cellNode++) {
-            VALIDATE_NUMERICAL_EQUALS(
-              timeAveragedState[unknown * UnknownStride + cellNode],
-              0,
-              cellNode,
-              unknown
-            );
+            VALIDATE_NUMERICAL_EQUALS(timeAveragedState[unknown * UnknownStride + cellNode], 0, cellNode, unknown);
           }
         }
       }
@@ -1536,8 +1510,8 @@ UNIT_TEST("Every axis of the time-averaged flux receives the same time integral 
       const double* const flux    = scratch.data() + AuxiliaryFluxPointSourceScratch::FluxOffset;
 
       THEN("Every axis adds the time integral of the samples over the number of axes to one plus the axis number") {
-      for (int lane = 0; lane < NumberOfUnknowns; lane++) {
-        for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+        for (int lane = 0; lane < NumberOfUnknowns; lane++) {
+          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
             double timeAverage = 0.0;
             for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
               timeAverage +=
@@ -1678,13 +1652,7 @@ UNIT_TEST("The predictor writes the time averages of the Taylor series of a line
             const int base = axis * AxisStride + unknown * UnknownStride;
             for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               const double expectedFlux = (axis == 0) ? averagedFlux[unknown] : 0.0;
-              VALIDATE_NUMERICAL_EQUALS(
-                flux[base + cellNode],
-                expectedFlux,
-                axis,
-                cellNode,
-                unknown
-              );
+              VALIDATE_NUMERICAL_EQUALS(flux[base + cellNode], expectedFlux, axis, cellNode, unknown);
             }
           }
         }

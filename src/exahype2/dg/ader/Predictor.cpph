@@ -184,15 +184,7 @@ exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::pred
           for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
             values[unknown] = static_cast<ComputePrecision>(0);
           }
-          Derived::sourceTerm(
-            nodeState,
-            cellCentre,
-            cellSize,
-            timeStamp,
-            timeStepSize,
-            values,
-            parameters
-          );
+          Derived::sourceTerm(nodeState, cellCentre, cellSize, timeStamp, timeStepSize, values, parameters);
         }
       },
       timeStepSize,
@@ -243,7 +235,6 @@ INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::getTeamScratchBytes(const int teamThreads) {
   return Nonlinear::getTeamScratchBytes(teamThreads);
 }
-
 
 /**
  * Adds the time step times the time-averaged source minus the flux divergence to cellState.
@@ -298,8 +289,8 @@ exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::subt
     for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
       auto update = static_cast<ComputePrecision>(0);
       if constexpr (AccumulatesFlux) {
-        update          = workers.threads == 1 ? timeAveragedFlux[unknown * CellLayout::PaddedNodesPerCell + cellNode]
-          : sumOfAxes(unknown * CellLayout::PaddedNodesPerCell + cellNode);
+        update = workers.threads == 1 ? timeAveragedFlux[unknown * CellLayout::PaddedNodesPerCell + cellNode]
+                                      : sumOfAxes(unknown * CellLayout::PaddedNodesPerCell + cellNode);
       }
       if constexpr (AccumulatesSource) {
         update -= nodeSource[unknown];

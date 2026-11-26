@@ -236,11 +236,11 @@ namespace {
     }
   };
 
-  using InertScratch           = exahype2::dg::ader::Predictor<InertNonlinearSolver, double, double>::Nonlinear::Scratch;
-  using TermScratch            = exahype2::dg::ader::Predictor<TermSolver, double, double>::Nonlinear::Scratch;
-  using DivergingScratch       = exahype2::dg::ader::Predictor<DivergingSolver, double, double>::Nonlinear::Scratch;
-  using InertLinearScratch     = exahype2::dg::ader::Predictor<InertLinearSolver, double, double>::Linear::Scratch;
-  using TransportScratch       = exahype2::dg::ader::Predictor<TransportSolver, double, double>::Linear::Scratch;
+  using InertScratch       = exahype2::dg::ader::Predictor<InertNonlinearSolver, double, double>::Nonlinear::Scratch;
+  using TermScratch        = exahype2::dg::ader::Predictor<TermSolver, double, double>::Nonlinear::Scratch;
+  using DivergingScratch   = exahype2::dg::ader::Predictor<DivergingSolver, double, double>::Nonlinear::Scratch;
+  using InertLinearScratch = exahype2::dg::ader::Predictor<InertLinearSolver, double, double>::Linear::Scratch;
+  using TransportScratch   = exahype2::dg::ader::Predictor<TransportSolver, double, double>::Linear::Scratch;
   using SourceTransportScratch = exahype2::dg::ader::Predictor<SourceTransportSolver, double, double>::Linear::Scratch;
 
   struct FaceBuffers final {
@@ -714,8 +714,8 @@ UNIT_TEST("The linear predictor translates a linear profile by the flux and the 
             for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               VALIDATE_NUMERICAL_EQUALS(
                 scratch
-                  [TransportScratch::FluxOffset + axis * AveragedAxisStride
-                   + unknown * CellLayout::PaddedNodesPerCell + cellNode],
+                  [TransportScratch::FluxOffset + axis * AveragedAxisStride + unknown * CellLayout::PaddedNodesPerCell
+                   + cellNode],
                 expected,
                 axis,
                 cellNode,

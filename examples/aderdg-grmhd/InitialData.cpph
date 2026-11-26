@@ -70,9 +70,9 @@ examples::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(
 
   ASSERTION(V != nullptr);
 
-  double lapse           = 0.0;
-  double rootDeterminant = 0.0;
-  Vector3 shift;
+  double    lapse           = 0.0;
+  double    rootDeterminant = 0.0;
+  Vector3   shift;
   Matrix3x3 gCov;
   examples::exahype2::aderdg::grmhd::evaluateKerrSchildMetric(x, lapse, rootDeterminant, shift, gCov);
 

@@ -80,7 +80,6 @@ public:
   );
 
 private:
-
   template <bool AccumulatesFlux, bool AccumulatesSource, typename SourceOfNode>
   static INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegral(
     StoragePrecision* NOALIAS cellState,

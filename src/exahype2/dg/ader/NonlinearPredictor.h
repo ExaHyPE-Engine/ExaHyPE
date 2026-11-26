@@ -50,8 +50,10 @@ public:
     EvaluateNonconservativeProduct or EvaluateDiffusiveFlux or EvaluateDiffusiveSource;
 
   struct Scratch final {
-    static constexpr int SpaceTimeStateSize = CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell;
-    static constexpr int RightHandSideSize  = CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell;
+    static constexpr int SpaceTimeStateSize =
+      CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell;
+    static constexpr int RightHandSideSize =
+      CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell;
     static constexpr int FluxSize =
       EvaluateFlux ? CellLayout::NumberOfUnknowns * CellLayout::PaddedNodesPerCell * DIMENSIONS : 0;
     static constexpr int FirstFluxSize        = FluxSize;

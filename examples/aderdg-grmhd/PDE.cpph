@@ -23,11 +23,7 @@ examples::exahype2::aderdg::grmhd::dotProduct(const Vector3& left, const Vector3
  * permutation.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD examples::exahype2::aderdg::grmhd::Vector3
-examples::exahype2::aderdg::grmhd::crossProduct(
-  const Vector3& first,
-  const Vector3& second,
-  const double   scale
-) {
+examples::exahype2::aderdg::grmhd::crossProduct(const Vector3& first, const Vector3& second, const double scale) {
   Vector3 result;
   for (int axis = 0; axis < 3; axis++) {
     const int    nextAxis   = (axis + 1) % 3;
@@ -44,10 +40,7 @@ examples::exahype2::aderdg::grmhd::crossProduct(
  * bitwise.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD examples::exahype2::aderdg::grmhd::Vector3
-examples::exahype2::aderdg::grmhd::multiplyMatrixVector(
-  const Matrix3x3& matrix,
-  const Vector3& vector
-) {
+examples::exahype2::aderdg::grmhd::multiplyMatrixVector(const Matrix3x3& matrix, const Vector3& vector) {
   Vector3 result;
   for (int row = 0; row < 3; row++) {
     result(row) = dotProduct({matrix(row, 0), matrix(row, 1), matrix(row, 2)}, vector);
@@ -329,9 +322,9 @@ examples::exahype2::aderdg::grmhd::convertConservedToPrimitive(
   Matrix3x3&      gContr,
   double&         determinant
 ) {
-  constexpr double AdiabaticIndex      = 4.0 / 3.0;
-  constexpr double AtmospherePressure  = 1e-12;
-  constexpr double AtmosphereDensity   = 1e-11;
+  constexpr double AdiabaticIndex     = 4.0 / 3.0;
+  constexpr double AtmospherePressure = 1e-12;
+  constexpr double AtmosphereDensity  = 1e-11;
 
   const Matrix3x3 gCov = getSpatialMetricOf(Q.gij);
 

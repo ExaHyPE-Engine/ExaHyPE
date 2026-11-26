@@ -53,7 +53,7 @@ public:
     static constexpr int PointSourceSize = EvaluatePointSources
       ? (CellLayout::NodesPerAxis + 1) * CellLayout::PaddedNodesPerCell * CellLayout::NumberOfUnknowns
       : 0;
-    static constexpr int StateOffset             = 0;
+    static constexpr int StateOffset     = 0;
     static constexpr int TimeAveragedStateOffset = StateOffset + StateSize;
     static constexpr int FluxOffset              = TimeAveragedStateOffset + TimeAveragedStateSize;
     static constexpr int PointSourceOffset       = FluxOffset + FluxSize;

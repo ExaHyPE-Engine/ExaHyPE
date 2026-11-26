@@ -1285,7 +1285,12 @@ UNIT_TEST("The operator along an axis rounds the product of doubles once into a 
     float        result[1]         = {0.0F};
 
     WHEN("The operator adds its product to the float result in double precision") {
-      exahype2::dg::applyOperatorAlongAxis<1, 1, 1, 1, 1, 1, 1, false, float, double>(result, values, operatorMatrix, 1.0);
+      exahype2::dg::applyOperatorAlongAxis<1, 1, 1, 1, 1, 1, 1, false, float, double>(
+        result,
+        values,
+        operatorMatrix,
+        1.0
+      );
 
       THEN("The result is the double product rounded to float") {
         const auto expected = static_cast<double>(static_cast<float>(Operand * Operand));
@@ -1733,7 +1738,7 @@ UNIT_TEST("A flux that is linear along its own axis differentiates to its consta
       THEN("Every unknown equals its slope times the inverse extent and every padding entry equals zero") {
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-            const int base = axis * FluxAxisStride +  PaddedCell::PaddedNodesPerCell * unknown;
+            const int base = axis * FluxAxisStride + PaddedCell::PaddedNodesPerCell * unknown;
             for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
               VALIDATE_NUMERICAL_EQUALS(
                 flux[base + cellNode],
@@ -1764,8 +1769,7 @@ UNIT_TEST("A flux that is constant along every axis differentiates to zeros bitw
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
-          flux[axis * FluxAxisStride + PaddedCell::PaddedNodesPerCell * unknown + cellNode] =
-            1.0 / 3.0 + 0.1 * unknown;
+          flux[axis * FluxAxisStride + PaddedCell::PaddedNodesPerCell * unknown + cellNode] = 1.0 / 3.0 + 0.1 * unknown;
         }
       }
     }
@@ -2104,11 +2108,12 @@ UNIT_TEST("Threads that divide the items of the face extrapolation write the fac
     for (int entry = 0; entry < DIMENSIONS * FieldSize; entry++) {
       field[entry] = 1.0 + 0.5 * entry + 0.01 * entry * entry;
     }
-    double        fieldSoA[DIMENSIONS * FieldSize];
+    double fieldSoA[DIMENSIONS * FieldSize];
     for (int d = 0; d < DIMENSIONS; d++) {
       for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
         for (int value = 0; value < NumberOfData; value++) {
-          fieldSoA[d * FieldSize + value * CellNodes + cellNode] = field[d * FieldSize + cellNode * NumberOfData + value];
+          fieldSoA[d * FieldSize + value * CellNodes + cellNode] =
+            field[d * FieldSize + cellNode * NumberOfData + value];
         }
       }
     }
@@ -2126,9 +2131,9 @@ UNIT_TEST("Threads that divide the items of the face extrapolation write the fac
           direction
         );
       }
-      double  faceValues[2*peano4::FacesPerCell][FaceValues] = {};
-      double* faces[2*peano4::FacesPerCell];
-      for (int face = 0; face < 2*peano4::FacesPerCell; face++) {
+      double  faceValues[2 * peano4::FacesPerCell][FaceValues] = {};
+      double* faces[2 * peano4::FacesPerCell];
+      for (int face = 0; face < 2 * peano4::FacesPerCell; face++) {
         faces[face] = faceValues[face];
       }
       for (int thread = 0; thread < Threads; thread++) {
