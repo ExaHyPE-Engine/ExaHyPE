@@ -95,7 +95,7 @@ namespace {
   constexpr int HaloValuesPerCell = peano4::FacesPerCell * HaloValuesPerFace;
 
   /**
-   * Advances the subgrid of one cell with the single-step subcell family and projects it onto the
+   * Advances the subgrid of one cell with the single-step subcell stepper and projects it onto the
    * nodes, as the limiter recomputes a cell.
    */
   template <typename Solver>

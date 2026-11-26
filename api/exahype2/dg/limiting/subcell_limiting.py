@@ -136,7 +136,7 @@ class SubcellLimiting:
         return [
             self._name + "SubcellProjection.h",
             "exahype2/dg/limiting/SubcellLimiter.h",
-            scheme.subcell_family_include,
+            scheme.subcell_stepper_include,
         ] + list(scheme.includes)
 
     def _subcell_limiter_cpp_type(self):
@@ -147,7 +147,7 @@ class SubcellLimiting:
             self._solver_type(),
             self.precision.storage,
             self.precision.compute,
-            self._subcell_limiter_scheme.subcell_scheme().subcell_family,
+            self._subcell_limiter_scheme.subcell_scheme().subcell_stepper,
         )
 
     def _subcell_limiter_constants(self):

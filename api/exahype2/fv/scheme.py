@@ -24,24 +24,24 @@ class Weighting:
 class SubcellScheme:
     """The C++ description of one finite-volume scheme on a patch or a subgrid.
 
-    ``subcell_family`` is the class template that advances the subgrids of the DG subcell
-    limiter, declared in ``subcell_family_include``.
+    ``subcell_stepper`` is the class template that advances the subgrids of the DG subcell
+    limiter, declared in ``subcell_stepper_include``.
     """
 
     def __init__(
         self,
         reconstruction,
         halo_width,
-        subcell_family,
-        subcell_family_include,
+        subcell_stepper,
+        subcell_stepper_include,
         fallback_reconstruction=None,
         fallback_granularity=None,
         includes=None,
     ):
         if not reconstruction:
             raise ValueError("A subcell scheme needs a reconstruction policy type.")
-        if not subcell_family or not subcell_family_include:
-            raise ValueError("A subcell scheme needs a subcell family and its header.")
+        if not subcell_stepper or not subcell_stepper_include:
+            raise ValueError("A subcell scheme needs a subcell stepper and its header.")
         if (
             isinstance(halo_width, bool)
             or not isinstance(halo_width, int)
@@ -49,8 +49,8 @@ class SubcellScheme:
         ):
             raise ValueError("A subcell scheme needs a positive integer halo width.")
         self._reconstruction = reconstruction
-        self._subcell_family = subcell_family
-        self._subcell_family_include = subcell_family_include
+        self._subcell_stepper = subcell_stepper
+        self._subcell_stepper_include = subcell_stepper_include
         self._halo_width = halo_width
         self._fallback_reconstruction = fallback_reconstruction
         self._fallback_granularity = fallback_granularity
@@ -65,12 +65,12 @@ class SubcellScheme:
         return self._halo_width
 
     @property
-    def subcell_family(self):
-        return self._subcell_family
+    def subcell_stepper(self):
+        return self._subcell_stepper
 
     @property
-    def subcell_family_include(self):
-        return self._subcell_family_include
+    def subcell_stepper_include(self):
+        return self._subcell_stepper_include
 
     @property
     def fallback_reconstruction(self):
@@ -104,8 +104,8 @@ class Godunov:
         return SubcellScheme(
             reconstruction="::exahype2::fv::reconstruction::Constant",
             halo_width=self.halo_width,
-            subcell_family="::exahype2::fv::singlestep::SubcellStep",
-            subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
+            subcell_stepper="::exahype2::fv::singlestep::SubcellStep",
+            subcell_stepper_include="exahype2/fv/singlestep/SubcellStep.h",
             includes=[
                 "exahype2/fv/singlestep/PatchUpdate.h",
                 "exahype2/fv/reconstruction/Constant.h",
@@ -139,8 +139,8 @@ class MusclHancock:
             + self.limiter
             + ">",
             halo_width=self.halo_width,
-            subcell_family="::exahype2::fv::singlestep::SubcellStep",
-            subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
+            subcell_stepper="::exahype2::fv::singlestep::SubcellStep",
+            subcell_stepper_include="exahype2/fv/singlestep/SubcellStep.h",
             includes=[
                 "exahype2/fv/singlestep/PatchUpdate.h",
                 "exahype2/fv/limiter/SlopeLimiter.h",
@@ -266,8 +266,8 @@ class Weno:
                 self.order, self.weighting, self.reconstruction_limiter
             ),
             halo_width=self.halo_width,
-            subcell_family="::exahype2::fv::ader::SubcellStep",
-            subcell_family_include="exahype2/fv/ader/SubcellStep.h",
+            subcell_stepper="::exahype2::fv::ader::SubcellStep",
+            subcell_stepper_include="exahype2/fv/ader/SubcellStep.h",
             fallback_reconstruction=(
                 None if self.fallback is None else self.fallback.reconstruction
             ),

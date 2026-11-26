@@ -24,7 +24,7 @@ namespace exahype2::dg::limiting {
     typename Derived,
     typename StoragePrecision,
     typename ComputePrecision,
-    template <typename, typename, typename> class SubcellFamily>
+    template <typename, typename, typename> class SubcellStepper>
   class SubcellLimiter;
 } // namespace exahype2::dg::limiting
 
@@ -34,16 +34,17 @@ namespace exahype2::dg::limiting {
  * first ring of neighbours on the subcell scheme while the second ring supplies its subgrid. The
  * scheme follows Dumbser, Zanotti, Loubère and Diot, J. Comput. Phys. 278 (2014) 47-75.
  *
- * SubcellFamily<Derived, StoragePrecision, ComputePrecision> advances the subgrids of the
+ * SubcellStepper<Derived, StoragePrecision, ComputePrecision> advances the subgrids of the
  * recomputing cells, such as exahype2::fv::singlestep::SubcellStep or
- * exahype2::fv::ader::SubcellStep. On a face with one recomputing side, the step takes the other
- * side from the subgrid of that side.
+ * exahype2::fv::ader::SubcellStep, and satisfies the concept
+ * exahype2::dg::limiting::SubcellStepper. On a face with one recomputing side, the step takes the
+ * other side from the subgrid of that side.
  */
 template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 class exahype2::dg::limiting::SubcellLimiter final {
 public:
   template <typename Precision, typename Generated = Derived>
@@ -54,7 +55,7 @@ public:
   using CellPool      = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool    = tarch::accelerator::ChunkedMemoryPool<int>;
   using FluxPool      = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
-  using Family        = SubcellFamily<Derived, StoragePrecision, ComputePrecision>;
+  using Stepper       = SubcellStepper<Derived, StoragePrecision, ComputePrecision>;
 
   SubcellLimiter()                                       = delete;
   SubcellLimiter(const SubcellLimiter& other)            = delete;
@@ -204,7 +205,7 @@ private:
   tarch::accelerator::Buffer<StoragePrecision> _recomputeScratch{tarch::MemoryLocation::Device};
   tarch::accelerator::Buffer<StoragePrecision> _detectorScratch{tarch::MemoryLocation::Device};
 
-  Family _family{};
+  Stepper _stepper{};
 };
 
 #include "exahype2/dg/limiting/SubcellLimiter.cpph"

@@ -21,8 +21,8 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
-INLINE_METHOD exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::SubcellLimiter(
+  template <typename, typename, typename> class SubcellStepper>
+INLINE_METHOD exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::SubcellLimiter(
   const double relaxationParameter,
   const double differencesScaling
 ) :
@@ -44,9 +44,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::allocate(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::allocate(
   const peano4::CellConnectivity& cellConnectivity
 ) {
   SubcellProjection<double>::initialise();
@@ -66,9 +66,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::release() {
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::release() {
   _haloExchange.release();
   _statusExchange.release();
   _extremaExchange.release();
@@ -88,7 +88,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   _cellCountsOfBlocks.release();
   _recomputeScratch.release();
   _detectorScratch.release();
-  _family.release();
+  _stepper.release();
   _statusesOnHost.release();
   _subcellsOnHost.release();
   _cellCounts                  = exahype2::dg::limiting::SubcellSchemeCounts{};
@@ -105,15 +105,15 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD tarch::AllocatedBytes
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::getAllocatedBytes() const {
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::getAllocatedBytes() const {
   return _previousSolution.getAllocatedBytes() + _subcells.getAllocatedBytes() + _subcellHalo.getAllocatedBytes()
     + _appliedFluxes.getAllocatedBytes()
     + _statuses.getAllocatedBytes() + _faceStatuses.getAllocatedBytes() + _referenceExtrema.getAllocatedBytes()
     + _extremaFaces.getAllocatedBytes() + _cellsOnSubcellScheme.getAllocatedBytes()
     + _recomputedCells.getAllocatedBytes() + _freedCells.getAllocatedBytes() + _cellCountsOfBlocks.getAllocatedBytes()
-    + _recomputeScratch.getAllocatedBytes() + _detectorScratch.getAllocatedBytes() + _family.getAllocatedBytes()
+    + _recomputeScratch.getAllocatedBytes() + _detectorScratch.getAllocatedBytes() + _stepper.getAllocatedBytes()
     + _haloExchange.getAllocatedBytes() + _statusExchange.getAllocatedBytes() + _extremaExchange.getAllocatedBytes()
     + _subcellMigration.getAllocatedBytes()
     + _statusMigration.getAllocatedBytes() + _statusesOnHost.getAllocatedBytes() + _subcellsOnHost.getAllocatedBytes();
@@ -128,11 +128,11 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily
+  template <typename, typename, typename> class SubcellStepper
 >
 template <typename RuntimeParameters>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::initialise(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::initialise(
   const peano4::CellConnectivity& cellConnectivity,
   const CellPool&                 solution,
   const RuntimeParameters&        parameters
@@ -189,11 +189,11 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily
+  template <typename, typename, typename> class SubcellStepper
 >
 template <typename RuntimeParameters>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::sampleSubcells(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::sampleSubcells(
   const peano4::CellConnectivity& cellConnectivity,
   const RuntimeParameters&        parameters
 ) {
@@ -221,11 +221,11 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily
+  template <typename, typename, typename> class SubcellStepper
 >
 template <typename RuntimeParameters>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::openTimeStep(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::openTimeStep(
   const peano4::CellConnectivity&           cellConnectivity,
   const CellPool&                           solution,
   [[maybe_unused]] const RuntimeParameters& parameters
@@ -251,11 +251,11 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily
+  template <typename, typename, typename> class SubcellStepper
 >
 template <typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::closeTimeStep(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::closeTimeStep(
   const peano4::CellConnectivity& cellConnectivity,
   CellPool&                       solution,
   const double                    timeStamp,
@@ -297,9 +297,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::regrid(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::regrid(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Regrid&    regrid,
   const CellPool&          solution
@@ -332,9 +332,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::projectNodesOfFreedCells(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::projectNodesOfFreedCells(
   const std::vector<int>& freedSlots,
   const CellPool&         solution
 ) {
@@ -368,9 +368,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<int>::View
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::getStatuses() {
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::getStatuses() {
   return _statuses.getView();
 }
 
@@ -378,14 +378,14 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD typename exahype2::dg::limiting::SubcellLimiter<
   Derived,
   StoragePrecision,
   ComputePrecision,
-  SubcellFamily
+  SubcellStepper
 >::FluxPool::View
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::getAppliedFluxes() {
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::getAppliedFluxes() {
   if constexpr (exahype2::dg::limiting::couplesGalerkinFlux<Derived>()) {
     return _appliedFluxes.getView();
   } else {
@@ -400,9 +400,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
-INLINE_METHOD const typename exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::StatusPool&
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::downloadStatuses() {
+  template <typename, typename, typename> class SubcellStepper>
+INLINE_METHOD const typename exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::StatusPool&
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::downloadStatuses() {
   return std::as_const(_statuses).download(_statusesOnHost);
 }
 
@@ -413,9 +413,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
-INLINE_METHOD const typename exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::CellPool&
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::downloadSubcells() {
+  template <typename, typename, typename> class SubcellStepper>
+INLINE_METHOD const typename exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::CellPool&
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::downloadSubcells() {
   return std::as_const(_subcells).download(_subcellsOnHost);
 }
 
@@ -423,13 +423,13 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD int
 exahype2::dg::limiting::SubcellLimiter<
   Derived,
   StoragePrecision,
   ComputePrecision,
-  SubcellFamily
+  SubcellStepper
 >::getNumberOfRecomputedCells() const {
   return _cellCounts.recomputedCells;
 }
@@ -441,13 +441,13 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD int
 exahype2::dg::limiting::SubcellLimiter<
   Derived,
   StoragePrecision,
   ComputePrecision,
-  SubcellFamily
+  SubcellStepper
 >::getNumberOfCellsOnSubcellScheme() const {
   return _cellCounts.cellsOnScheme;
 }
@@ -456,9 +456,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD int
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::getNumberOfTroubledCells() const {
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::getNumberOfTroubledCells() const {
   return _cellCounts.troubledCells;
 }
 
@@ -470,13 +470,13 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD int
 exahype2::dg::limiting::SubcellLimiter<
   Derived,
   StoragePrecision,
   ComputePrecision,
-  SubcellFamily
+  SubcellStepper
 >::getGlobalNumberOfTroubledCells() const {
   return _globalTroubledCells;
 }
@@ -488,9 +488,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::addLocalValuesToGlobalReduction(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::addLocalValuesToGlobalReduction(
   tarch::mpi::ReductionRecord& record
 ) {
   ASSERTION(_localTroubledCells >= 0, _localTroubledCells);
@@ -504,9 +504,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::readValuesFromGlobalReduction(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::readValuesFromGlobalReduction(
   const tarch::mpi::ReductionRecord& record
 ) {
   const auto globalTroubledCells = record.getSum(_troubledCellsSlot);
@@ -518,9 +518,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::rebuild(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::rebuild(
   const peano4::CellConnectivity& cellConnectivity
 ) {
   _subcellHalo.reserve(cellConnectivity.getNumberOfFaces());
@@ -539,7 +539,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   _cellsOnSubcellScheme.allocate(static_cast<std::size_t>(cellConnectivity.getCells().size));
   _recomputedCells.allocate(static_cast<std::size_t>(cellConnectivity.getCells().size));
   _cellCounts = exahype2::dg::limiting::SubcellSchemeCounts{};
-  _family.rebuild(cellConnectivity);
+  _stepper.rebuild(cellConnectivity);
   clearFaces(cellConnectivity);
 }
 
@@ -551,9 +551,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::clearFaces(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::clearFaces(
   const peano4::CellConnectivity& cellConnectivity
 ) {
   tarch::accelerator::parallelFor(
@@ -574,9 +574,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::openStep(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::openStep(
   const peano4::CellConnectivity& cellConnectivity,
   const CellPool&          solution
 ) {
@@ -600,11 +600,11 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily
+  template <typename, typename, typename> class SubcellStepper
 >
 template <typename RuntimeParameters>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::reduceExtrema(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::reduceExtrema(
   const tarch::Span<const int> cells,
   const CellPool&              solution,
   const RuntimeParameters&     parameters
@@ -640,9 +640,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::reserveDetectorScratch(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::reserveDetectorScratch(
   const int numberOfTeams,
   const int scratchValuesPerTeam
 ) {
@@ -664,9 +664,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::mergeNeighbourExtrema(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::mergeNeighbourExtrema(
   const peano4::CellConnectivity& cellConnectivity,
   const bool               mergeLastRound
 ) {
@@ -709,11 +709,11 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily
+  template <typename, typename, typename> class SubcellStepper
 >
 template <typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::limiting::JudgedCells
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::judgeCandidates(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::judgeCandidates(
   const peano4::CellConnectivity& cellConnectivity,
   const CellPool&                 solution,
   const double                    timeStamp,
@@ -763,9 +763,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::spreadStatuses(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::spreadStatuses(
   const peano4::CellConnectivity& cellConnectivity
 ) {
   for (int ring = 0; ring < exahype2::dg::limiting::NumberOfSpreadRings; ring++) {
@@ -808,9 +808,9 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::listCellsOnSubcellScheme(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::listCellsOnSubcellScheme(
   const peano4::CellConnectivity& cellConnectivity
 ) {
   const int numberOfCells = cellConnectivity.getCells().size;
@@ -865,7 +865,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Advances every recomputing cell by one step of the subcell family on its subgrid and projects the
+ * Advances every recomputing cell by one step of the subcell stepper on its subgrid and projects the
  * result onto the nodes over the candidate. Every cell on the subcell scheme first writes its
  * subgrid onto its faces. Returns the wave speeds of the subgrids.
  */
@@ -873,17 +873,21 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily
+  template <typename, typename, typename> class SubcellStepper
 >
 template <typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::recompute(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::recompute(
   const peano4::CellConnectivity& cellConnectivity,
   CellPool&                       solution,
   const double                    timeStamp,
   const double                    timeStepSize,
   const RuntimeParameters&        parameters
 ) {
+  static_assert(
+    exahype2::dg::limiting::SubcellStepper<Stepper, StoragePrecision, ComputePrecision, RuntimeParameters>,
+    "The subcell stepper of the limiter offers rebuild(), release(), getAllocatedBytes() and advance()."
+  );
   // The projections onto the faces and onto the nodes take their chunks from this scratch. Every
   // recomputing cell lies on the subcell scheme.
   const auto scratchValues =
@@ -945,7 +949,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       workOnCells
     );
   };
-  _family.advance(
+  _stepper.advance(
     cellConnectivity,
     exahype2::dg::limiting::SubcellRegion<StoragePrecision, ComputePrecision>{
       recomputedCells,
@@ -990,10 +994,10 @@ template <
   typename Derived,
   typename StoragePrecision,
   typename ComputePrecision,
-  template <typename, typename, typename> class SubcellFamily>
+  template <typename, typename, typename> class SubcellStepper>
 template <typename Interpolate, typename Restrict, typename Exchange, typename Work>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::exchangeFaces(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellStepper>::exchangeFaces(
   const peano4::CellConnectivity& cellConnectivity,
   const Interpolate&       interpolation,
   const Restrict&          restriction,

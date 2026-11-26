@@ -188,7 +188,7 @@ exahype2::dg::limiting::SubcellLimiter::recompute():
 1. exahype2::dg::limiting::ProjectSubgridsOntoFaces calls exahype2::dg::limiting::SubcellScheme::projectSubgridOntoFaces() on every cell on the subcell scheme.
 2. exahype2::dg::limiting::ApplySubgridBoundaryConditions calls `Derived::boundaryConditions()` on the boundary faces of those cells.
 3. exahype2::dg::RestrictFluxHalves restricts the Galerkin fluxes of the fine faces of every level jump onto the coarse face.
-4. The subcell family of the limiter, `SubcellFamily::advance()`, advances the recomputed cells on their subgrids while exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the subgrid halo halves to the neighbour ranks:
+4. The subcell stepper of the limiter, `SubcellStepper::advance()`, advances the recomputed cells on their subgrids while exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the subgrid halo halves to the neighbour ranks:
    - exahype2::fv::singlestep::SubcellStep for Godunov and MUSCL-Hancock:
      1. exahype2::fv::singlestep::AdvanceSubgrids runs on the local cells while the halves travel, then on the remote cells.
      2. exahype2::fv::singlestep::SubcellStep::advanceSubgrid() runs exahype2::fv::singlestep::PatchUpdate::update() on the subgrid.

@@ -24,6 +24,7 @@
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Reducer.h"
@@ -60,6 +61,38 @@ namespace exahype2::dg::limiting {
 
   template <typename StoragePrecision, typename ComputePrecision>
   struct SubcellRegion;
+
+  /**
+   * Stands for the halo exchange that a subcell stepper receives: a callable that takes the work
+   * on the local or the remote cells.
+   */
+  struct HaloExchangeArchetype final {
+    template <typename Work>
+    void operator()(const Work& workOnCells) const;
+  };
+
+  /**
+   * A subcell stepper advances the subgrids of the recomputing cells of
+   * exahype2::dg::limiting::SubcellLimiter. It rebuilds its pools for a cell connectivity,
+   * releases them, reports their bytes and advances a SubcellRegion by one time step while
+   * exchangeHalo passes the subgrid halo halves.
+   */
+  template <typename Stepper, typename StoragePrecision, typename ComputePrecision, typename RuntimeParameters>
+  concept SubcellStepper = requires(
+    Stepper                                                  stepper,
+    const Stepper                                            constStepper,
+    const peano4::CellConnectivity&                          cellConnectivity,
+    const SubcellRegion<StoragePrecision, ComputePrecision>& region,
+    const HaloExchangeArchetype&                             exchangeHalo,
+    double                                                   timeStamp,
+    double                                                   timeStepSize,
+    const RuntimeParameters&                                 parameters
+  ) {
+    stepper.rebuild(cellConnectivity);
+    stepper.release();
+    { constStepper.getAllocatedBytes() } -> std::same_as<tarch::AllocatedBytes>;
+    stepper.advance(cellConnectivity, region, exchangeHalo, timeStamp, timeStepSize, parameters);
+  };
 } // namespace exahype2::dg::limiting
 
 TARGET_DECLARE
