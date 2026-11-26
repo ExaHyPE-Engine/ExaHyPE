@@ -32,7 +32,6 @@ def _pde_terms():
         "physical_admissibility": exahype2.pde_terms.physical_admissibility(),
         "reconstruction_support": exahype2.pde_terms.reconstruction_support(),
         "reconstruction_weights": exahype2.pde_terms.reconstruction_weights(),
-        "postprocess_updated_subcells": exahype2.pde_terms.postprocess_updated_subcells(),
         "dmp_observables": exahype2.pde_terms.dmp_observables(),
         "dmp_relaxation_parameter": exahype2.pde_terms.dmp_relaxation_parameter(),
         "analytical_solution": exahype2.pde_terms.analytical_solution(),
@@ -202,7 +201,6 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
             "physical_admissibility",
             "reconstruction_support",
             "reconstruction_weights",
-            "postprocess_updated_subcells",
             "dmp_observables",
             "dmp_relaxation_parameter",
         ]
