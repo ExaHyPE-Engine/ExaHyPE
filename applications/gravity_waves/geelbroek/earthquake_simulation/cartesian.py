@@ -66,12 +66,24 @@ theSolver = exahype2.dg.ader.Solver(
     point_sources=1,
 )
 
+# Static refinement: the top layer of level-3 cells (surface at y = 0, y = depth)
+# is refined to level 4 (max_grid_levels), everything else stays at level 3.
+# The criterion depends on geometry only, so the grid never changes in time.
+# Cells are never erased (Keep), so there is no dynamic coarsening either.
+TopLayerThickness = 10.0 / 27.0  # one level-3 cell of the 10 km domain, km
+static_refinement_criterion = f"""
+  if (x(1) < {TopLayerThickness}) {{
+    return ::exahype2::RefinementCommand::Refine;
+  }}
+  return ::exahype2::RefinementCommand::Keep;
+"""
+
 theSolver.set_pde_terms(
     initial_condition=Elastic.initial(),
     boundary_conditions=Elastic.boundary(),
     max_eigenvalue=Elastic.eigenvalue(),
     flux=Elastic.flux(),
-    refinement_criterion=Elastic.refinement_criterion(),
+    refinement_criterion=static_refinement_criterion,
     riemann_solver=Elastic.riemann_solver(),
     point_source=Elastic.point_source(),
     point_source_locations=Elastic.init_point_source(),
@@ -109,14 +121,15 @@ def surface_tracer_grid(dx, x_range=(-3.0, 7.0), z_range=(-3.0, 7.0),
 
 if args.use_tracers:
     tracer_coordinates = surface_tracer_grid(0.1)
-    for station in [            
-                [0.000, 0.0, 0.6],     #ELE
-                [0.000, 0.0, 2.7],      #ASS1
-                [0.000, 0.0, 6.6],      #ASS2
-                ]: 
-        tracer_coordinates.append(station)
-        tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
-        tracer_particles.insert_by_coordinates(tracer_coordinates)
+    # stations relative to the epicentre 6.5681E, 52.9553N
+    # (source at x = z = 0; x = East, y = depth, z = North; km)
+    tracer_coordinates += [
+        [+0.640, 0.0, +0.147],   # ELE
+        [-0.718, 0.0, +2.504],   # ASS1
+        [+0.165, 0.0, +6.564],   # ASS2
+    ]
+    tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
+    tracer_particles.insert_by_coordinates(tracer_coordinates)
 
 
 

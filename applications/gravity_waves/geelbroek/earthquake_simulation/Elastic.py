@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-POINT_SOURCE_LOCATION = (0.0, 3.0, 0.0)
+POINT_SOURCE_LOCATION = (0.0, 3.5, 0.0)
 
 
 def initial():
@@ -12,8 +12,8 @@ def initial():
     Q[unknown] = 0.0;
   }
   Q[Shortcuts::rho] = upperLayer ? 2.6 : 2.7;
-  Q[Shortcuts::cp]  = upperLayer ? 1.9 : 4.0;
-  Q[Shortcuts::cs]  = upperLayer ? 0.45 : 2.15;
+  Q[Shortcuts::cp]  = upperLayer ? 2.1 : 4.0;
+  Q[Shortcuts::cs]  = upperLayer ? 0.62 : 2.15;
 """
 
 
