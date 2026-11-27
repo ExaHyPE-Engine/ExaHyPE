@@ -1,5 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "tarch/Assertions.h"
 
 template <typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD T
@@ -22,108 +23,88 @@ applications::exahype2::exaskred::shallowwater::regularisedVelocity(
     : T{};
 }
 
-template <class Shortcuts, int NumberOfUnknowns, typename T>
+template <typename State, typename Flux>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::shallowwater::flux(
-  const T* const NOALIAS                       Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  const double                                 minimumWaterHeight,
-  T* const NOALIAS                             F
+  const State&                                                  Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const double                                                  minimumWaterHeight,
+  Flux&                                                         F
 ) {
-  (void)x;
-  (void)h;
-  (void)t;
-  (void)dt;
+  using Value = decltype(Q.h);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
 
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    F[unknown] = T{};
-  }
-  if (not std::isfinite(Q[Shortcuts::h]) or Q[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)) {
+  F = {};
+  if (not std::isfinite(Q.h) or Q.h <= static_cast<Value>(minimumWaterHeight)) {
     return;
   }
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    if (not std::isfinite(Q[Shortcuts::hu + dimension])) {
+    if (not std::isfinite(Q.hu(dimension))) {
       return;
     }
   }
 
-  const auto normalVelocity = applications::exahype2::exaskred::shallowwater::regularisedVelocity(
-    Q[Shortcuts::h],
-    Q[Shortcuts::hu + normal],
-    minimumWaterHeight
-  );
-  F[Shortcuts::h] = Q[Shortcuts::hu + normal];
+  const auto normalVelocity =
+    applications::exahype2::exaskred::shallowwater::regularisedVelocity(Q.h, Q.hu(normal), minimumWaterHeight);
+  F.h = Q.hu(normal);
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    F[Shortcuts::hu + dimension] = normalVelocity * Q[Shortcuts::hu + dimension];
+    F.hu(dimension) = normalVelocity * Q.hu(dimension);
   }
 }
 
-template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD T
+template <typename State>
+INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::shallowwater::maxEigenvalue(
-  const T* const NOALIAS                       Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  const double                                 gravity,
-  const double                                 minimumWaterHeight
+  const State&                                                  Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const double                                                  gravity,
+  const double                                                  minimumWaterHeight
 ) {
-  (void)x;
-  (void)h;
-  (void)t;
-  (void)dt;
+  using Value = decltype(Q.h);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
 
-  if (
-    not std::isfinite(Q[Shortcuts::h]) or not std::isfinite(Q[Shortcuts::hu + normal])
-    or Q[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)
-  ) {
-    return T{};
+  if (not std::isfinite(Q.h) or not std::isfinite(Q.hu(normal)) or Q.h <= static_cast<Value>(minimumWaterHeight)) {
+    return 0.0;
   }
 
-  const auto normalVelocity = applications::exahype2::exaskred::shallowwater::regularisedVelocity(
-    Q[Shortcuts::h],
-    Q[Shortcuts::hu + normal],
-    minimumWaterHeight
-  );
-  const auto waveSpeed = std::sqrt(static_cast<T>(gravity) * Q[Shortcuts::h]);
+  const auto normalVelocity =
+    applications::exahype2::exaskred::shallowwater::regularisedVelocity(Q.h, Q.hu(normal), minimumWaterHeight);
+  const auto waveSpeed = std::sqrt(static_cast<Value>(gravity) * Q.h);
   return std::fmax(std::fabs(normalVelocity + waveSpeed), std::fabs(normalVelocity - waveSpeed));
 }
 
-template <class Shortcuts, int NumberOfUnknowns, typename T>
+template <typename State, typename Difference, typename NonconservativeProduct>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::shallowwater::nonconservativeProduct(
-  const T* const NOALIAS                       Q,
-  const T* const NOALIAS                       deltaQ,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  const double                                 gravity,
-  const double                                 minimumWaterHeight,
-  T* const NOALIAS                             BTimesDeltaQ
+  const State&                                                  Q,
+  const Difference&                                             deltaQ,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const double                                                  gravity,
+  const double                                                  minimumWaterHeight,
+  NonconservativeProduct&                                       BTimesDeltaQ
 ) {
-  (void)x;
-  (void)h;
-  (void)t;
-  (void)dt;
+  using Value = decltype(Q.h);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
 
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    BTimesDeltaQ[unknown] = T{};
-  }
+  BTimesDeltaQ = {};
   if (
-    not std::isfinite(Q[Shortcuts::h]) or not std::isfinite(deltaQ[Shortcuts::h])
-    or not std::isfinite(deltaQ[Shortcuts::b]) or Q[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)
+    not std::isfinite(Q.h) or not std::isfinite(deltaQ.h) or not std::isfinite(deltaQ.b)
+    or Q.h <= static_cast<Value>(minimumWaterHeight)
   ) {
     return;
   }
 
-  BTimesDeltaQ[Shortcuts::hu + normal] =
-    static_cast<T>(gravity) * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
+  BTimesDeltaQ.hu(normal) = static_cast<Value>(gravity) * Q.h * (deltaQ.h + deltaQ.b);
 }

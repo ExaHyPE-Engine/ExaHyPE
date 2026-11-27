@@ -10,54 +10,33 @@ class Euler(Equation):
         self.num_auxiliary_variables = 0
         self.gamma = gamma
 
-    def _momentum_squared(self):
-        """Returns the squared momentum with equal bits for every order of the axes."""
-        components = ", ".join(
-            f"Q[Shortcuts::v+{axis}]" for axis in range(self.dimensions)
-        )
-        return f"tarch::la::norm2Squared(tarch::la::makeVector({components}))"
-
-    def eigenvalues(self):
+    def _pressure(self):
+        """Returns the pressure. The squared momentum has equal bits for every order of the axes."""
         return (
             """
-  const auto irho = 1 / Q[Shortcuts::rho];
+  const auto irho = 1 / Q.rho;
   constexpr auto Gamma = """
             + str(self.gamma)
             + """;
-  const auto p = (Gamma - 1) * (Q[Shortcuts::E] - 0.5 * irho * """
-            + self._momentum_squared()
-            + """);
+  const auto p = (Gamma - 1) * (Q.E - 0.5 * irho * tarch::la::norm2Squared(Q.v));
+"""
+        )
 
+    def eigenvalues(self):
+        return self._pressure() + """
   const auto c = std::sqrt(Gamma * p * irho);
-  const auto u = Q[Shortcuts::v + normal] * irho;
+  const auto u = Q.v(normal) * irho;
 
   return std::fmax(std::abs(u-c), std::abs(u+c));
 """
-        )
 
     def flux(self):
-        return (
-            """
-  const auto irho = 1 / Q[Shortcuts::rho];
-  constexpr auto Gamma = """
-            + str(self.gamma)
-            + """;
-  const auto p = (Gamma - 1) * (Q[Shortcuts::E] - 0.5 * irho * """
-            + self._momentum_squared()
-            + """);
+        return self._pressure() + """
+  F.rho = Q.v(normal);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    F.v(axis) = Q.v(normal) * Q.v(axis) * irho;
+  }
+  F.E = Q.v(normal) * irho * (Q.E + p);
 
-  F[Shortcuts::rho] = Q[Shortcuts::v + normal];
-  F[Shortcuts::v+0] = Q[Shortcuts::v + normal] * Q[Shortcuts::v+0] * irho;
-  F[Shortcuts::v+1] = Q[Shortcuts::v + normal] * Q[Shortcuts::v+1] * irho;"""
-            + (
-                """
-  F[Shortcuts::v+2] = Q[Shortcuts::v + normal] * Q[Shortcuts::v+2] * irho; """
-                if self.dimensions == 3
-                else ""
-            )
-            + """
-  F[Shortcuts::E]     = Q[Shortcuts::v + normal] * irho * (Q[Shortcuts::E] + p);
-
-  F[Shortcuts::v + normal] += p;
+  F.v(normal) += p;
 """
-        )

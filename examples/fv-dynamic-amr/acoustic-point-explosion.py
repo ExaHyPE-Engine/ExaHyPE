@@ -49,28 +49,21 @@ initial_conditions = """
   const tarch::la::Vector<DIMENSIONS, double> sourceCentre(-0.7);
   const double distanceSquared = tarch::la::norm2Squared(x - sourceCentre);
   constexpr double Sigma = 0.1;
-  Q[Shortcuts::p] = std::exp(-distanceSquared / (2.0 * Sigma * Sigma));
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::u + d] = 0.0;
-  }
+  Q.p = std::exp(-distanceSquared / (2.0 * Sigma * Sigma));
+  Q.u = 0.0;
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::p] = Qinside[Shortcuts::p];
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Qoutside[Shortcuts::u + d] = Qinside[Shortcuts::u + d];
-  }
-  Qoutside[Shortcuts::u + normal] = -Qinside[Shortcuts::u + normal];
+  Qoutside           = Qinside;
+  Qoutside.u(normal) = -Qinside.u(normal);
 """
 
 flux = """
   static constexpr double K0 = RHO * WAVE_SPEED * WAVE_SPEED;
 
-  F[Shortcuts::p] = K0 * Q[Shortcuts::u + normal];
-  for (int d = 0; d < DIMENSIONS; d++) {
-    F[Shortcuts::u + d] = 0.0;
-  }
-  F[Shortcuts::u + normal] = (1.0 / RHO) * Q[Shortcuts::p];
+  F.p         = K0 * Q.u(normal);
+  F.u         = 0.0;
+  F.u(normal) = (1.0 / RHO) * Q.p;
 """
 
 # Pressure and velocity magnitude are symmetric under axis permutations. The unit offsets bound the
@@ -79,13 +72,11 @@ refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
     ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
     5.0e-3,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
-    [](const double* const values) {
-      const double velocitySquared =
-        tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::u));
+    [](const auto& state) { return 1.0 + state.p; },
+    [](const auto& state) {
+      const double velocitySquared = tarch::la::norm2Squared(state.u);
       return 1.0 + RHO * WAVE_SPEED * std::sqrt(velocitySquared);
     }
   );

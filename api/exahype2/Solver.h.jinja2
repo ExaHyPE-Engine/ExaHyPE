@@ -14,7 +14,7 @@ namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};
 } // namespace {{NAMESPACE | join("::")}}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public {{NAMESPACE | join("::")}}::{{CLASSNAME}}Base {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public {{NAMESPACE | join("::")}}::{{CLASSNAME}}Base {
 public:
   TARGET_DECLARE
 {%- if SOLVER_PDE_TERM_DECLARATIONS %}
@@ -34,7 +34,5 @@ public:
   {{SOLVER_HOST_PDE_TERM_DECLARATIONS | indent(2)}}
 {%- endif %}
 };
-{%- if SOLVER_INLINE_DEFINITIONS or SOLVER_HOST_INLINE_DEFINITIONS or USER_TERMS_INLINE %}
 
-#include "{{CLASSNAME}}.cpph"
-{%- endif %}
+#include "{{CLASSNAME}}PDETerms.h"

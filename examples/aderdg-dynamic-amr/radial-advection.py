@@ -48,27 +48,25 @@ initial_conditions = """
   constexpr double BumpRadius = 0.3;
   const auto scaledRadiusSquared =
     tarch::la::norm2Squared(x - centre) / (BumpRadius * BumpRadius);
-  Q[Shortcuts::rho] = 0.0;
+  Q.rho = 0.0;
   if (scaledRadiusSquared < 1.0) {
     const auto exponent = 1.0 - 1.0 / (1.0 - scaledRadiusSquared);
     const auto minimumNormalExponent = std::log(std::numeric_limits<double>::min());
     if (exponent >= minimumNormalExponent) {
-      Q[Shortcuts::rho] = std::exp(exponent);
+      Q.rho = std::exp(exponent);
     }
   }
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  Qoutside = Qinside;
 """
 
 flux = """
   const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
   const tarch::la::Vector<DIMENSIONS, double> radialOffset = x - centre;
   const double radius = tarch::la::norm2(radialOffset);
-  F[Shortcuts::rho] = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q[Shortcuts::rho];
+  F.rho = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q.rho;
 """
 
 # The detail indicator refines the expanding front and coarsens its interior and
@@ -77,10 +75,9 @@ refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
     Quadrature<double>::getQuadraturePoints1D(),
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
+    [](const auto& state) { return 1.0 + state.rho; }
   );
 """
 

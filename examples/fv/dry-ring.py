@@ -32,60 +32,38 @@ initial_conditions = """
   const double bathymetry = 0.3 * std::exp(-radius * radius / 0.0625);
   const bool wet = radius > 0.35 and radius < 0.65;
 
-  Q[Shortcuts::h] = wet ? 0.2 - bathymetry : 0.0;
-  Q[Shortcuts::v + 0] = 0.0;
-  Q[Shortcuts::v + 1] = 0.0;
-  Q[Shortcuts::b] = bathymetry;
+  Q.h = wet ? 0.2 - bathymetry : 0.0;
+  Q.v = 0.0;
+  Q.b = bathymetry;
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::h]     = Qinside[Shortcuts::h];
-  Qoutside[Shortcuts::v + 0] = Qinside[Shortcuts::v + 0];
-  Qoutside[Shortcuts::v + 1] = Qinside[Shortcuts::v + 1];
-  Qoutside[Shortcuts::b]     = Qinside[Shortcuts::b];
+  Qoutside = Qinside;
 """
 
 flux = """
-  if (Q[Shortcuts::h] < DRY_TOLERANCE) {
-    F[Shortcuts::h]     = 0.0;
-    F[Shortcuts::v + 0] = 0.0;
-    F[Shortcuts::v + 1] = 0.0;
-  } else {
-    const double inverseHeight = 1.0 / Q[Shortcuts::h];
-    F[Shortcuts::h]     = Q[Shortcuts::v + normal];
-    F[Shortcuts::v + 0] =
-      Q[Shortcuts::v + normal] * Q[Shortcuts::v + 0] * inverseHeight;
-    F[Shortcuts::v + 1] =
-      Q[Shortcuts::v + normal] * Q[Shortcuts::v + 1] * inverseHeight;
+  F = {};
+  if (Q.h < DRY_TOLERANCE) {
+    return;
   }
-  F[Shortcuts::b] = 0.0;
+  const double inverseHeight = 1.0 / Q.h;
+  F.h = Q.v(normal);
+  for (int axis = 0; axis < 2; axis++) {
+    F.v(axis) = Q.v(normal) * Q.v(axis) * inverseHeight;
+  }
 """
 
 ncp = """
-  BTimesDeltaQ[Shortcuts::h] = 0.0;
-  switch (normal) {
-    case 0:
-      BTimesDeltaQ[Shortcuts::v + 0] =
-        GRAVITY * Q[Shortcuts::h]
-        * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
-      BTimesDeltaQ[Shortcuts::v + 1] = 0.0;
-      break;
-    case 1:
-      BTimesDeltaQ[Shortcuts::v + 0] = 0.0;
-      BTimesDeltaQ[Shortcuts::v + 1] =
-        GRAVITY * Q[Shortcuts::h]
-        * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
-      break;
-  }
-  BTimesDeltaQ[Shortcuts::b] = 0.0;
+  BTimesDeltaQ           = {};
+  BTimesDeltaQ.v(normal) = GRAVITY * Q.h * (deltaQ.h + deltaQ.b);
 """
 
 max_eigenvalue = """
-  if (Q[Shortcuts::h] < DRY_TOLERANCE) {
+  if (Q.h < DRY_TOLERANCE) {
     return 0.0;
   }
-  const double velocity = Q[Shortcuts::v + normal] / Q[Shortcuts::h];
-  const double soundSpeed = std::sqrt(GRAVITY * Q[Shortcuts::h]);
+  const double velocity = Q.v(normal) / Q.h;
+  const double soundSpeed = std::sqrt(GRAVITY * Q.h);
   return std::fmax(
     std::fabs(velocity + soundSpeed),
     std::fabs(velocity - soundSpeed)

@@ -15,8 +15,10 @@ class Tracers:
 
     def __init__(self, name, particle_attributes):
         self._name = name
+        self._attributes = {}
         if isinstance(particle_attributes, dict):
-            self._number_of_data = sum(particle_attributes["unknowns"].values())
+            self._attributes = dict(particle_attributes["unknowns"])
+            self._number_of_data = sum(self._attributes.values())
         elif isinstance(particle_attributes, int) and not isinstance(
             particle_attributes, bool
         ):
@@ -48,6 +50,12 @@ class Tracers:
     @property
     def number_of_data(self):
         return self._number_of_data
+
+    @property
+    def attributes(self):
+        """Returns the entry count of every named particle attribute. A tracer set without names
+        returns an empty dictionary."""
+        return self._attributes
 
     @property
     def solver(self):
@@ -212,14 +220,14 @@ class Tracers:
             or every < 0
         ):
             raise ValueError(
-                "The tracer set {} expects a finite non-negative time for every (got {!r}).".format(
+                "The tracer set {} expects a finite non-negative interval 'every' of the error measurement (got {!r}).".format(
                     self._name, every
                 )
             )
         self._error = {"FILE": str(file), "EVERY": repr(float(every))}
 
     def _rendered_data(self, dimensions):
-        """Returns the C++ initialiser of the particles with data, or None without them."""
+        """Returns the C++ initialiser of the particles with data. Returns None without them."""
         if not self._data:
             return None
         rows = []

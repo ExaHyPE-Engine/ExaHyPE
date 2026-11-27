@@ -50,43 +50,27 @@ class Zugspitze(Scenario):
 
     def initial_conditions(self):
         return """
-        Q[Shortcuts::rho] = 2.67;
-        Q[Shortcuts::cp ] = 6.0;
-        Q[Shortcuts::cs ] = 3.464;
+      Q.rho = 2.67;
+      Q.cp  = 6.0;
+      Q.cs  = 3.464;
 """
 
     # The point source is a copy of the LOH1 point source.
     def point_source(self):
         return """
-  std::fill_n(forceVector, 9, 0.);
-
-  const auto jacobian = Q[Shortcuts::jacobian];
-
   ASSERTION(n == 0, n);
+  constexpr double t0                 = 0.1;
+  constexpr double M0                 = 1000.0;
+  const double     sourceTimeFunction = M0 * t / (t0 * t0) * std::exp(-t / t0);
 
-  constexpr double t0 = 0.1;
-  constexpr double M0 = 1000.0;
-
-  const double sourceTimeFunction = M0*t/(t0*t0)*std::exp(-t/t0);
-
-  forceVector[Shortcuts::sigma + 4] = sourceTimeFunction;
-
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    forceVector[i] = forceVector[i] / jacobian;
-  }
+  forceVector             = {};
+  forceVector.sigma(0, 2) = sourceTimeFunction;
+  forceVector.sigma(0, 2) /= Q.jacobian;
 """
 
     def init_point_source(self):
         return """
-  const tarch::la::Vector<DIMENSIONS, double> sourceLocation = _curvi->invertProjection({
-    4424.756,
-    10.0,
-    2675.783
-  });
-
-  location[0][0] = sourceLocation[0];
-  location[0][1] = sourceLocation[1];
-  location[0][2] = sourceLocation[2];
+  location[0] = _curvi->invertProjection({4424.756, 10.0, 2675.783});
 """
 
     def generate_required_files(self):

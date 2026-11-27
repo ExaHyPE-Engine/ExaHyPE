@@ -31,8 +31,8 @@ state:
 
 @code{.cpp}
 void MySolver::boundaryConditions(...) {
-  Qoutside[0] = value0;
-  Qoutside[1] = value1;
+  Qoutside.p = value0;
+  Qoutside.v = value1;
 }
 @endcode
 
@@ -64,8 +64,7 @@ For a Cartesian halo this is usually implemented by copying the interior state:
 
 @code{.cpp}
 void MySolver::boundaryConditions(...) {
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = Qinside[1];
+  Qoutside = Qinside;
 }
 @endcode
 

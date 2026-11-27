@@ -1,5 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "tarch/Assertions.h"
 
 /**
  * Replaces the physical fluxes FL and FR of the nodes of one Galerkin face by a well-balanced
@@ -8,20 +9,11 @@
  * callable maxEigenvalue(Q, x, h, t, dt, normal) returns the wave speed of one state and
  * interfaceGravity(QL, QR) the gravity between two states.
  */
-template <
-  class Shortcuts,
-  int BathymetryIndex,
-  int NumberOfUnknowns,
-  int NumberOfAuxiliaryVariables,
-  int Order,
-  typename T,
-  typename MaxEigenvalue,
-  typename InterfaceGravity
->
+template <auto Bathymetry, typename FaceStates, typename FaceFluxes, typename MaxEigenvalue, typename InterfaceGravity>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::riemann::wellBalancedRusanov(
-  const T* const NOALIAS                       QL,
-  const T* const NOALIAS                       QR,
+  const FaceStates&                            QL,
+  const FaceStates&                            QR,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
@@ -29,58 +21,51 @@ applications::exahype2::exaskred::riemann::wellBalancedRusanov(
   const int                                    normal,
   MaxEigenvalue&&                              maxEigenvalue,
   InterfaceGravity&&                           interfaceGravity,
-  T* const NOALIAS                             FL,
-  T* const NOALIAS                             FR
+  FaceFluxes&                                  FL,
+  FaceFluxes&                                  FR
 ) {
-  constexpr int NumberOfData      = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int NumberOfFaceNodes = []() constexpr {
-    int result = 1;
-    for (int dimension = 1; dimension < DIMENSIONS; dimension++) {
-      result *= Order + 1;
-    }
-    return result;
-  }();
+  constexpr int NumberOfFaceNodes = std::extent_v<FaceStates>;
+  static_assert(
+    std::extent_v<FaceFluxes> == NumberOfFaceNodes,
+    "The well-balanced Rusanov solver reads one flux per state of the face."
+  );
+  using Value = decltype(QL[0].h);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
 
   double maximumEigenvalue = 0.0;
   for (int node = 0; node < NumberOfFaceNodes; node++) {
-    maximumEigenvalue =
-      std::max(maximumEigenvalue, static_cast<double>(maxEigenvalue(QL + node * NumberOfData, x, h, t, dt, normal)));
-    maximumEigenvalue =
-      std::max(maximumEigenvalue, static_cast<double>(maxEigenvalue(QR + node * NumberOfData, x, h, t, dt, normal)));
+    maximumEigenvalue = std::max(maximumEigenvalue, static_cast<double>(maxEigenvalue(QL[node], x, h, t, dt, normal)));
+    maximumEigenvalue = std::max(maximumEigenvalue, static_cast<double>(maxEigenvalue(QR[node], x, h, t, dt, normal)));
   }
-  const auto dissipation = static_cast<T>(maximumEigenvalue);
+  const auto dissipation = static_cast<Value>(maximumEigenvalue);
 
   for (int node = 0; node < NumberOfFaceNodes; node++) {
-    const auto* const leftState  = QL + node * NumberOfData;
-    const auto* const rightState = QR + node * NumberOfData;
-    auto* const       leftFlux   = FL + node * NumberOfUnknowns;
-    auto* const       rightFlux  = FR + node * NumberOfUnknowns;
+    const auto& leftState  = QL[node];
+    const auto& rightState = QR[node];
+    auto&       leftFlux   = FL[node];
+    auto&       rightFlux  = FR[node];
 
-    leftFlux[Shortcuts::h] = static_cast<T>(0.5)
-      * (leftFlux[Shortcuts::h] + rightFlux[Shortcuts::h]
-         + dissipation
-           * (leftState[Shortcuts::h] + leftState[BathymetryIndex] - rightState[Shortcuts::h] - rightState[BathymetryIndex]));
+    leftFlux.h = static_cast<Value>(0.5)
+      * (leftFlux.h + rightFlux.h
+         + dissipation * (leftState.h + leftState.*Bathymetry - rightState.h - rightState.*Bathymetry));
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-      leftFlux[Shortcuts::hu + dimension] = static_cast<T>(0.5)
-        * (leftFlux[Shortcuts::hu + dimension] + rightFlux[Shortcuts::hu + dimension]
-           + dissipation * (leftState[Shortcuts::hu + dimension] - rightState[Shortcuts::hu + dimension]));
+      leftFlux.hu(dimension) = static_cast<Value>(0.5)
+        * (leftFlux.hu(dimension) + rightFlux.hu(dimension)
+           + dissipation * (leftState.hu(dimension) - rightState.hu(dimension)));
     }
 
-    rightFlux[Shortcuts::h] = leftFlux[Shortcuts::h];
-    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-      rightFlux[Shortcuts::hu + dimension] = leftFlux[Shortcuts::hu + dimension];
-    }
-    if constexpr (BathymetryIndex < NumberOfUnknowns) {
-      leftFlux[BathymetryIndex]  = T{};
-      rightFlux[BathymetryIndex] = T{};
+    rightFlux.h  = leftFlux.h;
+    rightFlux.hu = leftFlux.hu;
+    if constexpr (requires { leftFlux.*Bathymetry = Value{}; }) {
+      leftFlux.*Bathymetry  = Value{};
+      rightFlux.*Bathymetry = Value{};
     }
 
-    const auto gravity = static_cast<T>(interfaceGravity(leftState, rightState));
-    const auto hydrostaticJump =
-      rightState[BathymetryIndex] + rightState[Shortcuts::h] - leftState[BathymetryIndex] - leftState[Shortcuts::h];
-    const auto averageHeight = static_cast<T>(0.5) * (leftState[Shortcuts::h] + rightState[Shortcuts::h]);
-    leftFlux[Shortcuts::hu + normal] += static_cast<T>(0.5) * gravity * averageHeight * hydrostaticJump;
-    rightFlux[Shortcuts::hu + normal] -= static_cast<T>(0.5) * gravity * averageHeight * hydrostaticJump;
+    const auto gravity         = static_cast<Value>(interfaceGravity(leftState, rightState));
+    const auto hydrostaticJump = rightState.*Bathymetry + rightState.h - leftState.*Bathymetry - leftState.h;
+    const auto averageHeight   = static_cast<Value>(0.5) * (leftState.h + rightState.h);
+    leftFlux.hu(normal) += static_cast<Value>(0.5) * gravity * averageHeight * hydrostaticJump;
+    rightFlux.hu(normal) -= static_cast<Value>(0.5) * gravity * averageHeight * hydrostaticJump;
   }
   return maximumEigenvalue;
 }

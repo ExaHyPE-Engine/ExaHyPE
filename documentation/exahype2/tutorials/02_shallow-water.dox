@@ -64,9 +64,9 @@ through the exercises and rebuild after each change.
 
 # Exercise 1 - A Dam Break
 
-Complete the TODOs in `ADERDGSolver.cpp`. The variables are addressed through the
-generated `Shortcuts` enum (`Shortcuts::h`, `Shortcuts::hu + 0/1`,
-`Shortcuts::b`).
+Complete the TODOs in `ADERDGSolver.cpp`. The variables are addressed by their
+names (`Q.h`, `Q.hu`, `Q.b`), and `Q.hu(0)` and `Q.hu(1)` are the two momentum
+components.
 
 - `initialCondition` - water at rest (\f$hu = 0\f$), flat bed
   (\f$b = 0\f$) and a height step: \f$h = 1\f$ on the left half (\f$x_0 < 0\f$),
@@ -127,7 +127,7 @@ non-conservative product:
 - `flux` - remove the \f$\frac12 g h^2\f$ term you added in Exercise 1.
 - `nonconservativeProduct` - implement \f$B(Q)\,\nabla Q\f$. The argument
   `deltaQ` provides the gradient in the `normal` direction. The momentum
-  component is then `g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b])`.
+  component is then `g * Q.h * (deltaQ.h + deltaQ.b)`.
 - `initialCondition` - a radial setup: \f$h = 1\f$ everywhere and a
   circular bump in the bed, \f$b = 0.1\f$ within distance \f$0.5\f$ of the origin
   (`tarch::la::norm2(cellCentre)`), else \f$0\f$.
@@ -161,70 +161,67 @@ continue with @ref page_exahype2_tutorials_euler.
 Initial conditions:
 
     void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
-      double* const NOALIAS                        Q,
-      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      const RuntimeParameters&                     parameters
+      State&                   Q,
+      const Coordinates&       cellCentre,
+      const Coordinates&       cellSize,
+      const RuntimeParameters& parameters
     ) {
-      Q[Shortcuts::hu + 0] = 0.0;
-      Q[Shortcuts::hu + 1] = 0.0;
-      Q[Shortcuts::h]      = cellCentre[0] < 0.0 ? 1.0 : 2.0;
-      Q[Shortcuts::b]      = 0.0;
+      Q.h  = cellCentre(0) < 0.0 ? 1.0 : 2.0;
+      Q.hu = 0.0;
+      Q.b  = 0.0;
     }
 
 Boundary conditions:
 
     void tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
-      const double* const NOALIAS                  Qinside,
-      double* const NOALIAS                        Qoutside,
-      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      const double                                 time,
-      const int                                    normal,
-      const RuntimeParameters&                     parameters
+      const State&             Qinside,
+      State&                   Qoutside,
+      const Coordinates&       faceCentre,
+      const Coordinates&       cellSize,
+      const double             time,
+      const int                normal,
+      const RuntimeParameters& parameters
     ) {
-      Qoutside[Shortcuts::h]      = 1.0;
-      Qoutside[Shortcuts::hu + 0] = 0.0;
-      Qoutside[Shortcuts::hu + 1] = 0.0;
-      Qoutside[Shortcuts::b]      = 0.0;
+      Qoutside.h  = 1.0;
+      Qoutside.hu = 0.0;
+      Qoutside.b  = 0.0;
     }
 
 Max eigenvalue:
 
     double tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
-      const double* const NOALIAS                  Q,
-      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      const double                                 time,
-      const double                                 timeStepSize,
-      const int                                    normal,
-      const RuntimeParameters&                     parameters
+      const State&             Q,
+      const Coordinates&       cellCentre,
+      const Coordinates&       cellSize,
+      const double             time,
+      const double             timeStepSize,
+      const int                normal,
+      const RuntimeParameters& parameters
     ) {
       constexpr double g = 9.81;
-      const double u = Q[Shortcuts::hu + normal] / Q[Shortcuts::h];
-      const double c = std::sqrt(g * Q[Shortcuts::h]);
+      const double     u = Q.hu(normal) / Q.h;
+      const double     c = std::sqrt(g * Q.h);
       return std::max(std::abs(u + c), std::abs(u - c));
     }
 
 Flux (with the pressure term still in the flux):
 
     void tutorials::exahype2::swe::ADERDGSolver::flux(
-      const double* const NOALIAS                  Q,
-      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      const double                                 time,
-      const double                                 timeStepSize,
-      const int                                    normal,
-      double* const NOALIAS                        F,
-      const RuntimeParameters&                     parameters
+      const State&             Q,
+      const Coordinates&       cellCentre,
+      const Coordinates&       cellSize,
+      const double             time,
+      const double             timeStepSize,
+      const int                normal,
+      Flux&                    F,
+      const RuntimeParameters& parameters
     ) {
-      const double     ih = 1.0 / Q[Shortcuts::h];
+      const double     ih = 1.0 / Q.h;
       constexpr double g  = 9.81;
-      F[Shortcuts::h]      = Q[Shortcuts::hu + normal];
-      F[Shortcuts::hu + 0] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 0] * ih;
-      F[Shortcuts::hu + 1] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 1] * ih;
-      F[Shortcuts::b]      = 0.0;
-      F[Shortcuts::hu + normal] += 0.5 * g * Q[Shortcuts::h] * Q[Shortcuts::h];
+      F.h                 = Q.hu(normal);
+      F.hu                = Q.hu(normal) * Q.hu * ih;
+      F.b                 = 0.0;
+      F.hu(normal) += 0.5 * g * Q.h * Q.h;
     }
 
 The non-conservative product and refinement criterion stay at their stub values
@@ -243,72 +240,60 @@ The non-conservative product and refinement criterion stay at their stub values
 Initial conditions (radial bump in the bed):
 
     void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
-      double* const NOALIAS                        Q,
-      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      const RuntimeParameters&                     parameters
+      State&                   Q,
+      const Coordinates&       cellCentre,
+      const Coordinates&       cellSize,
+      const RuntimeParameters& parameters
     ) {
-      Q[Shortcuts::hu + 0] = 0.0;
-      Q[Shortcuts::hu + 1] = 0.0;
-      Q[Shortcuts::h]      = 1.0;
-      Q[Shortcuts::b]      = (tarch::la::norm2(cellCentre) < 0.5 ? 0.1 : 0.0);
+      Q.h  = 1.0;
+      Q.hu = 0.0;
+      Q.b  = tarch::la::norm2(cellCentre) < 0.5 ? 0.1 : 0.0;
     }
 
 Flux (pressure term removed - it lives in the NCP):
 
     void tutorials::exahype2::swe::ADERDGSolver::flux(
-      const double* const NOALIAS                  Q,
-      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      const double                                 time,
-      const double                                 timeStepSize,
-      const int                                    normal,
-      double* const NOALIAS                        F,
-      const RuntimeParameters&                     parameters
+      const State&             Q,
+      const Coordinates&       cellCentre,
+      const Coordinates&       cellSize,
+      const double             time,
+      const double             timeStepSize,
+      const int                normal,
+      Flux&                    F,
+      const RuntimeParameters& parameters
     ) {
-      const double ih = 1.0 / Q[Shortcuts::h];
-      F[Shortcuts::h]      = Q[Shortcuts::hu + normal];
-      F[Shortcuts::hu + 0] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 0] * ih;
-      F[Shortcuts::hu + 1] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 1] * ih;
-      F[Shortcuts::b]      = 0.0;
+      const double ih = 1.0 / Q.h;
+      F.h             = Q.hu(normal);
+      F.hu            = Q.hu(normal) * Q.hu * ih;
+      F.b             = 0.0;
     }
 
 Non-conservative product:
 
     void tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
-      const double* const NOALIAS                  Q,
-      const double* const NOALIAS                  deltaQ,
-      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      const double                                 time,
-      const double                                 timeStepSize,
-      const int                                    normal,
-      double* const NOALIAS                        BTimesDeltaQ,
-      const RuntimeParameters&                     parameters
+      const State&             Q,
+      const Difference&        deltaQ,
+      const Coordinates&       cellCentre,
+      const Coordinates&       cellSize,
+      const double             time,
+      const double             timeStepSize,
+      const int                normal,
+      NonconservativeProduct&  BTimesDeltaQ,
+      const RuntimeParameters& parameters
     ) {
-      constexpr double g         = 9.81;
-      BTimesDeltaQ[Shortcuts::h] = 0.0;
-      switch (normal) {
-      case 0:
-        BTimesDeltaQ[Shortcuts::hu + 0] = g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
-        BTimesDeltaQ[Shortcuts::hu + 1] = 0.0;
-        break;
-      case 1:
-        BTimesDeltaQ[Shortcuts::hu + 0] = 0.0;
-        BTimesDeltaQ[Shortcuts::hu + 1] = g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
-        break;
-      }
-      BTimesDeltaQ[Shortcuts::b] = 0.0;
+      constexpr double g      = 9.81;
+      BTimesDeltaQ            = {};
+      BTimesDeltaQ.hu(normal) = g * Q.h * (deltaQ.h + deltaQ.b);
     }
 
 Refinement criterion (a fixed, finely resolved disc over the bump):
 
     ::exahype2::RefinementCommand tutorials::exahype2::swe::ADERDGSolver::refinementCriterion(
-      const double* const NOALIAS                  Q,
-      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      const double                                 time,
-      const RuntimeParameters&                     parameters
+      const CellStates*        Q,
+      const Coordinates&       cellCentre,
+      const Coordinates&       cellSize,
+      const double             time,
+      const RuntimeParameters& parameters
     ) {
       return (tarch::la::norm2(cellCentre) < 0.3
         ? ::exahype2::RefinementCommand::Refine

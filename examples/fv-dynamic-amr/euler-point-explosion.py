@@ -44,41 +44,36 @@ project = exahype2.Project(
 )
 
 primitives = """
-  const double density        = std::max(Q[Shortcuts::rho], 1.0e-12);
+  const double density        = std::max(Q.rho, 1.0e-12);
   const double inverseDensity = 1.0 / density;
-  const double normalVelocity = Q[Shortcuts::rhoU + normal] * inverseDensity;
-  const double momentumSquared = tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(Q + Shortcuts::rhoU));
+  const double normalVelocity = Q.rhoU(normal) * inverseDensity;
+  const double momentumSquared = tarch::la::norm2Squared(Q.rhoU);
   const double pressure =
-    std::max((GAMMA - 1.0) * (Q[Shortcuts::rhoE] - 0.5 * momentumSquared * inverseDensity), 1.0e-12);
+    std::max((GAMMA - 1.0) * (Q.rhoE - 0.5 * momentumSquared * inverseDensity), 1.0e-12);
 """
 
 initial_conditions = """
-  Q[Shortcuts::rho] = 1.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::rhoU + d] = 0.0;
-  }
+  Q.rho  = 1.0;
+  Q.rhoU = 0.0;
   const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
   constexpr double Radius = 0.15;
   const double pressure = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 5.0 : 1.0;
-  Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0);
+  Q.rhoE = pressure / (GAMMA - 1.0);
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::rho] = Qinside[Shortcuts::rho];
+  Qoutside = Qinside;
   for (int d = 0; d < DIMENSIONS; d++) {
-    Qoutside[Shortcuts::rhoU + d] = -Qinside[Shortcuts::rhoU + d];
+    Qoutside.rhoU(d) = -Qinside.rhoU(d);
   }
-  Qoutside[Shortcuts::rhoE] = Qinside[Shortcuts::rhoE];
 """
 
 flux = """
   {primitives}
-  F[Shortcuts::rho] = Q[Shortcuts::rhoU + normal];
-  for (int d = 0; d < DIMENSIONS; d++) {{
-    F[Shortcuts::rhoU + d] = Q[Shortcuts::rhoU + d] * normalVelocity;
-  }}
-  F[Shortcuts::rhoU + normal] += pressure;
-  F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + pressure) * normalVelocity;
+  F.rho  = Q.rhoU(normal);
+  F.rhoU = Q.rhoU * normalVelocity;
+  F.rhoU(normal) += pressure;
+  F.rhoE = (Q.rhoE + pressure) * normalVelocity;
 """.format(primitives=primitives)
 
 max_eigenvalue = """
@@ -92,16 +87,14 @@ refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
     ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
     2.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    [](const double* const values) { return values[Shortcuts::rho]; },
-    [](const double* const values) {
-      const double momentumSquared =
-        tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::rhoU));
-      const double density = std::max(values[Shortcuts::rho], 1.0e-12);
+    [](const auto& state) { return state.rho; },
+    [](const auto& state) {
+      const double momentumSquared = tarch::la::norm2Squared(state.rhoU);
+      const double density = std::max(state.rho, 1.0e-12);
       return std::max(
-        (GAMMA - 1.0) * (values[Shortcuts::rhoE] - 0.5 * momentumSquared / density),
+        (GAMMA - 1.0) * (state.rhoE - 0.5 * momentumSquared / density),
         1.0e-12
       );
     }

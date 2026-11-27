@@ -204,32 +204,35 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const int                                    normal,
-      const int                                                     unknown,
-      ComputePrecision&                                             reconstructedMinus,
-      ComputePrecision&                                             reconstructedPlus,
+      ComputePrecision* NOALIAS const                               reconstructedMinus,
+      ComputePrecision* NOALIAS const                               reconstructedPlus,
       [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
-      reconstructedMinus = centreState[unknown] - static_cast<ComputePrecision>(0.5) * limitedDifferences[unknown];
-      reconstructedPlus  = centreState[unknown] + static_cast<ComputePrecision>(0.5) * limitedDifferences[unknown];
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        reconstructedMinus[entry] = centreState[entry] - static_cast<ComputePrecision>(0.5) * limitedDifferences[entry];
+        reconstructedPlus[entry]  = centreState[entry] + static_cast<ComputePrecision>(0.5) * limitedDifferences[entry];
+      }
     }
   };
 
   struct MinmodHook {
     template <typename ComputePrecision>
-    static INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision limitedDifference(
+    static INLINE_METHOD GPU_CALLABLE_METHOD void limitedDifference(
       const ComputePrecision* NOALIAS const                         leftState,
       const ComputePrecision* NOALIAS const                         centreState,
       const ComputePrecision* NOALIAS const                         rightState,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const int                                    normal,
-      const int                                                     unknown,
+      ComputePrecision* NOALIAS const                               limitedDifferences,
       [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
-      return exahype2::fv::limiter::Minmod::limitedDifference(
-        rightState[unknown] - centreState[unknown],
-        centreState[unknown] - leftState[unknown]
-      );
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        limitedDifferences[entry] = exahype2::fv::limiter::Minmod::limitedDifference(
+          rightState[entry] - centreState[entry],
+          centreState[entry] - leftState[entry]
+        );
+      }
     }
   };
 
@@ -836,7 +839,7 @@ namespace {
   }
 
   /**
-   * Calls functor(volumeIndex, face, faceVolume) for every halo volume of the patch, with volumeIndex in patch
+   * Calls functor(volumeIndex, face, faceVolume) for every halo volume of the patch. volumeIndex counts in patch
    * coordinates.
    */
   template <int VolumesPerAxis, int HaloWidth, typename Functor>

@@ -52,12 +52,12 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 if project.dimensions != 3:
-    raise ValueError("The Cartesian ExaSeis application is three-dimensional.")
+    raise ValueError("The Cartesian ExaSeis application runs in 3D only.")
 
 theSolver = exahype2.dg.ader.Solver(
     name="elastic",
     order=order,
-    unknowns={"v": 3, "sigma": 6},
+    unknowns={"v": 3, "sigma": exahype2.SymmetricMatrix(3)},
     auxiliary_variables={"rho": 1, "cp": 1, "cs": 1},
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),
     basis=exahype2.dg.GaussLobatto if args.lobatto else exahype2.dg.GaussLegendre,

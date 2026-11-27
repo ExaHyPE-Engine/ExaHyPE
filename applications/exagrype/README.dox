@@ -18,16 +18,16 @@ The environment variable @c PEANO_BUILD_DIR selects the CMake library build.
 The unknowns are grouped as
 @code
 {
-  "gamma_tilde": 6,
-  "A_tilde": 6,
+  "gamma_tilde": exahype2.SymmetricMatrix(3),
+  "A_tilde": exahype2.SymmetricMatrix(3),
   "theta": 1,
   "gamma_hat": 3,
   "alpha": 1,
   "beta": 3,
   "b": 3,
   "grad_alpha": 3,
-  "grad_beta": 9,
-  "grad_gamma_tilde": 18,
+  "grad_beta": (3, 3),
+  "grad_gamma_tilde": (3, exahype2.SymmetricMatrix(3)),
   "K": 1,
   "phi": 1,
   "grad_phi": 3,
@@ -36,9 +36,9 @@ The unknowns are grouped as
 
 The entries represent:
 - @f$\tilde{\gamma}_{ij}@f$: conformal metric, stored as
-  @f$(xx,xy,xz,yy,yz,zz)@f$.
+  @f$(xx,yy,zz,xy,xz,yz)@f$.
 - @f$\tilde{A}_{ij}@f$: traceless extrinsic curvature, stored as
-  @f$(xx,xy,xz,yy,yz,zz)@f$.
+  @f$(xx,yy,zz,xy,xz,yz)@f$.
 - @f$\Theta@f$: temporal component of the Z4 vector.
 - @f$\hat{\Gamma}^i@f$: conformal connection functions, the conformal Christoffel symbols traced
   with the conformal metric, together with the spatial Z4 contribution, stored as @f$(x,y,z)@f$.
@@ -53,9 +53,9 @@ The entries represent:
 - `grad_gamma_tilde`: half the first derivatives of the conformal metric,
   @f$D_{kij} = \tfrac{1}{2} \partial_k \tilde{\gamma}_{ij}@f$, grouped by
   derivative direction:
-  @f$x:(xx,xy,xz,yy,yz,zz)@f$,
-  @f$y:(xx,xy,xz,yy,yz,zz)@f$,
-  @f$z:(xx,xy,xz,yy,yz,zz)@f$.
+  @f$x:(xx,yy,zz,xy,xz,yz)@f$,
+  @f$y:(xx,yy,zz,xy,xz,yz)@f$,
+  @f$z:(xx,yy,zz,xy,xz,yz)@f$.
 - @f$K@f$: trace of the extrinsic curvature.
 - @f$\phi@f$: conformal factor
   @f$\phi = (\det \gamma_{ij})^{-1/6}@f$. The conformal metric
@@ -65,10 +65,10 @@ The entries represent:
 
 In terms of state-vector indices, the layout is
 @code
-[0]  gamma_tilde_xx   [1]  gamma_tilde_xy   [2]  gamma_tilde_xz
-[3]  gamma_tilde_yy   [4]  gamma_tilde_yz   [5]  gamma_tilde_zz
-[6]  A_tilde_xx       [7]  A_tilde_xy       [8]  A_tilde_xz
-[9]  A_tilde_yy       [10] A_tilde_yz       [11] A_tilde_zz
+[0]  gamma_tilde_xx   [1]  gamma_tilde_yy   [2]  gamma_tilde_zz
+[3]  gamma_tilde_xy   [4]  gamma_tilde_xz   [5]  gamma_tilde_yz
+[6]  A_tilde_xx       [7]  A_tilde_yy       [8]  A_tilde_zz
+[9]  A_tilde_xy       [10] A_tilde_xz       [11] A_tilde_yz
 [12] theta
 [13] gamma_hat_x      [14] gamma_hat_y      [15] gamma_hat_z
 [16] alpha
@@ -78,12 +78,12 @@ In terms of state-vector indices, the layout is
 [26] B_xx             [27] B_xy             [28] B_xz
 [29] B_yx             [30] B_yy             [31] B_yz
 [32] B_zx             [33] B_zy             [34] B_zz
-[35] D_x_xx           [36] D_x_xy           [37] D_x_xz
-[38] D_x_yy           [39] D_x_yz           [40] D_x_zz
-[41] D_y_xx           [42] D_y_xy           [43] D_y_xz
-[44] D_y_yy           [45] D_y_yz           [46] D_y_zz
-[47] D_z_xx           [48] D_z_xy           [49] D_z_xz
-[50] D_z_yy           [51] D_z_yz           [52] D_z_zz
+[35] D_x_xx           [36] D_x_yy           [37] D_x_zz
+[38] D_x_xy           [39] D_x_xz           [40] D_x_yz
+[41] D_y_xx           [42] D_y_yy           [43] D_y_zz
+[44] D_y_xy           [45] D_y_xz           [46] D_y_yz
+[47] D_z_xx           [48] D_z_yy           [49] D_z_zz
+[50] D_z_xy           [51] D_z_xz           [52] D_z_yz
 [53] K
 [54] phi
 [55] P_x              [56] P_y              [57] P_z

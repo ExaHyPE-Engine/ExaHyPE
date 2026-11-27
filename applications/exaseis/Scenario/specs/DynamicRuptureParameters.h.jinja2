@@ -3,31 +3,35 @@
 #pragma once
 
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/la/Vector.h"
 
 namespace applications::exahype2::exaseis {
-  template <typename Shortcuts, typename Value>
+  template <typename Value, typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD void writeInitialStress(
-    const Value*  Q,
-    const double* x,
-    Value&        sxx,
-    Value&        syy,
-    Value&        szz,
-    Value&        sxy,
-    Value&        sxz,
-    Value&        syz
+    const State&                                 Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    Value&                                       sxx,
+    Value&                                       syy,
+    Value&                                       szz,
+    Value&                                       sxy,
+    Value&                                       sxz,
+    Value&                                       syz
   );
 
-  template <typename Shortcuts, typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value getAdditionalShearStress(const Value* Q, const double* x);
+  template <typename Value, typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value
+  getAdditionalShearStress(const State& Q, const tarch::la::Vector<DIMENSIONS, double>& x);
 
-  template <typename Shortcuts, typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value getCohesion(const Value* Q, const double* x);
+  template <typename Value, typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getCohesion(const State& Q, const tarch::la::Vector<DIMENSIONS, double>& x);
 
-  template <typename Shortcuts, typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value getForcedRuptureTime(const Value* Q, const double* x);
+  template <typename Value, typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value
+  getForcedRuptureTime(const State& Q, const tarch::la::Vector<DIMENSIONS, double>& x);
 
-  template <typename Shortcuts, typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value getCriticalSlipDistance(const Value* Q, const double* x);
+  template <typename Value, typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value
+  getCriticalSlipDistance(const State& Q, const tarch::la::Vector<DIMENSIONS, double>& x);
 
   TARGET_DECLARE
   constexpr double DynamicFrictionCoefficient = {{mu_d}};

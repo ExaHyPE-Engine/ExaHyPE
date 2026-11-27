@@ -171,14 +171,14 @@ namespace exahype2::terms::unittests {
       const RuntimeParameters& parameters
     );
     static void initPointSourceLocations(double location[2][DIMENSIONS], const RuntimeParameters& parameters);
-    static double limitedDifference(
+    static void limitedDifference(
       const double*                                QL,
       const double*                                Q,
       const double*                                QR,
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
       int                                          normal,
-      int                                          unknown,
+      double*                                      limitedDifferences,
       const RuntimeParameters&                     parameters
     );
     static void reconstruct(
@@ -189,9 +189,8 @@ namespace exahype2::terms::unittests {
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
       int                                          normal,
-      int                                          unknown,
-      double&                                      reconstructedMinus,
-      double&                                      reconstructedPlus,
+      double*                                      reconstructedMinus,
+      double*                                      reconstructedPlus,
       const RuntimeParameters&                     parameters
     );
     static bool isPhysicallyAdmissible(

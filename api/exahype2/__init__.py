@@ -14,6 +14,7 @@ _LAZY_ATTRIBUTES = {
     "Main": (".main", "Main"),
     "Precision": (".precision", "Precision"),
     "Project": (".project", "Project"),
+    "SymmetricMatrix": (".state", "SymmetricMatrix"),
     "TimeStepping": (".time_stepping", "TimeStepping"),
 }
 

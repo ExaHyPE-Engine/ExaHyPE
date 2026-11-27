@@ -24,9 +24,8 @@ class Husavik(DynamicRuptureScenario):
 
     end_time = 25.0
 
-    # These tracers were copied from Leonhard Rannabauer's work, where they were hardcoded
-    # for the ExaHyPE1 case where the domain was divided into 241 cells, as such they are likely
-    # to be slightly off from the correct position in all cases
+    # The tracer positions come from the ExaHyPE 1 setup of Leonhard Rannabauer with 241 cells along
+    # each axis. They can deviate slightly from the positions of the stations.
     tracer_coordinates = [
         [9.376232362467874, 0.0001, 33.85099388956314],  # body6.75st33.85dp0.09
         [8.246753305766788, 0.0001, 11.638967936983136],  # body5.48st11.64dp0.03
@@ -158,8 +157,8 @@ class Husavik(DynamicRuptureScenario):
   faultPosition = _curvi->split(
     faultNormal,
     14.7,
-    [](tarch::la::Vector<DIMENSIONS, double> x) {
-      static tarch::reader::NetCDFFieldSampler<2> netcdfSampler(
+    [](const tarch::la::Vector<DIMENSIONS, double> x) {
+      static tarch::reader::NetCDFFieldSampler<2> faultSampler(
         {
           {"perturbation", "husavik-fault.nc"}
         },
@@ -167,110 +166,80 @@ class Husavik(DynamicRuptureScenario):
         {-56.406, -1.106}
       );
       // The perturbation moves the plane x = 14.7 onto the fault surface of the file.
-      return netcdfSampler.samplePiecewiseConstant(
-        "perturbation",
-        {x[2], x[1]}
-      );
+      return faultSampler.samplePiecewiseConstant("perturbation", {x[2], x[1]});
     }
   );
 
   _curvi->applyPerturbation(
     1,
-    [](tarch::la::Vector<DIMENSIONS, double> x) {
-      static tarch::reader::NetCDFFieldSampler<2> netcdfSampler(
+    [](const tarch::la::Vector<DIMENSIONS, double> x) {
+      static tarch::reader::NetCDFFieldSampler<2> topographySampler(
         {
           {"perturbation", "husavik-topography.nc"}
         },
         {DomainSize[0], DomainSize[2]},
         {DomainOffset[0], DomainOffset[2]}
       );
-      return netcdfSampler.samplePiecewiseConstant(
-        "perturbation",
-        {x[0], x[2]}
-      );
+      return topographySampler.samplePiecewiseConstant("perturbation", {x[0], x[2]});
     }
   );
 """
 
     def initial_conditions(self):
         return """
-        // Two criteria: Under a given depth (about 14.875km) we use values from a file,
-        // beneath that depth we interpolate linearly from pre-computed values
-        // The NetCDF file uses the same domain transformation as the stresses, see beneath
-        static tarch::reader::NetCDFFieldSampler<3> materialSampler(
-          {
-            {"rho", "husavik-material.nc", "rho", {"x", "y", "z"}},
-            {"cp",  "husavik-material.nc", "cp",  {"x", "y", "z"}},
-            {"cs",  "husavik-material.nc", "cs",  {"x", "y", "z"}}
-          },
-          {
-            (746984.1-563984.1),
-            (7472491-7234491),
-            (14875+1625.)
-          },
-          {
-            563984.1,
-            7234491,
-            -1625.
-          }
-        );
+      // The NetCDF file sets the material down to a depth of 14.875 km. A node without a positive
+      // density in the file interpolates the tabulated layers linearly. The file uses the coordinate
+      // transformation of the initial stress.
+      static tarch::reader::NetCDFFieldSampler<3> materialSampler(
+        {
+          {"rho", "husavik-material.nc", "rho", {"x", "y", "z"}},
+          {"cp", "husavik-material.nc", "cp", {"x", "y", "z"}},
+          {"cs", "husavik-material.nc", "cs", {"x", "y", "z"}}
+        },
+        {(746984.1 - 563984.1), (7472491 - 7234491), (14875 + 1625.)},
+        {563984.1, 7234491, -1625.}
+      );
 
-        const double xx = 634870.90025815+(500*x[0]-866.02540378*x[2]);
-        const double y  = 7327057.0394108+(866.02540378*x[0]+500*x[2]);
-        const double z  = 1000.*x[1];
+      const double easting  = 634870.90025815 + (500 * x[0] - 866.02540378 * x[2]);
+      const double northing = 7327057.0394108 + (866.02540378 * x[0] + 500 * x[2]);
+      const double depth    = 1000. * x[1];
 
-        Q[Shortcuts::rho] = materialSampler.samplePiecewiseConstant(
-          "rho", {xx, y, z}
-        );
-        Q[Shortcuts::cp] = materialSampler.samplePiecewiseConstant(
-          "cp", {xx, y, z}
-        );
-        Q[Shortcuts::cs] = materialSampler.samplePiecewiseConstant(
-          "cs", {xx, y, z}
-        );
+      Q.rho = materialSampler.samplePiecewiseConstant("rho", {easting, northing, depth});
+      Q.cp  = materialSampler.samplePiecewiseConstant("cp", {easting, northing, depth});
+      Q.cs  = materialSampler.samplePiecewiseConstant("cs", {easting, northing, depth});
+      if (Q.rho > 0.0) {
+        // The NetCDF files cover every point with a positive density.
+        return;
+      }
 
-        if (Q[Shortcuts::rho] > 0.0) {
-          // The NetCDF files cover every point with a positive density.
-          return;
-        }
+      constexpr int    NumberOfLayers                      = 11;
+      constexpr double LayerDepths[NumberOfLayers]         = {-3.0, 0.5, 2.5, 5.0, 7.0, 11., 20., 28., 32., 60., 200.};
+      constexpr double Densities[NumberOfLayers]           = {2.5, 2.5, 2.7, 2.8, 2.85, 2.95, 2.95, 3.1, 3.15, 3.26, 3.33};
+      constexpr double PressureWaveSpeeds[NumberOfLayers]  = {3.8, 3.8, 5.2, 6.5, 6.8, 7.0, 7.09, 7.25, 7.4, 7.7, 8.0};
+      constexpr double ShearWaveSpeeds[NumberOfLayers] = {
+        2.159073875530895,
+        2.159073875530895,
+        2.95453198650129,
+        3.6931887112822785,
+        3.8636406792357922,
+        3.9772659035820834,
+        4.028416015411062,
+        4.119309368986427,
+        4.204532701513361,
+        4.374984662549803,
+        4.45
+      };
+      ASSERTION(x[1] <= LayerDepths[NumberOfLayers - 1], x[1]);
 
-        constexpr double xPos[11] = {
-          -3.0, 0.5, 2.5, 5.0, 7.0, 11.,
-          20., 28., 32., 60., 200.
-        };
-        constexpr double rho[11] = {
-          2.5, 2.5, 2.7, 2.8, 2.85, 2.95,
-          2.95, 3.1, 3.15, 3.26, 3.33
-        };
-        constexpr double cp[11] = {
-          3.8, 3.8, 5.2, 6.5, 6.8, 7.0,
-          7.09, 7.25, 7.4, 7.7, 8.0
-        };
-        constexpr double cs[11] = {
-          2.159073875530895,  2.159073875530895,
-          2.95453198650129,   3.6931887112822785,
-          3.8636406792357922, 3.9772659035820834,
-          4.028416015411062,  4.119309368986427,
-          4.204532701513361,  4.374984662549803,
-          4.45
-        };
+      int layer = 1;
+      while (x[1] > LayerDepths[layer]) {
+        layer++;
+      }
 
-        int i=1;
-        while(x[1]>xPos[i]){
-          i++;
-        }
-
-        // y = y0 + (x-x0) * (y1-y0) / (x1-x0);
-        const double xdiff = (x[1]-xPos[i-1])/(xPos[i]-xPos[i-1]);
-        const double rhoL = rho[i-1];
-        const double rhoR = rho[i];
-        Q[Shortcuts::rho] = rhoL+xdiff*(rhoR-rhoL);
-        const double cpL = cp[i-1];
-        const double cpR = cp[i];
-        Q[Shortcuts::cp] = cpL+xdiff*(cpR-cpL);
-        const double csL = cs[i-1];
-        const double csR = cs[i];
-        Q[Shortcuts::cs] = csL+xdiff*(csR-csL);
+      const double weight = (x[1] - LayerDepths[layer - 1]) / (LayerDepths[layer] - LayerDepths[layer - 1]);
+      Q.rho = Densities[layer - 1] + weight * (Densities[layer] - Densities[layer - 1]);
+      Q.cp  = PressureWaveSpeeds[layer - 1] + weight * (PressureWaveSpeeds[layer] - PressureWaveSpeeds[layer - 1]);
+      Q.cs  = ShearWaveSpeeds[layer - 1] + weight * (ShearWaveSpeeds[layer] - ShearWaveSpeeds[layer - 1]);
 """
 
     def generate_required_files(self):
@@ -291,148 +260,98 @@ class Husavik(DynamicRuptureScenario):
     # TODO: Translate the data from the yaml files to here, and ascertain what directions any of it is in
     dynamicRuptureDictionary = {
         "initialStresses": """
-    auto evaluateAndersonianStress = [&](
-      const double* const x,
-      double& b_xx,
-      double& b_yy,
-      double& b_zz,
-      double& b_xy,
-      double& b_yz,
-      double& b_xz
-    ) -> void {
+  // The Andersonian stress follows Aochi and Madariaga (2003), equation A4, in the SeisSol frame with
+  // x pointing east, y north and z up. The vertical stress is the intermediate principal stress. A
+  // negative stress compresses.
+  constexpr double StaticFriction          = 0.55;
+  constexpr double DynamicFriction         = 0.1;
+  constexpr double Cohesion                = 0.;
+  constexpr double RelativePrestress       = 0.55;
+  // An intermediate stress ratio below 0.5 induces transpression, above 0.5 transtension.
+  constexpr double IntermediateStressRatio = 0.5;
+  // The maximum horizontal stress points 30 degrees off the strike of the fault.
+  constexpr double MaximumHorizontalStressAzimuth = 140.;
 
-      constexpr double mu_s = 0.55;
-      constexpr double mu_d = 0.1;
-      // strike alpha means Shmax=alpha+30
-      constexpr double SH_max = 140.;
-      constexpr double cohesion = 0.;
-      // s2ratio<0.5 induces transpression, else transtension
-      constexpr double s2ratio = 0.5;
-      constexpr double i_S_v = 2;
+  const double height                   = -1000. * x[1];
+  const double effectiveVerticalStress  = 2670.0 * 0.4 * 9.8 * std::min(-1500.0, height);
+  const double effectiveConfiningStress = std::fabs(effectiveVerticalStress);
 
-      constexpr double R = 0.55;
-      // constexpr double S = (1.0/R-1.0);
+  const double optimalFaultAngle  = M_PI / 4.0 - 0.5 * std::atan(StaticFriction);
+  const double sineOfTwiceAngle   = std::sin(2.0 * optimalFaultAngle);
+  const double cosineOfTwiceAngle = std::cos(2.0 * optimalFaultAngle);
+  const double shapeFactor        = (2.0 * IntermediateStressRatio - 1.0) / 3.0;
+  const double stressDifference =
+    (DynamicFriction * effectiveConfiningStress
+     + RelativePrestress * (Cohesion + (StaticFriction - DynamicFriction) * effectiveConfiningStress))
+    / (sineOfTwiceAngle + DynamicFriction * (shapeFactor + cosineOfTwiceAngle)
+       + RelativePrestress * (StaticFriction - DynamicFriction) * (shapeFactor + cosineOfTwiceAngle));
+  const double meanStress              = effectiveConfiningStress - shapeFactor * stressDifference;
+  const double maximumHorizontalStress = meanStress + stressDifference;
+  const double minimumHorizontalStress = meanStress - stressDifference;
+  const double verticalStress = meanStress - stressDifference + 2.0 * stressDifference * IntermediateStressRatio;
 
-      const double z  = -1000.*x[1];
-      const double sig_zz = 2670.0*0.4*9.8*std::min(-1500.0,z);
+  const double azimuth       = MaximumHorizontalStressAzimuth * M_PI / 180.0;
+  const double azimuthCosine = std::cos(azimuth);
+  const double azimuthSine   = std::sin(azimuth);
+  const double andersonianXX =
+    -(azimuthCosine * azimuthCosine * minimumHorizontalStress + azimuthSine * azimuthSine * maximumHorizontalStress)
+    * effectiveConfiningStress / verticalStress;
+  const double andersonianXY = -azimuthCosine * azimuthSine * (maximumHorizontalStress - minimumHorizontalStress)
+                             * effectiveConfiningStress / verticalStress;
+  const double andersonianYY =
+    -(azimuthSine * azimuthSine * minimumHorizontalStress + azimuthCosine * azimuthCosine * maximumHorizontalStress)
+    * effectiveConfiningStress / verticalStress;
+  const double andersonianZZ = -effectiveConfiningStress;
 
-      // most favorable direction (A4, AM2003)
-      double Phi = M_PI / 4.0 - 0.5 * atan(mu_s);
-      double SHmax_rad = SH_max * M_PI / 180.0;
-      double s2 = sin(2.0 * Phi);
-      double c2 = cos(2.0 * Phi);
-      double alpha = (2.0 * s2ratio - 1.0) / 3.0;
-      // we assume that szz is the effectiveConfiningStress  = sii/3 which is not necessarily true,
-      // but then we scale the stress to get b_zz = szz
-      double effectiveConfiningStress = std::fabs(sig_zz);
-      // double R = 1.0 / (1.0 + i.S);
-      double ds = (mu_d * effectiveConfiningStress +
-                  R * (cohesion + (mu_s - mu_d) * effectiveConfiningStress)) /
-                  (s2 + mu_d * (alpha + c2) + R * (mu_s - mu_d) * (alpha + c2));
-      double sm = effectiveConfiningStress - alpha * ds;
-      // sii are all positive
-      double s11 = sm + ds;
-      double s22 = sm - ds + 2.0 * ds * s2ratio;
-      double s33 = sm - ds;
-      double S_hmax, S_hmin, S_v;
-      if (i_S_v == 1) {
-          S_hmax = s22;
-          S_hmin = s33;
-          S_v = s11;
-      } else {
-          if (i_S_v == 2) {
-              S_hmax = s11;
-              S_hmin = s33;
-              S_v = s22;
-          } else {
-              S_hmax = s11;
-              S_hmin = s22;
-              S_v = s33;
-          }
-      }
+  // The stress tapers from the Andersonian stress to the confining stress between the heights
+  // TaperStart and TaperStop.
+  constexpr double TaperStart = -9000.;
+  constexpr double TaperStop  = -11000.;
+  constexpr double TaperWidth = (TaperStart - TaperStop);
+  double           taper      = 0.001;
+  if (height >= TaperStart) {
+    taper = 1.0;
+  } else if (height >= TaperStop) {
+    const double position = 1.0 - (height - TaperStop) / TaperWidth;
+    taper                 = 1.0 - (3.0 * position * position - 2.0 * position * position * position);
+  }
 
-      double cs = cos(SHmax_rad);
-      double ss = sin(SHmax_rad);
+  const double stressXX = taper * andersonianXX + (1.0 - taper) * effectiveVerticalStress;
+  const double stressYY = taper * andersonianYY + (1.0 - taper) * effectiveVerticalStress;
+  const double stressZZ = taper * andersonianZZ + (1.0 - taper) * effectiveVerticalStress;
+  const double stressXY = taper * andersonianXY;
 
-      // minus signs added to fall back to SeisSol convention (compressive stress<0)
-
-      b_xx = -(cs * cs * S_hmin + ss * ss * S_hmax) * effectiveConfiningStress / S_v;
-      b_xy = -cs * ss * (S_hmax - S_hmin) * effectiveConfiningStress / S_v;
-      b_xz = 0;
-      b_yy = -(ss * ss * S_hmin + cs * cs * S_hmax) * effectiveConfiningStress / S_v;
-      b_yz = 0;
-      b_zz = -effectiveConfiningStress;
-
-    };
-
-    double b_xx, b_yy, b_zz,
-        b_xy, b_xz, b_yz;
-
-    evaluateAndersonianStress(
-        x,
-        b_xx,
-        b_yy,
-        b_zz,
-        b_xy,
-        b_yz,
-        b_xz
-    );
-
-    const double z  = -1000.*x[1];
-
-    constexpr double zStressDecreaseStart = -9000.;
-    constexpr double zStressDecreaseStop = -11000.;
-    constexpr double zStressDecreaseWidth = (zStressDecreaseStart - zStressDecreaseStop);
-    double Omega;
-    if  (z>=zStressDecreaseStart) {
-      Omega = 1.0;
-    } else {
-      if (z>=zStressDecreaseStop) {
-          const double a = 1.0-(z-zStressDecreaseStop)/zStressDecreaseWidth;
-          const double Sx = (3.0*a*a-2.0*a*a*a);
-          Omega = 1.0-Sx;
-      } else {
-        Omega = 0.001;
-      }
-    }
-
-    const double eCS = 2670.0*0.4*9.8*std::min(-1500.0,z);
-
-    const double stresses[6] = {
-        Omega*b_xx + (1.0-Omega)*eCS, //s_xx
-        Omega*b_yy + (1.0-Omega)*eCS, //s_yy
-        Omega*b_zz + (1.0-Omega)*eCS, //s_zz
-        Omega*b_xy, //s_xy
-        Omega*b_yz, //s_yz
-        Omega*b_xz  //s_xz
-    };
-
-    sxx = 0.000001*(0.25*stresses[0]+0.8660254*stresses[3]+0.75*stresses[1]);
-    sxy = 0.000001*(0.5*stresses[5]+0.8660254*stresses[4]);
-    sxz = 0.000001*(-0.4330127*stresses[0]-0.5*stresses[3]+0.4330127*stresses[1]);
-    syy = 0.000001*(stresses[2]);
-    syz = 0.000001*(-0.8660254*stresses[5]+0.5*stresses[4]);
-    szz = 0.000001*(0.75*stresses[0]-0.8660254*stresses[3]+0.25*stresses[1]);
+  // The rotation into the mesh frame converts the stress from Pa to MPa.
+  sxx = 0.000001 * (0.25 * stressXX + 0.8660254 * stressXY + 0.75 * stressYY);
+  sxy = 0;
+  sxz = 0.000001 * (-0.4330127 * stressXX - 0.5 * stressXY + 0.4330127 * stressYY);
+  syy = 0.000001 * (stressZZ);
+  syz = 0;
+  szz = 0.000001 * (0.75 * stressXX - 0.8660254 * stressXY + 0.25 * stressYY);
     """,
         "n_yz": "return 0;",
         "cohesion": """
-  constexpr double cohesion = -.4;
-  constexpr double zIncreasingCohesion = 10.0;
-  const double z = -x[1];
-  if (z >= -zIncreasingCohesion) {
-    return -(cohesion - 2.0 * (z+zIncreasingCohesion)/zIncreasingCohesion);
+  constexpr double BaseCohesion           = -.4;
+  constexpr double CohesionIncreaseHeight = 10.0;
+  const double     height                 = -x[1];
+  if (height >= -CohesionIncreaseHeight) {
+    return -(BaseCohesion - 2.0 * (height + CohesionIncreaseHeight) / CohesionIncreaseHeight);
   }
-  return -cohesion;
+  return -BaseCohesion;
 """,
         "forced_rupture_time": """
-  const double xx = 634870.90025815+(500*x[0]-866.02540378*x[2]);
-  const double y  = 7327057.0394108+(866.02540378*x[0]+500*x[2]);
-  const double z  = -1000.*x[1];
-  const double r = sqrt(pow(xx-639613.9, 2.0) + pow(y-7340258.5, 2.0) + pow(z+5000.0, 2.0));
-  constexpr double r_crit = 3000.0;
-  constexpr double Vs = 3800.0;
-  if (r <= r_crit) {
-    return r/(0.7*Vs)+(0.081*r_crit/(0.7*Vs))*(1.0/(1.0-pow(r/r_crit, 2.0))-1.0);
+  const double     easting          = 634870.90025815 + (500 * x[0] - 866.02540378 * x[2]);
+  const double     northing         = 7327057.0394108 + (866.02540378 * x[0] + 500 * x[2]);
+  const double     height           = -1000. * x[1];
+  const double     distance         = std::sqrt(
+    std::pow(easting - 639613.9, 2.0) + std::pow(northing - 7340258.5, 2.0) + std::pow(height + 5000.0, 2.0)
+  );
+  constexpr double CriticalDistance = 3000.0;
+  constexpr double ShearWaveSpeed   = 3800.0;
+  if (distance <= CriticalDistance) {
+    return distance / (0.7 * ShearWaveSpeed)
+         + (0.081 * CriticalDistance / (0.7 * ShearWaveSpeed))
+             * (1.0 / (1.0 - std::pow(distance / CriticalDistance, 2.0)) - 1.0);
   }
   return 1000000000.0;
 """,

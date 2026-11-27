@@ -147,42 +147,35 @@ initial_conditions = """
 
   const double localEnergy = localPressure / (GAMMA - 1.0);
 
-  Q[0] = inPlume ? RHO_HOT : RHO_AMBIENT;  // density
-  Q[1] = 0.0;                              // rho*u
-  Q[2] = 0.0;                              // rho*v
-  Q[3] = localEnergy;                      // total energy
+  Q.rho  = inPlume ? RHO_HOT : RHO_AMBIENT;
+  Q.rhoU = 0.0;
+  Q.rhoE = localEnergy;
 """
 
 boundary_conditions = """
   if (x(1) >= DomainSize[1] - 0.001) {
-    Qoutside[0] = RHO_AMBIENT;
-    Qoutside[1] = 0.0;
-    Qoutside[2] = 0.0;
-    Qoutside[3] = P0 / (GAMMA - 1.0);
+    Qoutside.rho  = RHO_AMBIENT;
+    Qoutside.rhoU = 0.0;
+    Qoutside.rhoE = P0 / (GAMMA - 1.0);
   } else if (x(1) <= DomainOffset[1] + 0.001) {
-    Qoutside[0] = Qinside[0];
-    Qoutside[1] = Qinside[1];
-    Qoutside[2] = -Qinside[2];
-    Qoutside[3] = Qinside[3];
+    Qoutside         = Qinside;
+    Qoutside.rhoU(1) = -Qinside.rhoU(1);
   } else if (x(0) <= DomainOffset[0] + 0.001 or x(0) >= DomainSize[0] - 0.001) {
-    Qoutside[0] = Qinside[0];
-    Qoutside[1] = Qinside[1];
-    Qoutside[2] = Qinside[2];
-    Qoutside[3] = Qinside[3];
+    Qoutside = Qinside;
   }
 """
 
 compute_primitive_variables = r"""
-  const auto irho = 1.0 / Q[Shortcuts::rho];
-  const auto u0 = Q[Shortcuts::rhoU] * irho;
-  const auto u1 = Q[Shortcuts::rhoV] * irho;
+  const auto irho = 1.0 / Q.rho;
+  const auto u0 = Q.rhoU(0) * irho;
+  const auto u1 = Q.rhoU(1) * irho;
 
   const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
   const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
   const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 
-  const auto internalE = Q[Shortcuts::rhoE] - 0.5 * Q[Shortcuts::rho] * uSq;
+  const auto internalE = Q.rhoE - 0.5 * Q.rho * uSq;
   const auto p = (GAMMA - 1.0) * internalE;
 """
 
@@ -197,27 +190,22 @@ max_eigenvalue = r"""
 flux = r"""
   {compute_primitive_variables}
 
-  F[Shortcuts::rho] = Q[Shortcuts::rhoU + normal];
-
-  F[Shortcuts::rhoU] = Q[Shortcuts::rhoU] * u_n;
-  F[Shortcuts::rhoV] = Q[Shortcuts::rhoV] * u_n;
-
-  F[Shortcuts::rhoU + normal] += p;
-
-  F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + p) * u_n;
+  F.rho  = Q.rhoU(normal);
+  F.rhoU = Q.rhoU * u_n;
+  F.rhoU(normal) += p;
+  F.rhoE = (Q.rhoE + p) * u_n;
 """.format(compute_primitive_variables=compute_primitive_variables)
 
 source_term = """
-  S[0] = 0.0;
-  S[1] = 0.0;
-  S[2] = -GRAVITY * Q[0];
-  S[3] = -GRAVITY * Q[2];
+  S         = {};
+  S.rhoU(1) = -GRAVITY * Q.rho;
+  S.rhoE    = -GRAVITY * Q.rhoU(1);
 """
 
 fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
-    unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},
+    unknowns={"rho": 1, "rhoU": 2, "rhoE": 1},
     auxiliary_variables=0,
     time_stepping=exahype2.TimeStepping.Adaptive(0.4),
     scheme=exahype2.fv.Godunov(),

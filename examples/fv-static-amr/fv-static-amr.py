@@ -52,26 +52,21 @@ project = exahype2.Project(
 )
 
 initial_conditions = """
-  Q[Shortcuts::rho]       = 1.0;
-  Q[Shortcuts::rhoU + 0]  = 0.0;
-  Q[Shortcuts::rhoU + 1]  = 0.0;
+  Q.rho  = 1.0;
+  Q.rhoU = 0.0;
 #if DIMENSIONS == 2
-  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(x(0), 2) + std::pow(x(1), 2)) < 0.2) ? (1.0) : (1.01));
+  Q.rhoE = ((std::sqrt(std::pow(x(0), 2) + std::pow(x(1), 2)) < 0.2) ? (1.0) : (1.01));
 #else
-  Q[Shortcuts::rhoU + 2]  = 0.0;
-  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(x(0), 2) + std::pow(x(1), 2) + std::pow(x(2), 2)) < 0.2) ? (1.0) : (1.01));
+  Q.rhoE = ((std::sqrt(std::pow(x(0), 2) + std::pow(x(1), 2) + std::pow(x(2), 2)) < 0.2) ? (1.0) : (1.01));
 #endif
 """
 
 boundary_conditions = """
   // The solver calls these reflecting walls only with --periodic-bc off.
-  Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
-  Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
-  Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
-#if DIMENSIONS == 3
-  Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
-#endif
-  Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
+  Qoutside = Qinside;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    Qoutside.rhoU(axis) = -Qinside.rhoU(axis);
+  }
 """
 
 refinement_criterion = """
@@ -92,11 +87,11 @@ refinement_criterion = """
 """
 
 compute_primitive_variables = r"""
-  const auto irho = 1.0 / Q[Shortcuts::rho];
-  const auto u0 = Q[Shortcuts::rhoU + 0] * irho;
-  const auto u1 = Q[Shortcuts::rhoU + 1] * irho;
+  const auto irho = 1.0 / Q.rho;
+  const auto u0 = Q.rhoU(0) * irho;
+  const auto u1 = Q.rhoU(1) * irho;
 #if DIMENSIONS == 3
-  const auto u2 = Q[Shortcuts::rhoU + 2] * irho;
+  const auto u2 = Q.rhoU(2) * irho;
 #endif
 
 #if DIMENSIONS == 3
@@ -109,7 +104,7 @@ compute_primitive_variables = r"""
   const auto u_n = (normal == 0) ? u0 : u1;
 #endif
 
-  const auto internalE = Q[Shortcuts::rhoE] - 0.5 * Q[Shortcuts::rho] * uSq;
+  const auto internalE = Q.rhoE - 0.5 * Q.rho * uSq;
   const auto p = (GAMMA - 1.0) * internalE;
 """
 
@@ -124,17 +119,12 @@ max_eigenvalue = r"""
 flux = r"""
   {compute_primitive_variables}
 
-  F[Shortcuts::rho] = Q[Shortcuts::rhoU + normal];
-
-  F[Shortcuts::rhoU + 0] = Q[Shortcuts::rhoU + 0] * u_n;
-  F[Shortcuts::rhoU + 1] = Q[Shortcuts::rhoU + 1] * u_n;
-#if DIMENSIONS == 3
-  F[Shortcuts::rhoU + 2] = Q[Shortcuts::rhoU + 2] * u_n;
-#endif
-
-  F[Shortcuts::rhoU + normal] += p;
-
-  F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + p) * u_n;
+  F.rho = Q.rhoU(normal);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {{
+    F.rhoU(axis) = Q.rhoU(axis) * u_n;
+  }}
+  F.rhoU(normal) += p;
+  F.rhoE = (Q.rhoE + p) * u_n;
 """.format(compute_primitive_variables=compute_primitive_variables)
 
 fv_solver = exahype2.fv.Solver(

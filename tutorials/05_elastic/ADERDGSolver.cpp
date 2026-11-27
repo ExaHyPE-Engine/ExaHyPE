@@ -13,98 +13,64 @@ namespace {
 
 void
 tutorials::exahype2::elastic::ADERDGSolver::initialCondition(
-  double* const NOALIAS                        Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const RuntimeParameters&                     parameters
+  State&                   Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const RuntimeParameters& parameters
 ) {
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    Q[i] = 0.0;
-  }
   const double     r2 = cellCentre[0] * cellCentre[0] + cellCentre[1] * cellCentre[1] + cellCentre[2] * cellCentre[2];
-  constexpr double Width  = 0.1;
-  const double     bump   = std::exp(-r2 / (2.0 * Width * Width));
-  Q[Shortcuts::sigma + 0] = bump; // sigma_xx
-  Q[Shortcuts::sigma + 1] = bump; // sigma_yy
-  Q[Shortcuts::sigma + 2] = bump; // sigma_zz
+  constexpr double Width = 0.1;
+  const double     bump  = std::exp(-r2 / (2.0 * Width * Width));
+  Q                      = {};
+  Q.sigma(0, 0)          = bump; // sigma_xx
+  Q.sigma(1, 1)          = bump; // sigma_yy
+  Q.sigma(2, 2)          = bump; // sigma_zz
 }
 
 void
 tutorials::exahype2::elastic::ADERDGSolver::boundaryConditions(
-  const double* const NOALIAS                  Qinside,
-  double* const NOALIAS                        Qoutside,
-  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const int                                    normal,
-  const RuntimeParameters&                     parameters
+  const State&             Qinside,
+  State&                   Qoutside,
+  const Coordinates&       faceCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const int                normal,
+  const RuntimeParameters& parameters
 ) {
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    Qoutside[i] = 0.0;
-  }
+  Qoutside = {};
 }
 
 double
 tutorials::exahype2::elastic::ADERDGSolver::maxEigenvalue(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  const RuntimeParameters&                     parameters
+  const State&             Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const double             timeStepSize,
+  const int                normal,
+  const RuntimeParameters& parameters
 ) {
   return Cp;
 }
 
 void
 tutorials::exahype2::elastic::ADERDGSolver::flux(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  double* const NOALIAS                        F,
-  const RuntimeParameters&                     parameters
+  const State&             Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const double             timeStepSize,
+  const int                normal,
+  Flux&                    F,
+  const RuntimeParameters& parameters
 ) {
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = 0.0;
+  F = {};
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    F.v(axis)           = -InverseRho * Q.sigma(normal, axis);
+    F.sigma(axis, axis) = -Lambda * Q.v(normal);
+    if (axis != normal) {
+      F.sigma(normal, axis) = -Mu * Q.v(axis);
+    }
   }
-  const double vx = Q[Shortcuts::v + 0];
-  const double vy = Q[Shortcuts::v + 1];
-  const double vz = Q[Shortcuts::v + 2];
-
-  switch (normal) {
-  case 0: // x
-    F[Shortcuts::v + 0]     = -InverseRho * Q[Shortcuts::sigma + 0];
-    F[Shortcuts::v + 1]     = -InverseRho * Q[Shortcuts::sigma + 3];
-    F[Shortcuts::v + 2]     = -InverseRho * Q[Shortcuts::sigma + 4];
-    F[Shortcuts::sigma + 0] = -(Lambda + 2.0 * Mu) * vx;
-    F[Shortcuts::sigma + 1] = -Lambda * vx;
-    F[Shortcuts::sigma + 2] = -Lambda * vx;
-    F[Shortcuts::sigma + 3] = -Mu * vy;
-    F[Shortcuts::sigma + 4] = -Mu * vz;
-    break;
-  case 1: // y
-    F[Shortcuts::v + 0]     = -InverseRho * Q[Shortcuts::sigma + 3];
-    F[Shortcuts::v + 1]     = -InverseRho * Q[Shortcuts::sigma + 1];
-    F[Shortcuts::v + 2]     = -InverseRho * Q[Shortcuts::sigma + 5];
-    F[Shortcuts::sigma + 0] = -Lambda * vy;
-    F[Shortcuts::sigma + 1] = -(Lambda + 2.0 * Mu) * vy;
-    F[Shortcuts::sigma + 2] = -Lambda * vy;
-    F[Shortcuts::sigma + 3] = -Mu * vx;
-    F[Shortcuts::sigma + 5] = -Mu * vz;
-    break;
-  case 2: // z
-    F[Shortcuts::v + 0]     = -InverseRho * Q[Shortcuts::sigma + 4];
-    F[Shortcuts::v + 1]     = -InverseRho * Q[Shortcuts::sigma + 5];
-    F[Shortcuts::v + 2]     = -InverseRho * Q[Shortcuts::sigma + 2];
-    F[Shortcuts::sigma + 0] = -Lambda * vz;
-    F[Shortcuts::sigma + 1] = -Lambda * vz;
-    F[Shortcuts::sigma + 2] = -(Lambda + 2.0 * Mu) * vz;
-    F[Shortcuts::sigma + 4] = -Mu * vx;
-    F[Shortcuts::sigma + 5] = -Mu * vy;
-    break;
-  }
+  F.sigma(normal, normal) = -(Lambda + 2.0 * Mu) * Q.v(normal);
 }

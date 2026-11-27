@@ -103,6 +103,7 @@ exahype2::dg::extrapolateStateToFaces(
     NodesPerAxis,
     NumberOfData,
     NumberOfData,
+    NumberOfData,
     0,
     CellPrecision,
     FacePrecision,
@@ -217,6 +218,7 @@ exahype2::dg::extrapolateFluxToFaces(
     ASSERTION(nodalFluxes != nullptr);
     exahype2::dg::extrapolateNodalFieldToFaces<
       NodesPerAxis,
+      NumberOfUnknowns,
       NumberOfUnknowns,
       NumberOfUnknowns,
       AxisStride,

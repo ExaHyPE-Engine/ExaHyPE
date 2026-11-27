@@ -9,7 +9,6 @@ def initial():
   // axis PmlTop is a free surface without a layer.
   {
     constexpr int    NodesPerAxis       = DGOrder + 1;
-    constexpr int    NumberOfData       = NumberOfUnknowns + NumberOfAuxiliaryVariables;
     constexpr double AmplitudeNumerator = 6.0;
     const auto&      quadraturePoints   = Quadrature<{{STORAGE_PRECISION}}>::getQuadraturePoints1D();
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -25,7 +24,7 @@ def initial():
         }
         nodeIndexAlongAxis %= NodesPerAxis;
         const double position = lowerEdge + h[axis] * quadraturePoints[nodeIndexAlongAxis];
-        auto&        damping  = Q[node * NumberOfData + Shortcuts::pmlDamping + axis];
+        auto&        damping  = Q[node].pmlDamping(axis);
         if (PmlTop != axis and position < lowerBound) {
           damping = amplitude * std::pow((lowerBound - position) / width, PmlPower);
         }
@@ -41,70 +40,67 @@ def initial():
 def flux():
     return CurvilinearElastic.flux() + """
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    F[Shortcuts::pml + 9 * normal + axis] = F[Shortcuts::v + axis];
+    F.pml(normal, axis) = F.v(axis);
   }
 """
 
 
 def ncp():
     return """
-  const auto* const metric             = Q + Shortcuts::metricDerivative + normal * DIMENSIONS;
-  const auto* const velocityJump       = deltaQ + Shortcuts::v;
-  const auto        density            = Q[Shortcuts::rho];
-  const auto        damping            = Q[Shortcuts::pmlDamping + normal];
-  const auto        shearModulus       = density * Q[Shortcuts::cs] * Q[Shortcuts::cs];
-  const auto        firstLameParameter = density * Q[Shortcuts::cp] * Q[Shortcuts::cp] - 2 * shearModulus;
-  const auto        lameTimesDivergence = firstLameParameter
-    * (-metric[0] * velocityJump[0] - metric[1] * velocityJump[1] - metric[2] * velocityJump[2]);
-  std::fill_n(BTimesDeltaQ, NumberOfUnknowns, 0);
+  // The first three of the nine entries per axis contain the velocity and the last six the stress.
+  const auto& metric              = Q.metricDerivative;
+  const auto& velocityJump        = deltaQ.v;
+  const auto  density             = Q.rho;
+  const auto  damping             = Q.pmlDamping(normal);
+  const auto  shearModulus        = density * Q.cs * Q.cs;
+  const auto  firstLameParameter  = density * Q.cp * Q.cp - 2 * shearModulus;
+  const auto  lameTimesDivergence = firstLameParameter
+    * (-metric(normal, 0) * velocityJump(0) - metric(normal, 1) * velocityJump(1) - metric(normal, 2) * velocityJump(2));
+  BTimesDeltaQ = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    BTimesDeltaQ[Shortcuts::sigma + axis] = -2 * shearModulus * metric[axis] * velocityJump[axis] + lameTimesDivergence;
+    BTimesDeltaQ.sigma(axis, axis) =
+      -2 * shearModulus * metric(normal, axis) * velocityJump(axis) + lameTimesDivergence;
+    BTimesDeltaQ.pml(normal, 3 + axis) = -damping * metric(normal, axis) * velocityJump(axis);
   }
-  BTimesDeltaQ[Shortcuts::sigma + 3] = -shearModulus * (metric[1] * velocityJump[0] + metric[0] * velocityJump[1]);
-  BTimesDeltaQ[Shortcuts::sigma + 4] = -shearModulus * (metric[2] * velocityJump[0] + metric[0] * velocityJump[2]);
-  BTimesDeltaQ[Shortcuts::sigma + 5] = -shearModulus * (metric[2] * velocityJump[1] + metric[1] * velocityJump[2]);
-
-  auto* const layer = BTimesDeltaQ + Shortcuts::pml + 9 * normal + Shortcuts::sigma;
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    layer[axis] = -damping * metric[axis] * velocityJump[axis];
-  }
-  layer[3] = -damping * (metric[1] * velocityJump[0] + metric[0] * velocityJump[1]);
-  layer[4] = -damping * (metric[2] * velocityJump[0] + metric[0] * velocityJump[2]);
-  layer[5] = -damping * (metric[2] * velocityJump[1] + metric[1] * velocityJump[2]);
+  BTimesDeltaQ.sigma(0, 1) = -shearModulus * (metric(normal, 1) * velocityJump(0) + metric(normal, 0) * velocityJump(1));
+  BTimesDeltaQ.sigma(0, 2) = -shearModulus * (metric(normal, 2) * velocityJump(0) + metric(normal, 0) * velocityJump(2));
+  BTimesDeltaQ.sigma(1, 2) = -shearModulus * (metric(normal, 2) * velocityJump(1) + metric(normal, 1) * velocityJump(2));
+  BTimesDeltaQ.pml(normal, 6) = -damping * (metric(normal, 1) * velocityJump(0) + metric(normal, 0) * velocityJump(1));
+  BTimesDeltaQ.pml(normal, 7) = -damping * (metric(normal, 2) * velocityJump(0) + metric(normal, 0) * velocityJump(2));
+  BTimesDeltaQ.pml(normal, 8) = -damping * (metric(normal, 2) * velocityJump(1) + metric(normal, 1) * velocityJump(2));
 """
 
 
 def algebraic_source():
     return """
-  const auto density             = Q[Shortcuts::rho];
-  const auto shearModulus        = density * Q[Shortcuts::cs] * Q[Shortcuts::cs];
-  const auto firstLameParameter  = density * Q[Shortcuts::cp] * Q[Shortcuts::cp] - 2 * shearModulus;
+  const auto density             = Q.rho;
+  const auto shearModulus        = density * Q.cs * Q.cs;
+  const auto firstLameParameter  = density * Q.cp * Q.cp - 2 * shearModulus;
   const auto longitudinalModulus = 2 * shearModulus + firstLameParameter;
   const auto inverseDensity      = 1 / density;
-  // The layer stores nine entries per axis: The velocity first, then the stress.
-  const auto layer = [Q](const int axis, const int entry) { return Q[Shortcuts::pml + 9 * axis + entry]; };
+  // The first three of the nine entries per axis contain the velocity and the last six the stress.
+  const auto& layer = Q.pml;
 
   for (int component = 0; component < DIMENSIONS; component++) {
-    S[Shortcuts::v + component] = -inverseDensity * (layer(0, component) + layer(1, component) + layer(2, component));
+    S.v(component) = -inverseDensity * (layer(0, component) + layer(1, component) + layer(2, component));
   }
-  S[Shortcuts::sigma + 0] = -(longitudinalModulus * layer(0, 3) + firstLameParameter * (layer(0, 4) + layer(0, 5))
-                            + longitudinalModulus * layer(1, 3) + firstLameParameter * (layer(1, 4) + layer(1, 5))
-                            + longitudinalModulus * layer(2, 3) + firstLameParameter * (layer(2, 4) + layer(2, 5)));
-  S[Shortcuts::sigma + 1] = -(longitudinalModulus * layer(0, 4) + firstLameParameter * (layer(0, 3) + layer(0, 5))
-                            + longitudinalModulus * layer(1, 4) + firstLameParameter * (layer(1, 3) + layer(1, 5))
-                            + longitudinalModulus * layer(2, 4) + firstLameParameter * (layer(2, 3) + layer(2, 5)));
-  S[Shortcuts::sigma + 2] = -(longitudinalModulus * layer(0, 5) + firstLameParameter * (layer(0, 3) + layer(0, 4))
-                            + longitudinalModulus * layer(1, 5) + firstLameParameter * (layer(1, 3) + layer(1, 4))
-                            + longitudinalModulus * layer(2, 5) + firstLameParameter * (layer(2, 3) + layer(2, 4)));
-  for (int shearComponent = 3; shearComponent < 6; shearComponent++) {
-    S[Shortcuts::sigma + shearComponent] =
-      -shearModulus * (layer(0, 3 + shearComponent) + layer(1, 3 + shearComponent) + layer(2, 3 + shearComponent));
-  }
+  S.sigma(0, 0) = -(longitudinalModulus * layer(0, 3) + firstLameParameter * (layer(0, 4) + layer(0, 5))
+                  + longitudinalModulus * layer(1, 3) + firstLameParameter * (layer(1, 4) + layer(1, 5))
+                  + longitudinalModulus * layer(2, 3) + firstLameParameter * (layer(2, 4) + layer(2, 5)));
+  S.sigma(1, 1) = -(longitudinalModulus * layer(0, 4) + firstLameParameter * (layer(0, 3) + layer(0, 5))
+                  + longitudinalModulus * layer(1, 4) + firstLameParameter * (layer(1, 3) + layer(1, 5))
+                  + longitudinalModulus * layer(2, 4) + firstLameParameter * (layer(2, 3) + layer(2, 5)));
+  S.sigma(2, 2) = -(longitudinalModulus * layer(0, 5) + firstLameParameter * (layer(0, 3) + layer(0, 4))
+                  + longitudinalModulus * layer(1, 5) + firstLameParameter * (layer(1, 3) + layer(1, 4))
+                  + longitudinalModulus * layer(2, 5) + firstLameParameter * (layer(2, 3) + layer(2, 4)));
+  S.sigma(0, 1) = -shearModulus * (layer(0, 6) + layer(1, 6) + layer(2, 6));
+  S.sigma(0, 2) = -shearModulus * (layer(0, 7) + layer(1, 7) + layer(2, 7));
+  S.sigma(1, 2) = -shearModulus * (layer(0, 8) + layer(1, 8) + layer(2, 8));
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    const auto damping    = Q[Shortcuts::pmlDamping + axis];
+    const auto damping    = Q.pmlDamping(axis);
     const auto relaxation = PmlAlphaConstant + PmlAlphaScalar * damping;
     for (int entry = 0; entry < 9; entry++) {
-      S[Shortcuts::pml + 9 * axis + entry] = -(damping + relaxation) * layer(axis, entry);
+      S.pml(axis, entry) = -(damping + relaxation) * layer(axis, entry);
     }
   }
 """
@@ -112,15 +108,13 @@ def algebraic_source():
 
 def multiplyMaterialParameterMatrix():
     return """
-  const auto jacobian                    = Q[Shortcuts::jacobian];
-  const auto inverseDensityTimesJacobian = 1 / (Q[Shortcuts::rho] * jacobian);
+  const auto jacobian                    = Q.jacobian;
+  const auto inverseDensityTimesJacobian = 1 / (Q.rho * jacobian);
+  rhs.v                                  = inverseDensityTimesJacobian * rhs.v;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    rhs[Shortcuts::v + axis] = inverseDensityTimesJacobian * rhs[Shortcuts::v + axis];
-  }
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    const auto damping = Q[Shortcuts::pmlDamping + axis];
+    const auto damping = Q.pmlDamping(axis);
     for (int component = 0; component < DIMENSIONS; component++) {
-      rhs[Shortcuts::pml + 9 * axis + component] = damping / jacobian * rhs[Shortcuts::pml + 9 * axis + component];
+      rhs.pml(axis, component) = damping / jacobian * rhs.pml(axis, component);
     }
   }
 """

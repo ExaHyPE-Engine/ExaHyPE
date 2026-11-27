@@ -126,24 +126,24 @@ class NavierStokes(Equation):
             + """;
 
   auto maxEval = [&](
-    const auto* const NOALIAS Q,
+    const auto& Q,
     const int normal
   ){
-    const auto* const j = &Q[Shortcuts::j];
-    const auto E = Q[Shortcuts::E];
-    const auto rho = Q[Shortcuts::rho];"""
+    const auto& j = Q.j;
+    const auto E = Q.E;
+    const auto rho = Q.rho;"""
             + (
                 """
-    const auto height = Q[Shortcuts::height];"""
+    const auto height = Q.height;"""
                 if self._use_gravity
                 else ""
             )
             + """
     const auto Z = """
-            + ("Q[Shortcuts::Z];" if self._use_advection else "0;")
+            + ("Q.Z;" if self._use_advection else "0;")
             + self.evaluate_pressure()
             + """
-    const auto normalVelocity = Q[Shortcuts::j+normal]/rho;
+    const auto normalVelocity = Q.j(normal)/rho;
     const auto c = std::sqrt(AdiabaticIndex * (pressure/rho));
     const double lambda = std::fmax(
       std::abs(normalVelocity-c), std::abs(normalVelocity+c)
@@ -152,15 +152,15 @@ class NavierStokes(Equation):
   };
 
   auto diffusiveEval = [&](
-    const auto* const NOALIAS Q,
+    const auto& Q,
     [[maybe_unused]] const int normal
   ){
     double smaxDiffusive = MolecularDiffusionCoefficient;
     smaxDiffusive = std::fmax(
-      smaxDiffusive, (4./3.) * (ReferenceViscosity/Q[Shortcuts::rho])
+      smaxDiffusive, (4./3.) * (ReferenceViscosity/Q.rho)
     );
     return std::fmax(
-      smaxDiffusive, (AdiabaticIndex * ReferenceViscosity) / (PrandtlNumber * Q[Shortcuts::rho])
+      smaxDiffusive, (AdiabaticIndex * ReferenceViscosity) / (PrandtlNumber * Q.rho)
     );
   };
 """
@@ -181,21 +181,21 @@ class NavierStokes(Equation):
 
     def flux(self):
         flux_init = (
-            """  const auto rho = Q[Shortcuts::rho];
-  const auto* const j = &Q[Shortcuts::j];
-  const auto E = Q[Shortcuts::E];
+            """  const auto rho = Q.rho;
+  const auto& j = Q.j;
+  const auto E = Q.E;
   const auto Z = """
-            + ("Q[Shortcuts::Z]" if self._use_advection else "0")
+            + ("Q.Z" if self._use_advection else "0")
             + """;"""
             + (
                 """
-  const auto height = Q[Shortcuts::height];"""
+  const auto height = Q.height;"""
                 if self._use_gravity
                 else ""
             )
             + """
   const auto backgroundPressure = """
-            + ("Q[Shortcuts::backgroundstate+1]" if self._use_background_state else "0")
+            + ("Q.backgroundstate(1)" if self._use_background_state else "0")
             + """;
 """
             + (
@@ -226,15 +226,13 @@ class NavierStokes(Equation):
         )
 
         flux_euler = """
-  F[Shortcuts::rho] = j[normal];
-  F[Shortcuts::j+0] = invRho * j[normal] * j[0];
-  F[Shortcuts::j+1] = invRho * j[normal] * j[1];
-#if DIMENSIONS==3
-  F[Shortcuts::j+2] = invRho * j[normal] * j[2];
-#endif
-  F[Shortcuts::E] = invRho * j[normal] * (E+pressure);
+  F.rho = j[normal];
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    F.j(axis) = invRho * j[normal] * j[axis];
+  }
+  F.E = invRho * j[normal] * (E+pressure);
 
-  F[Shortcuts::j+normal] += (pressure-backgroundPressure);
+  F.j(normal) += (pressure-backgroundPressure);
 """
         flux_viscous = (
             """
@@ -247,23 +245,23 @@ class NavierStokes(Equation):
             + """;
   constexpr auto ThermalConductivity = 1./PrandtlNumber * ReferenceViscosity * AdiabaticIndex * IsochoricHeatCapacity;
 
-  const auto uu   = invRho * Q[Shortcuts::j];
-  const auto uux  = invRho * (deltaQ[0][Shortcuts::j+0] - uu * deltaQ[0][Shortcuts::rho]);
-  const auto uuy  = invRho * (deltaQ[1][Shortcuts::j+0] - uu * deltaQ[1][Shortcuts::rho]);
+  const auto uu   = invRho * Q.j(0);
+  const auto uux  = invRho * (deltaQ[0].j(0) - uu * deltaQ[0].rho);
+  const auto uuy  = invRho * (deltaQ[1].j(0) - uu * deltaQ[1].rho);
 
-  const auto vv   = invRho * Q[Shortcuts::j+1];
-  const auto vvx  = invRho * (deltaQ[0][Shortcuts::j+1] - vv * deltaQ[0][Shortcuts::rho]);
-  const auto vvy  = invRho * (deltaQ[1][Shortcuts::j+1] - vv * deltaQ[1][Shortcuts::rho]);
+  const auto vv   = invRho * Q.j(1);
+  const auto vvx  = invRho * (deltaQ[0].j(1) - vv * deltaQ[0].rho);
+  const auto vvy  = invRho * (deltaQ[1].j(1) - vv * deltaQ[1].rho);
 
 #if DIMENSIONS == 2
   const auto divV23 = 2./3. * (uux + vvy);
 #else
-  const auto ww   = invRho * Q[Shortcuts::j+2];
-  const auto uuz  = invRho * (deltaQ[2][Shortcuts::j+0] - uu * deltaQ[2][Shortcuts::rho]);
-  const auto vvz  = invRho * (deltaQ[2][Shortcuts::j+1] - vv * deltaQ[2][Shortcuts::rho]);
-  const auto wwx  = invRho * (deltaQ[0][Shortcuts::j+2] - ww * deltaQ[0][Shortcuts::rho]);
-  const auto wwy  = invRho * (deltaQ[1][Shortcuts::j+2] - ww * deltaQ[1][Shortcuts::rho]);
-  const auto wwz  = invRho * (deltaQ[2][Shortcuts::j+2] - ww * deltaQ[2][Shortcuts::rho]);
+  const auto ww   = invRho * Q.j(2);
+  const auto uuz  = invRho * (deltaQ[2].j(0) - uu * deltaQ[2].rho);
+  const auto vvz  = invRho * (deltaQ[2].j(1) - vv * deltaQ[2].rho);
+  const auto wwx  = invRho * (deltaQ[0].j(2) - ww * deltaQ[0].rho);
+  const auto wwy  = invRho * (deltaQ[1].j(2) - ww * deltaQ[1].rho);
+  const auto wwz  = invRho * (deltaQ[2].j(2) - ww * deltaQ[2].rho);
   const auto divV23 = 2./3. * (uux + vvy + wwz);
 #endif
 
@@ -292,12 +290,12 @@ class NavierStokes(Equation):
       ASSERTION(false, normal);
   }
 
-  F[Shortcuts::j+0] -= Fj[0];
-  F[Shortcuts::j+1] -= Fj[1];
-  F[Shortcuts::E] -= Fj[0]*uu + Fj[1]*vv;
+  F.j(0) -= Fj[0];
+  F.j(1) -= Fj[1];
+  F.E -= Fj[0]*uu + Fj[1]*vv;
 #if DIMENSIONS == 3
-  F[Shortcuts::j+2] -= Fj[2];
-  F[Shortcuts::E] -= Fj[2] *ww;
+  F.j(2) -= Fj[2];
+  F.E -= Fj[2] *ww;
 #endif
 """
         )
@@ -308,25 +306,25 @@ class NavierStokes(Equation):
   const auto invRho3 = invRho2 * invRho;
 
 #if DIMENSIONS == 2
-  const auto dTdW1 = -1 * Q[Shortcuts::E] * invRho2 +
-          invRho3 * (Q[Shortcuts::j]*Q[Shortcuts::j] + Q[Shortcuts::j+1] * Q[Shortcuts::j+1]);
+  const auto dTdW1 = -1 * Q.E * invRho2 +
+          invRho3 * (Q.j(0)*Q.j(0) + Q.j(1) * Q.j(1));
 #else
-  const auto dTdW1 = -1 * Q[Shortcuts::E] * invRho2 +
-          invRho3 * (Q[Shortcuts::j]*Q[Shortcuts::j] + Q[Shortcuts::j+1] * Q[Shortcuts::j+1] + Q[Shortcuts::j+2] * Q[Shortcuts::j+2]);
+  const auto dTdW1 = -1 * Q.E * invRho2 +
+          invRho3 * (Q.j(0)*Q.j(0) + Q.j(1) * Q.j(1) + Q.j(2) * Q.j(2));
 #endif
-  const auto dTdW2 = -1 * Q[Shortcuts::j] * invRho2;
-  const auto dTdW3 = -1 * Q[Shortcuts::j+1] * invRho2;
+  const auto dTdW2 = -1 * Q.j(0) * invRho2;
+  const auto dTdW3 = -1 * Q.j(1) * invRho2;
 #if DIMENSIONS == 3
-  const auto dTdW4 = -1 * Q[Shortcuts::j+2] * invRho2;
+  const auto dTdW4 = -1 * Q.j(2) * invRho2;
 #endif
 
-  auto T = invCv * (dTdW1 * deltaQ[normal][Shortcuts::rho] +
-            dTdW2 * deltaQ[normal][Shortcuts::j+0] +
-            dTdW3 * deltaQ[normal][Shortcuts::j+1] +
+  auto T = invCv * (dTdW1 * deltaQ[normal].rho +
+            dTdW2 * deltaQ[normal].j(0) +
+            dTdW3 * deltaQ[normal].j(1) +
 #if DIMENSIONS == 3
-            dTdW4 * deltaQ[normal][Shortcuts::j+2] +
+            dTdW4 * deltaQ[normal].j(2) +
 #endif
-            invRho * deltaQ[normal][Shortcuts::E]);
+            invRho * deltaQ[normal].E);
             """
             + (
                 """
@@ -338,25 +336,25 @@ class NavierStokes(Equation):
                 else ""
             )
             + """
-  F[Shortcuts::E] -= ThermalConductivity * T;
+  F.E -= ThermalConductivity * T;
 """
         )
 
         flux_advection = (
             """
-  F[Shortcuts::Z] = j[normal] * Z * invRho;
+  F.Z = j[normal] * Z * invRho;
 
   const auto factor = invCv * HeatRelease * invRho2;
   T = -factor *
-          (Q[Shortcuts::rho] * deltaQ[normal][Shortcuts::Z] -
-            Q[Shortcuts::Z] * deltaQ[normal][Shortcuts::rho]);
-  F[Shortcuts::E] -= ThermalConductivity * T;
+          (Q.rho * deltaQ[normal].Z -
+            Q.Z * deltaQ[normal].rho);
+  F.E -= ThermalConductivity * T;
 
   constexpr auto MolecularDiffusionCoefficient = """
             + str(self._molecular_diffusion_coeff)
             + """;
-  F[Shortcuts::rho] -= MolecularDiffusionCoefficient * deltaQ[normal][Shortcuts::rho];
-  F[Shortcuts::Z] -= MolecularDiffusionCoefficient * deltaQ[normal][Shortcuts::Z];
+  F.rho -= MolecularDiffusionCoefficient * deltaQ[normal].rho;
+  F.Z -= MolecularDiffusionCoefficient * deltaQ[normal].Z;
 """
         )
 
@@ -373,13 +371,13 @@ class NavierStokes(Equation):
             return None
         return (
             """
-  std::fill_n(S, NumberOfUnknowns, 0);
+  S = {};
 
-  auto rhoPerturbation = Q[Shortcuts::rho];
+  auto rhoPerturbation = Q.rho;
 """
             + (
                 """
-  const auto backgroundRho = Q[Shortcuts::backgroundstate+0];
+  const auto backgroundRho = Q.backgroundstate(0);
   rhoPerturbation -= backgroundRho;
 """
                 if self._use_background_state
@@ -389,7 +387,7 @@ class NavierStokes(Equation):
                 """
   constexpr auto Gravity = 9.81;
   // Gravity acts in y direction in 2D and in z direction in 3D.
-  S[Shortcuts::j+DIMENSIONS-1] = -1 * rhoPerturbation * Gravity;
+  S.j(DIMENSIONS - 1) = -1 * rhoPerturbation * Gravity;
 """
                 if self._use_gravity
                 else ""
@@ -399,10 +397,11 @@ class NavierStokes(Equation):
     def riemann_solver(self):
         return (
             """
-  constexpr int ValuesPerNode = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  using FaceValue = std::remove_cvref_t<decltype(QL[0])>;
-  FaceValue QavL[ValuesPerNode] __attribute__((aligned(16))) = {0};
-  FaceValue QavR[ValuesPerNode] __attribute__((aligned(16))) = {0};
+  using FaceState = std::remove_cvref_t<decltype(QL[0])>;
+  using FaceFlux  = std::remove_cvref_t<decltype(FL[0])>;
+  using FaceValue = std::remove_cvref_t<decltype(QL[0].rho)>;
+  FaceState QavL{};
+  FaceState QavR{};
 
 #if DIMENSIONS==3
   constexpr int NodesPerFace = (DGOrder+1)*(DGOrder+1);
@@ -413,19 +412,24 @@ class NavierStokes(Equation):
   // The weighted node values add in fixed point. A mirrored face then averages the same values in
   // another order and returns the same bits.
   const auto faceWeights = Quadrature<FaceValue>::getQuadratureWeightsOnFace();
+  constexpr int          ValuesPerNode = sizeof(FaceState) / sizeof(FaceValue);
+  const FaceValue* const leftValues    = reinterpret_cast<const FaceValue*>(&QL[0]);
+  const FaceValue* const rightValues   = reinterpret_cast<const FaceValue*>(&QR[0]);
+  FaceValue* const       leftAverage   = reinterpret_cast<FaceValue*>(&QavL);
+  FaceValue* const       rightAverage  = reinterpret_cast<FaceValue*>(&QavR);
   for (int n = 0; n < ValuesPerNode; n++) {
     double weightedLeft[NodesPerFace];
     double weightedRight[NodesPerFace];
     for (int xy = 0; xy < NodesPerFace; xy++) {
       weightedLeft[xy]  = tarch::la::productRoundedOnce(
-        static_cast<double>(faceWeights[xy]), static_cast<double>(QL[xy * ValuesPerNode + n])
+        static_cast<double>(faceWeights[xy]), static_cast<double>(leftValues[xy * ValuesPerNode + n])
       );
       weightedRight[xy] = tarch::la::productRoundedOnce(
-        static_cast<double>(faceWeights[xy]), static_cast<double>(QR[xy * ValuesPerNode + n])
+        static_cast<double>(faceWeights[xy]), static_cast<double>(rightValues[xy * ValuesPerNode + n])
       );
     }
-    QavL[n] = static_cast<FaceValue>(tarch::la::sumInFixedPoint(weightedLeft, NodesPerFace));
-    QavR[n] = static_cast<FaceValue>(tarch::la::sumInFixedPoint(weightedRight, NodesPerFace));
+    leftAverage[n]  = static_cast<FaceValue>(tarch::la::sumInFixedPoint(weightedLeft, NodesPerFace));
+    rightAverage[n] = static_cast<FaceValue>(tarch::la::sumInFixedPoint(weightedRight, NodesPerFace));
   }
 
   """
@@ -433,21 +437,22 @@ class NavierStokes(Equation):
             + """
 
   auto smax = std::fmax(
-    maxEval(&QavL[0], normal),
-    maxEval(&QavR[0], normal)
+    maxEval(QavL, normal),
+    maxEval(QavR, normal)
   );
 
   const auto factor = 2 * (2 * DGOrder + 1) / (h[normal] * std::sqrt(0.5 * std::numbers::pi));
   smax += factor*std::fmax(
-    diffusiveEval(&QavL[0], normal), diffusiveEval(&QavR[0], normal)
+    diffusiveEval(QavL, normal), diffusiveEval(QavR, normal)
   );
 
-  for (int xy = 0; xy < NodesPerFace; xy++) {
-    for (int n = 0; n < NumberOfUnknowns; n++) {
-      FL[xy*NumberOfUnknowns+n] = 0.5 * (FL[xy * NumberOfUnknowns + n] + FR[xy * NumberOfUnknowns + n]
-        + smax * (QL[xy * ValuesPerNode + n] - QR[xy * ValuesPerNode + n]) );
-      FR[xy * NumberOfUnknowns + n] = FL[xy * NumberOfUnknowns + n];
-    }
+  for (int node = 0; node < NodesPerFace; node++) {
+    const FaceFlux sumOfFluxes = FL[node] + FR[node];
+    const FaceFlux jumpOfState = QL[node] - QR[node];
+    FL[node] = transform(sumOfFluxes, jumpOfState, [&](const auto sum, const auto jump) {
+      return 0.5 * (sum + smax * jump);
+    });
+    FR[node] = FL[node];
   }
   return smax;
 """

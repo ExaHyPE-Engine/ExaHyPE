@@ -4,7 +4,7 @@
 
 TARGET_DECLARE
 template <typename Scalar>
-struct alignas(16) tarch::la::Vector<4, Scalar> {
+struct tarch::la::Vector<4, Scalar> {
   Scalar _values[4]{};
 
   Vector() = default;

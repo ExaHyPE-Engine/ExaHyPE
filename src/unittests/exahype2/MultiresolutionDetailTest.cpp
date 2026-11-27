@@ -24,30 +24,48 @@ namespace {
   constexpr double CoarsenSafetyFactor   = 9.0;
 
   template <typename Value>
-  struct Density final {
-    INLINE_METHOD GPU_CALLABLE_METHOD double operator()(const Value* const volume) const { return volume[0]; }
+  struct PatchState final {
+    Value density{};
+    Value velocity{};
+    Value pressure{};
   };
 
-  template <typename Value>
+  struct Density final {
+    template <typename Value>
+    INLINE_METHOD GPU_CALLABLE_METHOD double operator()(const PatchState<Value>& state) const {
+      return state.density;
+    }
+  };
+
   struct Pressure final {
-    INLINE_METHOD GPU_CALLABLE_METHOD double operator()(const Value* const volume) const { return volume[2]; }
+    template <typename Value>
+    INLINE_METHOD GPU_CALLABLE_METHOD double operator()(const PatchState<Value>& state) const {
+      return state.pressure;
+    }
   };
 
   struct RefineEveryPatchOnDetail final {
-    const double*                patches{nullptr};
+    const PatchState<double>*    states{nullptr};
     exahype2::RefinementCommand* commands{nullptr};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int patch) const {
-      commands[patch] = exahype2::refineOnDetail(
-        patches + static_cast<std::ptrdiff_t>(patch) * NumberOfPatchValues,
+      using CellStates = PatchState<double>[NumberOfVolumes];
+      commands[patch]  = exahype2::refineOnDetail(
+        reinterpret_cast<const CellStates*>(states + static_cast<std::ptrdiff_t>(patch) * NumberOfVolumes),
         exahype2::getVolumeCentresInUnitInterval<NumberOfDofsPerAxis>(),
-        NumberOfPatchUnknowns,
         Eps,
         CoarsenSafetyFactor,
-        Density<double>{},
-        Pressure<double>{}
+        Density{},
+        Pressure{}
       );
     }
+  };
+
+  /**
+   * Returns the density of a volume that stores the density only.
+   */
+  struct DensityOfVolume final {
+    INLINE_METHOD GPU_CALLABLE_METHOD double operator()(const double* const volume) const { return volume[0]; }
   };
 
   struct ComputeDetailOfEveryPatch final {
@@ -59,7 +77,7 @@ namespace {
         patches + static_cast<std::ptrdiff_t>(patch) * NumberOfVolumes,
         exahype2::getVolumeCentresInUnitInterval<NumberOfDofsPerAxis>(),
         1,
-        Density<double>{}
+        DensityOfVolume{}
       );
     }
   };
@@ -109,6 +127,18 @@ namespace {
       patch[index + 2] = volume(0) < NumberOfDofsPerAxis / 2 ? 2.0 : 20.0;
     });
     return patch;
+  }
+
+  template <typename Value>
+  void setStatesOf(const std::vector<double>& patch, PatchState<Value> (&states)[NumberOfVolumes]) {
+    for (int volume = 0; volume < NumberOfVolumes; volume++) {
+      const int index = volume * NumberOfPatchUnknowns;
+      states[volume]  = {
+        static_cast<Value>(patch[index]),
+        static_cast<Value>(patch[index + 1]),
+        static_cast<Value>(patch[index + 2])
+      };
+    }
   }
 } // namespace
 
@@ -384,84 +414,62 @@ UNIT_TEST("The command of a detail refines above eps, erases below eps over the 
   }
 }
 
-UNIT_TEST("The function refineOnDetail() keeps a null patch, erases an affine patch and refines a pressure jump") {
-  GIVEN("A null patch, a smooth patch and a patch with a pressure jump in double and in single precision") {
-    const double* const       nullPatch   = nullptr;
-    const std::vector<double> smoothPatch = getSmoothPatch();
-    const std::vector<double> jumpPatch   = getPatchWithAPressureJump();
-    const std::vector<float>  singlePrecisionPatch(jumpPatch.begin(), jumpPatch.end());
+UNIT_TEST("The function refineOnDetail() keeps a null cell, erases a smooth cell and refines a pressure jump") {
+  GIVEN("A null cell, the states of a smooth cell and the states of a cell with a pressure jump in both precisions") {
+    const PatchState<double>(*const nullCell)[NumberOfVolumes] = nullptr;
+    PatchState<double> smoothStates[NumberOfVolumes];
+    PatchState<double> jumpStates[NumberOfVolumes];
+    PatchState<float>  singlePrecisionJumpStates[NumberOfVolumes];
+    setStatesOf(getSmoothPatch(), smoothStates);
+    setStatesOf(getPatchWithAPressureJump(), jumpStates);
+    setStatesOf(getPatchWithAPressureJump(), singlePrecisionJumpStates);
 
-    WHEN("The function refineOnDetail() evaluates every patch with the density or with the density and the pressure") {
-      const exahype2::RefinementCommand commandOfTheNullPatch = exahype2::refineOnDetail(
-        nullPatch,
+    WHEN("The function refineOnDetail() evaluates the states with the density or with the density and the pressure") {
+      const exahype2::RefinementCommand commandOfTheNullCell =
+        exahype2::refineOnDetail(nullCell, VolumeCentres, Eps, CoarsenSafetyFactor, Density{});
+      const exahype2::RefinementCommand commandOfTheSmoothStates =
+        exahype2::refineOnDetail(&smoothStates, VolumeCentres, Eps, CoarsenSafetyFactor, Density{}, Pressure{});
+      const exahype2::RefinementCommand commandOfTheDensityOfTheJumpStates =
+        exahype2::refineOnDetail(&jumpStates, VolumeCentres, Eps, CoarsenSafetyFactor, Density{});
+      const exahype2::RefinementCommand commandOfTheJumpStates =
+        exahype2::refineOnDetail(&jumpStates, VolumeCentres, Eps, CoarsenSafetyFactor, Density{}, Pressure{});
+      const exahype2::RefinementCommand commandOfTheSinglePrecisionJumpStates = exahype2::refineOnDetail(
+        &singlePrecisionJumpStates,
         VolumeCentres,
-        NumberOfPatchUnknowns,
         Eps,
         CoarsenSafetyFactor,
-        Density<double>{}
-      );
-      const exahype2::RefinementCommand commandOfTheSmoothPatch = exahype2::refineOnDetail(
-        smoothPatch.data(),
-        VolumeCentres,
-        NumberOfPatchUnknowns,
-        Eps,
-        CoarsenSafetyFactor,
-        Density<double>{},
-        Pressure<double>{}
-      );
-      const exahype2::RefinementCommand commandOfTheDensityOfTheJumpPatch = exahype2::refineOnDetail(
-        jumpPatch.data(),
-        VolumeCentres,
-        NumberOfPatchUnknowns,
-        Eps,
-        CoarsenSafetyFactor,
-        Density<double>{}
-      );
-      const exahype2::RefinementCommand commandOfTheJumpPatch = exahype2::refineOnDetail(
-        jumpPatch.data(),
-        VolumeCentres,
-        NumberOfPatchUnknowns,
-        Eps,
-        CoarsenSafetyFactor,
-        Density<double>{},
-        Pressure<double>{}
-      );
-      const exahype2::RefinementCommand commandOfTheSinglePrecisionPatch = exahype2::refineOnDetail(
-        singlePrecisionPatch.data(),
-        VolumeCentres,
-        NumberOfPatchUnknowns,
-        Eps,
-        CoarsenSafetyFactor,
-        Density<float>{},
-        Pressure<float>{}
+        Density{},
+        Pressure{}
       );
 
-      THEN("The null patch keeps, the smooth indicators erase and the pressure jump refines in both precisions") {
-        VALIDATE(commandOfTheNullPatch == exahype2::RefinementCommand::Keep);
-        VALIDATE(commandOfTheSmoothPatch == exahype2::RefinementCommand::Erase);
-        VALIDATE(commandOfTheDensityOfTheJumpPatch == exahype2::RefinementCommand::Erase);
-        VALIDATE(commandOfTheJumpPatch == exahype2::RefinementCommand::Refine);
-        VALIDATE(commandOfTheSinglePrecisionPatch == exahype2::RefinementCommand::Refine);
+      THEN("The null cell keeps, the smooth indicators erase and the pressure jump refines in both precisions") {
+        VALIDATE(commandOfTheNullCell == exahype2::RefinementCommand::Keep);
+        VALIDATE(commandOfTheSmoothStates == exahype2::RefinementCommand::Erase);
+        VALIDATE(commandOfTheDensityOfTheJumpStates == exahype2::RefinementCommand::Erase);
+        VALIDATE(commandOfTheJumpStates == exahype2::RefinementCommand::Refine);
+        VALIDATE(commandOfTheSinglePrecisionJumpStates == exahype2::RefinementCommand::Refine);
       }
     }
   }
 }
 
-UNIT_TEST("A device kernel derives the same refinement commands from patches in device memory as the host") {
-  GIVEN("A smooth patch and a patch with a pressure jump in device memory") {
-    constexpr int             NumberOfPatches = 2;
-    const std::vector<double> smoothPatch     = getSmoothPatch();
-    const std::vector<double> jumpPatch       = getPatchWithAPressureJump();
-    std::vector<double>       patches(smoothPatch);
-    patches.insert(patches.end(), jumpPatch.begin(), jumpPatch.end());
-    tarch::accelerator::Buffer<double> devicePatches(patches.size(), tarch::MemoryLocation::Device);
-    devicePatches.setValues(patches);
+UNIT_TEST("A device kernel derives the same refinement commands from states in device memory as the host") {
+  GIVEN("The states of a smooth cell and of a cell with a pressure jump in device memory") {
+    constexpr int      NumberOfPatches = 2;
+    PatchState<double> smoothStates[NumberOfVolumes];
+    PatchState<double> jumpStates[NumberOfVolumes];
+    setStatesOf(getSmoothPatch(), smoothStates);
+    setStatesOf(getPatchWithAPressureJump(), jumpStates);
+    std::vector<PatchState<double>> states(std::begin(smoothStates), std::end(smoothStates));
+    states.insert(states.end(), std::begin(jumpStates), std::end(jumpStates));
+    tarch::accelerator::Buffer<PatchState<double>> deviceStates(states.size(), tarch::MemoryLocation::Device);
+    deviceStates.setValues(states);
 
-    WHEN("A device kernel refines every patch on the detail of the density and the pressure") {
+    WHEN("A device kernel refines every cell on the detail of the density and the pressure") {
       tarch::accelerator::Buffer<exahype2::RefinementCommand> commands(NumberOfPatches, tarch::MemoryLocation::Device);
       tarch::accelerator::parallelFor(
         tarch::accelerator::Range(NumberOfPatches),
-        RefineEveryPatchOnDetail{devicePatches.getData(), commands.getData()}
+        RefineEveryPatchOnDetail{deviceStates.getData(), commands.getData()}
       );
       const std::vector<exahype2::RefinementCommand> deviceCommands = commands.getValues();
 

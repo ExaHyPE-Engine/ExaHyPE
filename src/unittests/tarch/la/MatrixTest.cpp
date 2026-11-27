@@ -5,6 +5,7 @@
 #include "tarch/la/MatrixMatrixOperations.h"
 #include "tarch/la/MatrixOperations.h"
 #include "tarch/la/MatrixScalarOperations.h"
+#include "tarch/la/Vector.h"
 #include "tarch/testing/UnitTest.h"
 
 UNIT_TEST("A matrix from one value stores it in every entry and its copy stores it too") {
@@ -196,15 +197,16 @@ UNIT_TEST("The square matrices of one to four rows store their entries in compac
       static_assert(sizeof(tarch::la::Matrix<1, 1, int>) == sizeof(int));
       static_assert(std::is_trivially_copyable<tarch::la::Matrix<1, 1, int>>::value);
       static_assert(sizeof(tarch::la::Matrix<2, 2, int>) == 16);
-      static_assert(alignof(tarch::la::Matrix<2, 2, int>) == 8);
+      static_assert(alignof(tarch::la::Matrix<2, 2, int>) == alignof(int));
       static_assert(std::is_standard_layout<tarch::la::Matrix<2, 2, int>>::value);
       static_assert(std::is_trivially_copyable<tarch::la::Matrix<2, 2, int>>::value);
-      static_assert(sizeof(tarch::la::Matrix<3, 3, int>) == 48);
-      static_assert(alignof(tarch::la::Matrix<3, 3, int>) == 16);
+      static_assert(sizeof(tarch::la::Matrix<3, 3, int>) == 36);
+      static_assert(alignof(tarch::la::Matrix<3, 3, int>) == alignof(int));
+      static_assert(sizeof(tarch::la::Matrix<3, 3, double>) == 72);
       static_assert(std::is_standard_layout<tarch::la::Matrix<3, 3, int>>::value);
       static_assert(std::is_trivially_copyable<tarch::la::Matrix<3, 3, int>>::value);
       static_assert(sizeof(tarch::la::Matrix<4, 4, int>) == 64);
-      static_assert(alignof(tarch::la::Matrix<4, 4, int>) == 16);
+      static_assert(alignof(tarch::la::Matrix<4, 4, int>) == alignof(int));
       static_assert(std::is_standard_layout<tarch::la::Matrix<4, 4, int>>::value);
       static_assert(std::is_trivially_copyable<tarch::la::Matrix<4, 4, int>>::value);
 
@@ -466,6 +468,24 @@ UNIT_TEST("A four by four matrix returns its diagonal, its rows, its columns, it
       THEN("The sum is 136 and the largest magnitude is 16") {
         VALIDATE_EQUALS(sum, 136);
         VALIDATE_EQUALS(largestMagnitude, 16);
+      }
+    }
+  }
+}
+
+UNIT_TEST("A vector of matrices accesses the entries of every matrix and prints every matrix in brackets") {
+  GIVEN("A vector of the two matrices with the rows 1, 2 and 3, 4 and with the rows 5, 6 and 7, 8") {
+    tarch::la::Vector<2, tarch::la::Matrix<2, 2, int>> matrices;
+    matrices(0) = {1, 2, 3, 4};
+    matrices(1) = {5, 6, 7, 8};
+
+    WHEN("The test overwrites the entry of row 1 and column 0 of the second matrix with 9") {
+      matrices(1)(1, 0) = 9;
+
+      THEN("The second matrix reads 9 there and the text of the vector contains both matrices") {
+        VALIDATE_EQUALS(matrices(1)(1, 0), 9);
+        VALIDATE_EQUALS(matrices(0)(1, 0), 3);
+        VALIDATE_EQUALS(::toString(matrices), std::string("[[[1,2],[3,4]],[[5,6],[9,8]]]"));
       }
     }
   }

@@ -10,87 +10,78 @@ namespace {
 
 void
 tutorials::exahype2::acoustic::ADERDGSolver::initialCondition(
-  double* const NOALIAS                        Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const RuntimeParameters&                     parameters
+  State&                   Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const RuntimeParameters& parameters
 ) {
-  Q[Shortcuts::p]     = 0.0;
-  Q[Shortcuts::v + 0] = 0.0;
-  Q[Shortcuts::v + 1] = 0.0;
+  Q = {};
 }
 
 void
 tutorials::exahype2::acoustic::ADERDGSolver::boundaryConditions(
-  const double* const NOALIAS                  Qinside,
-  double* const NOALIAS                        Qoutside,
-  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const int                                    normal,
-  const RuntimeParameters&                     parameters
+  const State&             Qinside,
+  State&                   Qoutside,
+  const Coordinates&       faceCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const int                normal,
+  const RuntimeParameters& parameters
 ) {
-  Qoutside[Shortcuts::p]     = 0.0;
-  Qoutside[Shortcuts::v + 0] = 0.0;
-  Qoutside[Shortcuts::v + 1] = 0.0;
+  Qoutside = {};
 }
 
 double
 tutorials::exahype2::acoustic::ADERDGSolver::maxEigenvalue(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  const RuntimeParameters&                     parameters
+  const State&             Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const double             timeStepSize,
+  const int                normal,
+  const RuntimeParameters& parameters
 ) {
   return C;
 }
 
 void
 tutorials::exahype2::acoustic::ADERDGSolver::flux(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  double* const NOALIAS                        F,
-  const RuntimeParameters&                     parameters
+  const State&             Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const double             timeStepSize,
+  const int                normal,
+  Flux&                    F,
+  const RuntimeParameters& parameters
 ) {
-  F[Shortcuts::p]          = K0 * Q[Shortcuts::v + normal];
-  F[Shortcuts::v + 0]      = 0.0;
-  F[Shortcuts::v + 1]      = 0.0;
-  F[Shortcuts::v + normal] = Q[Shortcuts::p] / Rho;
+  F.p         = K0 * Q.v(normal);
+  F.v         = 0.0;
+  F.v(normal) = Q.p / Rho;
 }
 
 void
 tutorials::exahype2::acoustic::ADERDGSolver::pointSource(
-  const double* const NOALIAS Q,
-  const double* const         x,
-  const double                t,
-  const double                dt,
-  double* const NOALIAS       forceVector,
-  const int                   n,
-  const RuntimeParameters&    parameters
+  const State&             Q,
+  const Coordinates&       x,
+  const double             t,
+  const double             dt,
+  Source&                  forceVector,
+  const int                n,
+  const RuntimeParameters& parameters
 ) {
-  forceVector[Shortcuts::p]     = 0.0;
-  forceVector[Shortcuts::v + 0] = 0.0;
-  forceVector[Shortcuts::v + 1] = 0.0;
-
   constexpr double PulsePeakTime  = 0.25;
   constexpr double PulseWidth     = 0.08;
   constexpr double PulseAmplitude = 1.0;
-  forceVector[Shortcuts::p] =
+  forceVector                     = {};
+  forceVector.p =
     PulseAmplitude * std::exp(-(t - PulsePeakTime) * (t - PulsePeakTime) / (2.0 * PulseWidth * PulseWidth));
 }
 
 void
 tutorials::exahype2::acoustic::ADERDGSolver::initPointSourceLocations(
-  double                   location[NumberOfPointSources][DIMENSIONS],
+  PointSourceLocations&    location,
   const RuntimeParameters& parameters
 ) {
-  location[0][0] = -0.7;
-  location[0][1] = -0.7;
+  location[0] = {-0.7, -0.7};
 }

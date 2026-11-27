@@ -1,0 +1,79 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/CompileTarget.h"
+{%- for include in STATE_INCLUDES %}
+#include "{{include}}"
+{%- endfor %}
+
+TARGET_DECLARE
+namespace {{FULL_QUALIFIED_NAMESPACE}} {
+{%- for type in ["Unknowns", "State"] %}
+{%- set name = SOLVER_NAME ~ type %}
+  template <typename Value>
+  struct {{name}};
+
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> operator+(const {{name}}<Value>& left, const {{name}}<Value>& right);
+
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> operator-(const {{name}}<Value>& left, const {{name}}<Value>& right);
+
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> operator*(std::type_identity_t<Value> scalar, const {{name}}<Value>& value);
+
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> operator*(const {{name}}<Value>& value, std::type_identity_t<Value> scalar);
+
+  template <typename Value, typename Function>
+  INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> transform(
+    const {{name}}<Value>& left,
+    const {{name}}<Value>& right,
+    const Function& function
+  );
+
+  template <typename Value, typename Predicate>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool allOf(const {{name}}<Value>& value, const Predicate& predicate);
+{%- if not loop.last %}
+{% endif %}
+{%- endfor %}
+} // namespace {{FULL_QUALIFIED_NAMESPACE}}
+
+/**
+ * Stores the unknowns of one point of the solution array. The pointer overloads of the PDE terms
+ * access the solution array through this struct.
+ */
+template <typename Value>
+struct __attribute__((may_alias)) {{FULL_QUALIFIED_NAMESPACE}}::{{SOLVER_NAME}}Unknowns {
+{%- for member in STATE_UNKNOWN_MEMBERS %}
+  {{member.declaration}}{};
+{%- endfor %}
+};
+
+/**
+ * Stores the unknowns and the auxiliary variables of one point of the solution array.
+ */
+template <typename Value>
+struct __attribute__((may_alias)) {{FULL_QUALIFIED_NAMESPACE}}::{{SOLVER_NAME}}State final :
+  public {{FULL_QUALIFIED_NAMESPACE}}::{{SOLVER_NAME}}Unknowns<Value> {
+{%- for member in STATE_AUXILIARY_MEMBERS %}
+  {{member.declaration}}{};
+{%- endfor %}
+};
+TARGET_DECLARE_END
+
+static_assert(
+  sizeof({{FULL_QUALIFIED_NAMESPACE}}::{{SOLVER_NAME}}Unknowns<double>) == {{NUMBER_OF_UNKNOWNS}} * sizeof(double)
+    and alignof({{FULL_QUALIFIED_NAMESPACE}}::{{SOLVER_NAME}}Unknowns<double>) == alignof(double),
+  "The unknowns of one point occupy consecutive values of the solution array."
+);
+
+static_assert(
+  sizeof({{FULL_QUALIFIED_NAMESPACE}}::{{SOLVER_NAME}}State<double>) == {{NUMBER_OF_DATA}} * sizeof(double)
+    and alignof({{FULL_QUALIFIED_NAMESPACE}}::{{SOLVER_NAME}}State<double>) == alignof(double),
+  "The state of one point occupies consecutive values of the solution array."
+);
+
+#include "{{CLASSNAME}}.cpph"

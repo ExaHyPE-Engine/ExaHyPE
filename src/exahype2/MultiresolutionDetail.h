@@ -38,11 +38,10 @@ namespace exahype2 {
     double                                          floor = 1.0e-12
   );
 
-  template <std::size_t NumberOfNodesPerAxis, typename Value, typename... Indicators>
+  template <std::size_t NumberOfNodesPerAxis, typename State, std::size_t NumberOfStates, typename... Indicators>
   INLINE_METHOD GPU_CALLABLE_METHOD RefinementCommand refineOnDetail(
-    const Value*                                    Q,
+    const State (*Q)[NumberOfStates],
     const std::array<double, NumberOfNodesPerAxis>& nodesInUnitInterval,
-    int                                             numberOfUnknownsPlusAuxiliaryVariables,
     double                                          eps,
     double                                          coarsenSafetyFactor,
     const Indicators&... indicators

@@ -1257,6 +1257,7 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getWaveSpeedsOfVolu
     state[value] = static_cast<ComputePrecision>(stored[value]);
   }
   tarch::la::Vector<DIMENSIONS, ComputePrecision> waveSpeeds;
+  UNROLL(DIMENSIONS)
   for (int normal = 0; normal < DIMENSIONS; normal++) {
     waveSpeeds(normal) =
       Derived::maxEigenvalue(state, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, parameters);

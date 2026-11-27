@@ -7,27 +7,24 @@
 
 namespace applications::exahype2::exaskred::riemann {
   template <
-    class Shortcuts,
-    int BathymetryIndex,
-    int NumberOfUnknowns,
-    int NumberOfAuxiliaryVariables,
-    int Order,
-    typename T,
+    auto Bathymetry,
+    typename FaceStates,
+    typename FaceFluxes,
     typename MaxEigenvalue,
     typename InterfaceGravity
   >
   INLINE_METHOD GPU_CALLABLE_METHOD double wellBalancedRusanov(
-    const T* const NOALIAS                       QL,
-    const T* const NOALIAS                       QR,
+    const FaceStates&                            QL,
+    const FaceStates&                            QR,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     MaxEigenvalue&&                              maxEigenvalue,
     InterfaceGravity&&                           interfaceGravity,
-    T* const NOALIAS                             FL,
-    T* const NOALIAS                             FR
+    FaceFluxes&                                  FL,
+    FaceFluxes&                                  FR
   );
 } // namespace applications::exahype2::exaskred::riemann
 

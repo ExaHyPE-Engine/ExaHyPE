@@ -1,22 +1,18 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaskred::limiting::CellStatistics<T>
-applications::exahype2::exaskred::limiting::collectCellStatistics(const T* const Q, const int numberOfStates) {
-  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  applications::exahype2::exaskred::limiting::CellStatistics<T> result;
-  for (int state = 0; state < numberOfStates; state++) {
-    const auto* const values = Q + state * NumberOfData;
-    for (int entry = 0; entry < NumberOfData; entry++) {
-      if (not std::isfinite(values[entry])) {
-        result.finite = false;
-        return result;
-      }
+template <typename State>
+INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaskred::limiting::CellStatistics<decltype(State::h)>
+applications::exahype2::exaskred::limiting::collectCellStatistics(const std::span<const State> Q) {
+  applications::exahype2::exaskred::limiting::CellStatistics<decltype(State::h)> result;
+  for (const State& state : Q) {
+    if (not allOf(state, [](const auto value) { return std::isfinite(value); })) {
+      result.finite = false;
+      return result;
     }
 
-    const auto waterHeight = values[Shortcuts::h];
-    const auto bathymetry  = values[Shortcuts::b];
+    const auto waterHeight = state.h;
+    const auto bathymetry  = state.b;
     const auto freeSurface = waterHeight + bathymetry;
     result.minHeight       = std::min(result.minHeight, waterHeight);
     result.maxHeight       = std::max(result.maxHeight, waterHeight);
@@ -25,53 +21,41 @@ applications::exahype2::exaskred::limiting::collectCellStatistics(const T* const
     result.minFreeSurface  = std::min(result.minFreeSurface, freeSurface);
     result.maxFreeSurface  = std::max(result.maxFreeSurface, freeSurface);
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-      result.maxMomentum = std::max(result.maxMomentum, std::abs(values[Shortcuts::hu + dimension]));
+      result.maxMomentum = std::max(result.maxMomentum, std::abs(state.hu(dimension)));
     }
   }
   return result;
 }
 
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
-applications::exahype2::exaskred::limiting::isWetCell(
-  const T* const Q,
-  const int      numberOfStates,
-  const double   minimumWaterHeight
-) {
-  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
-    Shortcuts,
-    NumberOfUnknowns,
-    NumberOfAuxiliaryVariables
-  >(Q, numberOfStates);
-  return statistics.finite and statistics.minHeight > static_cast<T>(minimumWaterHeight);
+applications::exahype2::exaskred::limiting::isWetCell(const std::span<const State> Q, const double minimumWaterHeight) {
+  using Value           = decltype(State::h);
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics(Q);
+  return statistics.finite and statistics.minHeight > static_cast<Value>(minimumWaterHeight);
 }
 
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::limiting::hasBoundedDepthVariation(
-  const T* const Q,
-  const int      numberOfStates,
-  const double   minimumWaterHeight,
-  const double   maximumRelativeDepthVariation
+  const std::span<const State> Q,
+  const double                 minimumWaterHeight,
+  const double                 maximumRelativeDepthVariation
 ) {
-  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
-    Shortcuts,
-    NumberOfUnknowns,
-    NumberOfAuxiliaryVariables
-  >(Q, numberOfStates);
-  return statistics.finite and statistics.minHeight > static_cast<T>(minimumWaterHeight) and statistics.maxHeight > T{}
+  using Value           = decltype(State::h);
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics(Q);
+  return statistics.finite and statistics.minHeight > static_cast<Value>(minimumWaterHeight)
+    and statistics.maxHeight > Value{}
   and statistics.maxHeight - statistics.minHeight
-    <= static_cast<T>(maximumRelativeDepthVariation) * statistics.maxHeight;
+    <= static_cast<Value>(maximumRelativeDepthVariation) * statistics.maxHeight;
 }
 
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
-applications::exahype2::exaskred::limiting::isAdmissibleState(const T* const Q, const double minimumWaterHeight) {
-  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  for (int entry = 0; entry < NumberOfData; entry++) {
-    if (not std::isfinite(Q[entry])) {
-      return false;
-    }
+applications::exahype2::exaskred::limiting::isAdmissibleState(const State& Q, const double minimumWaterHeight) {
+  using Value = decltype(State::h);
+  if (not allOf(Q, [](const auto value) { return std::isfinite(value); })) {
+    return false;
   }
-  return Q[Shortcuts::h] >= static_cast<T>(minimumWaterHeight);
+  return Q.h >= static_cast<Value>(minimumWaterHeight);
 }

@@ -43,23 +43,19 @@ project = exahype2.Project(
 )
 
 initial_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
 #if DIMENSIONS == 3
-    Q[i] = tarch::la::productInOrderOfMagnitude(
-      std::sin(x(0) * tarch::la::PI),
-      std::sin(x(1) * tarch::la::PI),
-      std::sin(x(2) * tarch::la::PI)
-    );
+  Q.v = tarch::la::productInOrderOfMagnitude(
+    std::sin(x(0) * tarch::la::PI),
+    std::sin(x(1) * tarch::la::PI),
+    std::sin(x(2) * tarch::la::PI)
+  );
 #else
-    Q[i] = std::sin(x(0) * tarch::la::PI) * std::sin(x(1) * tarch::la::PI);
+  Q.v = std::sin(x(0) * tarch::la::PI) * std::sin(x(1) * tarch::la::PI);
 #endif
-  }
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  Qoutside = Qinside;
 """
 
 fv_solver = exahype2.fv.Solver(
@@ -76,10 +72,8 @@ fv_solver.set_pde_terms(
     initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     flux="""
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = 0.0;
-  }
-  F[normal] = Q[normal];
+  F           = {};
+  F.v(normal) = Q.v(normal);
 """,
     max_eigenvalue="return 1.0;",
 )

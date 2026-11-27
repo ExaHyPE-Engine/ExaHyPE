@@ -62,7 +62,7 @@ class TPV16(DynamicRuptureScenario):
   faultPosition = _curvi->split(
     faultNormal,
     20.0,
-    [](tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
+    []([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
   );
 """
 
@@ -78,21 +78,15 @@ class TPV16(DynamicRuptureScenario):
         {-4.0, 0.0}
       );
 
-      Q[Shortcuts::rho] = 2.67;
-      Q[Shortcuts::cp ] = 6.0;
-      Q[Shortcuts::cs ] = 3.464;
+      Q.rho = 2.67;
+      Q.cp  = 6.0;
+      Q.cs  = 3.464;
 
-      Q[Shortcuts::initialShearStress] = faultSampler.samplePiecewiseConstant(
-        "stress",
-        {x[2], x[1]}
-      );
+      Q.initialShearStress = faultSampler.samplePiecewiseConstant("stress", {x[2], x[1]});
 
-      Q[Shortcuts::criticalSlipDistance] = 0.4;
+      Q.criticalSlipDistance = 0.4;
       if (std::abs(x[2] - 20.0) < 24.0 and x[1] < 19.5) {
-        Q[Shortcuts::criticalSlipDistance] = faultSampler.samplePiecewiseConstant(
-          "slip",
-          {x[2], x[1]}
-        );
+        Q.criticalSlipDistance = faultSampler.samplePiecewiseConstant("slip", {x[2], x[1]});
       }
 """
 
@@ -113,17 +107,17 @@ class TPV16(DynamicRuptureScenario):
   syy = 0;
   szz = 0;
   sxy = 0;
-  sxz = Q[Shortcuts::initialShearStress];
+  sxz = Q.initialShearStress;
   syz = 0;
     """,
         "n_yz": "return 0;",
         "cohesion": """
-  if(x[1]<3){
-    return 4-(4*x[1])/3;
+  if (x[1] < 3) {
+    return 4 - (4 * x[1]) / 3;
   }
   return 0;""",
         "forced_rupture_time": "return 9999999;",
-        "d_c": "return Q[Shortcuts::criticalSlipDistance];",
+        "d_c": "return Q.criticalSlipDistance;",
         # constant parameters
         "mu_d": 0.373,
         "mu_s": 0.677,  # Should increase in locations where the initial shear stress is very high according to documentation

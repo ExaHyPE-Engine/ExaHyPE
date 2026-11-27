@@ -10,148 +10,148 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::exaskred::coupled {
-  /**
-   * Maps the indices h, hu and z that the landslide kernels read to the granular layer of the
-   * coupled state.
-   */
-  template <class Shortcuts>
-  struct SlideLayer {
-    static constexpr int h  = Shortcuts::lsh;
-    static constexpr int hu = Shortcuts::lshu;
-    static constexpr int z  = Shortcuts::z;
-  };
+  template <typename T>
+  struct WaterLayer;
 
-  /**
-   * Face view of the water layer: Thickness, momenta and the effective bathymetry, the terrain plus
-   * the granular layer.
-   */
-  struct WaterView {
-    static constexpr int h    = 0;
-    static constexpr int hu   = 1;
-    static constexpr int hv   = 2;
-    static constexpr int b    = 3;
-    static constexpr int Size = 4;
-  };
+  template <typename T>
+  struct SlideLayer;
 
-  /**
-   * Face view of the granular layer: Thickness, momenta, the terrain and the depth of the water
-   * above the layer. A positive water depth switches on buoyancy.
-   */
-  struct SlideView {
-    static constexpr int h          = 0;
-    static constexpr int hu         = 1;
-    static constexpr int hv         = 2;
-    static constexpr int z          = 3;
-    static constexpr int WaterDepth = 4;
-    static constexpr int Size       = 5;
-  };
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isSlideSubmerged(const State& Q, double minimumWaterHeight);
 
-  template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD bool isSlideSubmerged(const T* const NOALIAS Q, const double minimumWaterHeight);
-
-  template <class Shortcuts, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD double getSlideGravity(
-    const T* const NOALIAS    Q,
+    const State&              Q,
     const landslide::Physics& physics,
-    const double              minimumWaterHeight
+    double                    minimumWaterHeight
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD void sanitiseDryLayers(
-    const T* const NOALIAS    QIn,
-    T* const NOALIAS          QOut,
+    const State&              QIn,
+    State&                    QOut,
     const landslide::Physics& physics,
-    const double              minimumWaterHeight
+    double                    minimumWaterHeight
   );
 
-  template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD void gatherWaterView(const T* const NOALIAS Q, T* const NOALIAS view);
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD void addRemovedLayersToBed(
+    const State&                    Q,
+    const State&                    sanitisedQ,
+    WaterLayer<decltype(State::h)>& waterLayer
+  );
 
-  template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD void gatherSlideView(const T* const NOALIAS Q, T* const NOALIAS view);
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD WaterLayer<decltype(State::h)> getWaterLayerOf(const State& Q);
 
-  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD SlideLayer<decltype(State::h)> getSlideLayerOf(const State& Q);
+
+  template <typename State, typename Flux>
   INLINE_METHOD GPU_CALLABLE_METHOD void flux(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const landslide::Physics&                    physics,
-    const double                                 minimumWaterHeight,
-    T* const NOALIAS                             F
+    double                                       minimumWaterHeight,
+    Flux&                                        F
   );
 
-  template <class Shortcuts, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const landslide::Physics&                    physics,
-    const double                                 minimumWaterHeight,
-    const double                                 sourceEigenvalueScaling
+    double                                       minimumWaterHeight,
+    double                                       sourceEigenvalueScaling
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  template <typename State, typename Difference, typename NonconservativeProduct>
   INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
-    const T* const NOALIAS                       Q,
-    const T* const NOALIAS                       deltaQ,
+    const State&                                 Q,
+    const Difference&                            deltaQ,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const landslide::Physics&                    physics,
-    const double                                 minimumWaterHeight,
-    T* const NOALIAS                             BTimesDeltaQ
+    double                                       minimumWaterHeight,
+    NonconservativeProduct&                      BTimesDeltaQ
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  template <typename State, typename Gradient, typename Source>
   INLINE_METHOD GPU_CALLABLE_METHOD void diffusiveSourceTerm(
-    const T* const NOALIAS                       Q,
-    const T* const NOALIAS                       deltaQ,
+    const State&                                 Q,
+    const Gradient&                              deltaQ,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
+    double                                       t,
+    double                                       dt,
     const landslide::Physics&                    physics,
-    const double                                 minimumWaterHeight,
-    T* const NOALIAS                             S
+    double                                       minimumWaterHeight,
+    Source&                                      S
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, int Order, typename T>
+  template <typename FaceStates, typename FaceFluxes>
   INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblem(
-    const T* const NOALIAS                       QL,
-    const T* const NOALIAS                       QR,
+    const FaceStates&                            QL,
+    const FaceStates&                            QR,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const landslide::Physics&                    physics,
-    const double                                 minimumWaterHeight,
-    T* const NOALIAS                             FL,
-    T* const NOALIAS                             FR
+    double                                       minimumWaterHeight,
+    FaceFluxes&                                  FL,
+    FaceFluxes&                                  FR
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  template <typename State, typename Flux>
   INLINE_METHOD GPU_CALLABLE_METHOD double solveSubcellRiemannProblem(
-    const T* const NOALIAS                       QL,
-    const T* const NOALIAS                       QR,
+    const State&                                 QL,
+    const State&                                 QR,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const landslide::Physics&                    physics,
-    const double                                 minimumWaterHeight,
-    T* const NOALIAS                             FL,
-    T* const NOALIAS                             FR
+    double                                       minimumWaterHeight,
+    Flux&                                        FL,
+    Flux&                                        FR
   );
 } // namespace applications::exahype2::exaskred::coupled
+
+/**
+ * WaterLayer stores the thickness h, the momenta hu and the bed b of the water of a coupled state. The
+ * bed b is the terrain plus the granular layer.
+ */
+template <typename T>
+struct applications::exahype2::exaskred::coupled::WaterLayer final {
+  T                                h{};
+  tarch::la::Vector<DIMENSIONS, T> hu{};
+  T                                b{};
+};
+
+/**
+ * SlideLayer stores the thickness h, the momenta hu, the terrain z and the water depth above the
+ * granular layer of a coupled state. The water depth decides whether buoyancy reduces the gravity.
+ */
+template <typename T>
+struct applications::exahype2::exaskred::coupled::SlideLayer final {
+  T                                h{};
+  tarch::la::Vector<DIMENSIONS, T> hu{};
+  T                                z{};
+  T                                waterDepth{};
+};
 
 #include "Coupled.cpph"

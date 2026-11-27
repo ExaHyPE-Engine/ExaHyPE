@@ -28,9 +28,8 @@ oscillations can drive the density or pressure negative and crash the run. The
 # The Equations
 
 We solve the 2D compressible Euler equations for density \f$\rho\f$, momentum
-\f$\rho \mathbf{u}\f$ and energy \f$E\f$ without a source term. The generated
-`Shortcuts` enum (`Shortcuts::rho`, `Shortcuts::j + 0/1`, `Shortcuts::E`) names
-the conserved variables. Both implementation files use the same indices.
+\f$\rho \mathbf{u}\f$ and energy \f$E\f$ without a source term. Both implementation files
+address the conserved variables by their names (`Q.rho`, `Q.j`, `Q.E`).
 
 # The Configuration
 

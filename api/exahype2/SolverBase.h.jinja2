@@ -10,7 +10,7 @@
 #include "tarch/accelerator/CompileTarget.h"
 
 namespace {{NAMESPACE | join("::")}} {
-  class {{SOLVER_NAME}};
+  class {{SOLVER_NAME}}PDETerms;
   class {{CLASSNAME}};
 {%- if SOLVER_FAMILY_CONSTANTS %}
   struct {{CLASSNAME}}Constants;
@@ -36,13 +36,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} :
 public:
   using SolverFamily      = {{SOLVER_FAMILY_CLASS}};
   using RuntimeParameters = ::{{NAMESPACE | join("::")}}::RuntimeParameters;
-{%- if USE_VARIABLE_SHORTCUTS %}
-
-  /**
-   * Maps the variables to their indices. The expression Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first
-   * variable.
-   */
-  using Shortcuts = ::{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}VariableShortcuts;
+{% for line in STATE_ALIASES %}
+  {{line}}
+{%- endfor %}
+{%- if TRACER_SOLUTION %}
+{% for line in TRACER_SOLUTION %}
+{{ "  " ~ line if line else "" }}
+{%- endfor %}
 {%- endif %}
 {%- for table_class in OPERATOR_TABLES | default([]) %}
 

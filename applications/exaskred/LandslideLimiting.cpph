@@ -1,29 +1,29 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "tarch/Assertions.h"
 
 /**
- * Returns whether a state is finite, has a non-negative height and is at rest when dry. A dry state
- * may keep a momentum up to a rounding tolerance of the momentum scale of the dry height.
+ * Returns whether every value of a state is finite and the layer of Height and Momentum has a
+ * non-negative height and rests where dry. A dry layer may keep a momentum up to a rounding tolerance
+ * of the momentum scale of the dry height.
  */
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <auto Height, auto Momentum, typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerState(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  for (int entry = 0; entry < NumberOfUnknowns + NumberOfAuxiliaryVariables; entry++) {
-    if (not std::isfinite(static_cast<double>(Q[entry]))) {
-      return false;
-    }
+  if (not allOf(Q, [](const auto value) { return std::isfinite(static_cast<double>(value)); })) {
+    return false;
   }
 
-  const double height = static_cast<double>(Q[Shortcuts::h]);
+  const double height = static_cast<double>(Q.*Height);
   if (height < 0.0) {
     return false;
   }
 
-  const double momentumSquared =
-    static_cast<double>(Q[Shortcuts::hu] * Q[Shortcuts::hu] + Q[Shortcuts::hu + 1] * Q[Shortcuts::hu + 1]);
+  const auto&  momentum        = Q.*Momentum;
+  const double momentumSquared = static_cast<double>(momentum(0) * momentum(0) + momentum(1) * momentum(1));
 
   const double dryHeight = std::max(physics.dryHeightThreshold, 0.0);
   if (height <= dryHeight) {
@@ -40,37 +40,32 @@ applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerState(
 }
 
 /**
- * Returns whether every state of a cell is admissible and its friction stays integrable. For a wet,
- * moving state, the turbulent-friction stiffness times the cell size stays below
- * maxFrictionToWaveSpeedRatio times the wave speed.
+ * Returns whether every state of a cell is admissible and the friction of the layer of Height and
+ * Momentum stays integrable. The turbulent-friction stiffness of a wet, moving state times the cell
+ * size stays below maxFrictionToWaveSpeedRatio times the wave speed.
  */
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <auto Height, auto Momentum, typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell(
-  const T* const NOALIAS                                      Q,
-  const int                                                   numberOfStates,
+  const std::span<const State>                                Q,
   const tarch::la::Vector<DIMENSIONS, double>&                cellSize,
   const applications::exahype2::exaskred::landslide::Physics& physics,
   const double                                                maxFrictionToWaveSpeedRatio
 ) {
-  constexpr int StateSize = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  for (int state = 0; state < numberOfStates; state++) {
-    const T* const stateQ = Q + state * StateSize;
-    if (not isAdmissibleGranularLayerState<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(stateQ, physics)) {
+  for (const State& state : Q) {
+    if (not isAdmissibleGranularLayerState<Height, Momentum>(state, physics)) {
       return false;
     }
 
     const double dryHeight = std::max(physics.dryHeightThreshold, 0.0);
-    const double height    = static_cast<double>(stateQ[Shortcuts::h]);
+    const double height    = static_cast<double>(state.*Height);
     if (height <= dryHeight or physics.inverseTurbulentFrictionLength <= 0.0 or maxFrictionToWaveSpeedRatio <= 0.0) {
       continue;
     }
 
-    const double momentum = std::sqrt(
-      static_cast<double>(
-        stateQ[Shortcuts::hu] * stateQ[Shortcuts::hu] + stateQ[Shortcuts::hu + 1] * stateQ[Shortcuts::hu + 1]
-      )
-    );
+    const auto&  stateMomentum = state.*Momentum;
+    const double momentum =
+      std::sqrt(static_cast<double>(stateMomentum(0) * stateMomentum(0) + stateMomentum(1) * stateMomentum(1)));
     if (momentum <= 0.0) {
       continue;
     }
@@ -98,28 +93,26 @@ applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell(
 }
 
 /**
- * Returns whether the largest second difference of the nodal heights stays below maxCurvatureRatio
- * times the height span of the cell. A single spiked node often precedes an unphysical state. A cell
- * that is dry at every node passes.
+ * Returns whether the largest second difference of the nodal heights Height stays below
+ * maxCurvatureRatio times the height span of the cell. A cell that is dry at every node passes.
  */
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <auto Height, typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D(
-  const T* const NOALIAS                                      Q,
+  const std::span<const State>                                Q,
   const int                                                   nodesPerAxis,
   const applications::exahype2::exaskred::landslide::Physics& physics,
   const double                                                maxCurvatureRatio
 ) {
+  ASSERTION(static_cast<int>(Q.size()) == nodesPerAxis * nodesPerAxis, static_cast<int>(Q.size()), nodesPerAxis);
   if (maxCurvatureRatio <= 0.0 or nodesPerAxis < 3) {
     return true;
   }
 
-  constexpr int StateSize = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-
   double minHeight = std::numeric_limits<double>::max();
   double maxHeight = std::numeric_limits<double>::lowest();
-  for (int node = 0; node < nodesPerAxis * nodesPerAxis; node++) {
-    const double height = static_cast<double>(Q[node * StateSize + Shortcuts::h]);
+  for (const State& state : Q) {
+    const double height = static_cast<double>(state.*Height);
     if (not std::isfinite(height)) {
       return false;
     }
@@ -133,7 +126,7 @@ applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCur
   }
 
   const auto heightAt = [Q, nodesPerAxis](const int nodeX, const int nodeY) {
-    return static_cast<double>(Q[(nodeY * nodesPerAxis + nodeX) * StateSize + Shortcuts::h]);
+    return static_cast<double>(Q[nodeY * nodesPerAxis + nodeX].*Height);
   };
 
   double maxCurvature = 0.0;
@@ -161,21 +154,17 @@ applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCur
 /**
  * Maps one state to the height and momentum observables the DMP tracks.
  */
-template <class Shortcuts, typename ObservableT, typename T>
+template <typename State, typename Observables>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables(
-  ObservableT* const NOALIAS observables,
-  const T* const NOALIAS     Q
-) {
-  observables[0] = static_cast<ObservableT>(Q[Shortcuts::h]);
-  observables[1] = static_cast<ObservableT>(Q[Shortcuts::hu]);
-  observables[2] = static_cast<ObservableT>(Q[Shortcuts::hu + 1]);
+applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables(Observables& observables, const State& Q) {
+  observables(0) = Q.h;
+  observables(1) = Q.hu(0);
+  observables(2) = Q.hu(1);
 }
 
 /**
- * Returns the DMP relaxation of an observable, at least the dry height for the height and the dry
- * momentum scale for a momentum. Rounding noise at the wet-dry front then cannot trigger the
- * maximum principle.
+ * Returns the DMP relaxation of an observable. The relaxation of the height is at least the dry
+ * height. The relaxation of a momentum is at least the dry momentum scale.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(

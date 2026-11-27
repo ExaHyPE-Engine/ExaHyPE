@@ -90,9 +90,8 @@ The project is built exactly as before, registering `FVSolver.cpp`.
 
 # The Implementation File
 
-`FVSolver.cpp` contains the PDE terms. The conserved variables
-\f$(\rho, \rho u_1, \rho u_2, E)\f$ are addressed through the generated `Shortcuts`
-enum (`Shortcuts::rho`, `Shortcuts::j + 0/1`, `Shortcuts::E`). The `boundaryConditions` impose
+`FVSolver.cpp` contains the PDE terms. The code addresses the conserved variables
+\f$(\rho, \rho u_1, \rho u_2, E)\f$ by their names (`Q.rho`, `Q.j`, `Q.E`). The `boundaryConditions` impose
 a fixed inflow state on the left face and outflow (copy the inside state)
 elsewhere. The `initialCondition` places a dense gas blob (\f$\rho = 1000\f$)
 inside the symmetric NACA 0012 contour \f$y_t(x)\f$ (`airfoilSymmetric`) against

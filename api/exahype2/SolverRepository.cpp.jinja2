@@ -11,7 +11,7 @@
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
 {% for solver in SOLVERS %}
-{{ NAMESPACE | join("::") }}::{{ solver[0] }} {{ NAMESPACE | join("::") }}::{{ solver[1] }};
+{{ NAMESPACE | join("::") }}::{{ solver[0] }}PDETerms {{ NAMESPACE | join("::") }}::{{ solver[1] }};
 {%- endfor %}
 
 namespace {

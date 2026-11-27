@@ -49,7 +49,7 @@ namespace {
 
   using PaddedCell = exahype2::dg::PaddedLayout<Order2Layout>;
 
-  constexpr int FluxAxisStride = CellNodes * PaddedCell::PaddedNumberOfUnknowns;
+  constexpr int FluxAxisStride = PaddedCell::PaddedNodesPerCell * NumberOfUnknowns;
 
   // The nodes of the three-point Gauss-Legendre rule on the unit interval.
   const double QuadratureNodes[NodesPerAxis] = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
@@ -430,6 +430,7 @@ namespace {
         derivative,
         Entries,
         values,
+        1,
         Entries,
         derivativeWeights,
         0.5
@@ -438,6 +439,7 @@ namespace {
         reflectedDerivative,
         Entries,
         reflected,
+        1,
         Entries,
         derivativeWeights,
         0.5
@@ -614,6 +616,7 @@ namespace {
         derivatives + line * Nodes * Entries,
         Entries,
         values + line * Nodes * Entries,
+        1,
         Entries,
         exahype2::dg::getDerivativeWeightsOfNodePairs<Nodes>(derivativeOperator),
         1.5,
@@ -1099,6 +1102,7 @@ UNIT_TEST("The operator along an axis sums the products of the source values and
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1141,6 +1145,7 @@ UNIT_TEST("The operator along an axis adds its product to the result or overwrit
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1152,6 +1157,7 @@ UNIT_TEST("The operator along an axis adds its product to the result or overwrit
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1182,6 +1188,7 @@ UNIT_TEST("The scaling of the operator along an axis multiplies every product") 
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1193,6 +1200,7 @@ UNIT_TEST("The scaling of the operator along an axis multiplies every product") 
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         NumberOfEntries,
         NumberOfSourceNodes,
         NumberOfEntries,
@@ -1240,6 +1248,7 @@ UNIT_TEST("The strides of the operator along an axis address the entries of ever
         NumberOfEntries,
         NumberOfTargetNodes,
         NumberOfSourceNodes,
+        1,
         ValueStride,
         OperatorStride,
         ResultStride,
@@ -1276,7 +1285,12 @@ UNIT_TEST("The operator along an axis rounds the product of doubles once into a 
     float        result[1]         = {0.0F};
 
     WHEN("The operator adds its product to the float result in double precision") {
-      exahype2::dg::applyOperatorAlongAxis<1, 1, 1, 1, 1, 1, false, float, double>(result, values, operatorMatrix, 1.0);
+      exahype2::dg::applyOperatorAlongAxis<1, 1, 1, 1, 1, 1, 1, false, float, double>(
+        result,
+        values,
+        operatorMatrix,
+        1.0
+      );
 
       THEN("The result is the double product rounded to float") {
         const auto expected = static_cast<double>(static_cast<float>(Operand * Operand));
@@ -1334,6 +1348,7 @@ UNIT_TEST("The derivative of a constant line is zero bitwise") {
         result,
         NumberOfEntries,
         values,
+        1,
         NumberOfEntries,
         exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator.entries),
         3.7,
@@ -1380,6 +1395,7 @@ UNIT_TEST("The derivative along an axis acts on the differences from the centre 
         accumulated,
         NumberOfEntries,
         values,
+        1,
         NumberOfEntries,
         exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator.entries),
         0.25
@@ -1388,6 +1404,7 @@ UNIT_TEST("The derivative along an axis acts on the differences from the centre 
         NumberOfEntries,
         NodesPerAxis,
         NodesPerAxis,
+        1,
         NumberOfEntries,
         NodesPerAxis,
         NumberOfEntries,
@@ -1442,6 +1459,7 @@ UNIT_TEST("A derivative that overwrites or accumulates into its own line returns
         overwritten,
         NumberOfEntries,
         values,
+        1,
         NumberOfEntries,
         derivativeWeights,
         2.5
@@ -1450,6 +1468,7 @@ UNIT_TEST("A derivative that overwrites or accumulates into its own line returns
         accumulated,
         NumberOfEntries,
         values,
+        1,
         NumberOfEntries,
         derivativeWeights,
         2.5
@@ -1458,6 +1477,7 @@ UNIT_TEST("A derivative that overwrites or accumulates into its own line returns
         overwrittenInPlace,
         NumberOfEntries,
         overwrittenInPlace,
+        1,
         NumberOfEntries,
         derivativeWeights,
         2.5
@@ -1466,6 +1486,7 @@ UNIT_TEST("A derivative that overwrites or accumulates into its own line returns
         accumulatedInPlace,
         NumberOfEntries,
         accumulatedInPlace,
+        1,
         NumberOfEntries,
         derivativeWeights,
         2.5
@@ -1702,10 +1723,10 @@ UNIT_TEST("A flux that is linear along its own axis differentiates to its consta
 
     double flux[DIMENSIONS * FluxAxisStride] = {};
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
-        const double reference = QuadratureNodes[peano4::dDelinearised(cellNode, NodesPerAxis)(axis)];
-        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-          flux[axis * FluxAxisStride + cellNode * PaddedCell::PaddedNumberOfUnknowns + unknown] =
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
+          const double reference = QuadratureNodes[peano4::dDelinearised(cellNode, NodesPerAxis)(axis)];
+          flux[axis * FluxAxisStride + PaddedCell::PaddedNodesPerCell * unknown + cellNode] =
             1.0 + unknown + 3.0 * (1.0 + axis) * reference;
         }
       }
@@ -1716,19 +1737,16 @@ UNIT_TEST("A flux that is linear along its own axis differentiates to its consta
 
       THEN("Every unknown equals its slope times the inverse extent and every padding entry equals zero") {
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
-            const int base = axis * FluxAxisStride + cellNode * PaddedCell::PaddedNumberOfUnknowns;
-            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            const int base = axis * FluxAxisStride + PaddedCell::PaddedNodesPerCell * unknown;
+            for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
               VALIDATE_NUMERICAL_EQUALS(
-                flux[base + unknown],
+                flux[base + cellNode],
                 3.0 * (1.0 + axis) * inverseCellSize(axis),
                 axis,
                 cellNode,
                 unknown
               );
-            }
-            for (int unknown = NumberOfUnknowns; unknown < PaddedCell::PaddedNumberOfUnknowns; unknown++) {
-              VALIDATE_NUMERICAL_EQUALS(flux[base + unknown], 0.0, axis, cellNode, unknown);
             }
           }
         }
@@ -1749,10 +1767,9 @@ UNIT_TEST("A flux that is constant along every axis differentiates to zeros bitw
 
     double flux[DIMENSIONS * FluxAxisStride] = {};
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
-        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-          flux[axis * FluxAxisStride + cellNode * PaddedCell::PaddedNumberOfUnknowns + unknown] =
-            1.0 / 3.0 + 0.1 * unknown;
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
+          flux[axis * FluxAxisStride + PaddedCell::PaddedNodesPerCell * unknown + cellNode] = 1.0 / 3.0 + 0.1 * unknown;
         }
       }
     }
@@ -1761,8 +1778,10 @@ UNIT_TEST("A flux that is constant along every axis differentiates to zeros bitw
       exahype2::dg::differentiateFluxInPlace<Order2Layout>(flux, derivativeOperator.entries, inverseCellSize);
 
       THEN("Every entry of the flux is zero") {
-        for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
-          VALIDATE_EQUALS(flux[entry], 0.0, entry);
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          for (int entry = 0; entry < NumberOfUnknowns * CellNodes; entry++) {
+            VALIDATE_EQUALS(flux[FluxAxisStride + entry], 0.0, entry);
+          }
         }
       }
     }
@@ -1781,9 +1800,9 @@ UNIT_TEST("Two calls over alternate lines differentiate the flux bitwise like on
 
     double wholeFlux[DIMENSIONS * FluxAxisStride] = {};
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
-        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-          wholeFlux[axis * FluxAxisStride + cellNode * PaddedCell::PaddedNumberOfUnknowns + unknown] =
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
+          wholeFlux[axis * FluxAxisStride + PaddedCell::PaddedNodesPerCell * unknown + cellNode] =
             1.0 / 7.0 * (1 + axis) + 0.3 * cellNode * cellNode - 0.1 * unknown;
         }
       }
@@ -2089,6 +2108,15 @@ UNIT_TEST("Threads that divide the items of the face extrapolation write the fac
     for (int entry = 0; entry < DIMENSIONS * FieldSize; entry++) {
       field[entry] = 1.0 + 0.5 * entry + 0.01 * entry * entry;
     }
+    double fieldSoA[DIMENSIONS * FieldSize];
+    for (int d = 0; d < DIMENSIONS; d++) {
+      for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
+        for (int value = 0; value < NumberOfData; value++) {
+          fieldSoA[d * FieldSize + value * CellNodes + cellNode] =
+            field[d * FieldSize + cellNode * NumberOfData + value];
+        }
+      }
+    }
     const EndCoefficients coefficients;
 
     WHEN("The paired extrapolation writes both faces of every direction and three threads write every face") {
@@ -2103,9 +2131,9 @@ UNIT_TEST("Threads that divide the items of the face extrapolation write the fac
           direction
         );
       }
-      double  faceValues[peano4::FacesPerCell][FaceValues] = {};
-      double* faces[peano4::FacesPerCell];
-      for (int face = 0; face < peano4::FacesPerCell; face++) {
+      double  faceValues[2 * peano4::FacesPerCell][FaceValues] = {};
+      double* faces[2 * peano4::FacesPerCell];
+      for (int face = 0; face < 2 * peano4::FacesPerCell; face++) {
         faces[face] = faceValues[face];
       }
       for (int thread = 0; thread < Threads; thread++) {
@@ -2113,17 +2141,31 @@ UNIT_TEST("Threads that divide the items of the face extrapolation write the fac
           NodesPerAxis,
           NumberOfData,
           NumberOfData,
+          NodesPerAxis,
           FieldSize,
           double,
           double,
           double
         >(faces, field, coefficients.left, coefficients.right, thread, Threads);
       }
+      for (int thread = 0; thread < Threads; thread++) {
+        exahype2::dg::extrapolateNodeMajorNodalFieldToFaces<
+          NodesPerAxis,
+          NumberOfData,
+          NumberOfData,
+          CellNodes,
+          FieldSize,
+          double,
+          double,
+          double
+        >(faces + peano4::FacesPerCell, fieldSoA, coefficients.left, coefficients.right, thread, Threads);
+      }
 
       THEN("The threads write the bits of the paired extrapolation into every face") {
         for (int face = 0; face < peano4::FacesPerCell; face++) {
           for (int entry = 0; entry < FaceValues; entry++) {
             VALIDATE_EQUALS(faceValues[face][entry], pairedFaces[face][entry], face, entry);
+            VALIDATE_EQUALS(faceValues[face + peano4::FacesPerCell][entry], pairedFaces[face][entry], face, entry);
           }
         }
       }

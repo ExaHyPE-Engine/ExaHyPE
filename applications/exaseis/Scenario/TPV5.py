@@ -62,15 +62,15 @@ class TPV5(DynamicRuptureScenario):
   faultPosition = _curvi->split(
     faultNormal,
     20.0,
-    [](tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
+    []([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
   );
 """
 
     def initial_conditions(self):
         return """
-      Q[Shortcuts::rho] = 2.67;
-      Q[Shortcuts::cp ] = 6.0;
-      Q[Shortcuts::cs ] = 3.464;
+      Q.rho = 2.67;
+      Q.cp  = 6.0;
+      Q.cs  = 3.464;
 """
 
     dynamicRuptureDictionary = {

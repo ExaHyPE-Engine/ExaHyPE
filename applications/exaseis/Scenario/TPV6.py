@@ -40,24 +40,23 @@ class TPV6(DynamicRuptureScenario):
   faultPosition = _curvi->split(
     faultNormal,
     20.0,
-    [](tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
+    []([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
   );
 """
 
     def initial_conditions(self):
         return """
-        constexpr double EdgeTolerance = 1e-8;
-        if (x[0] >= 20.0 - EdgeTolerance)
-        {   //Far Side
-            Q[Shortcuts::rho] = 2.225;
-            Q[Shortcuts::cp ] = 3.75;
-            Q[Shortcuts::cs ] = 2.165;
-        } else {
-            //Near Side
-            Q[Shortcuts::rho] = 2.67;
-            Q[Shortcuts::cp ] = 6.0;
-            Q[Shortcuts::cs ] = 3.464;
-        }
+      // The material on the far side of the fault at x = 20 differs from the near side.
+      constexpr double EdgeTolerance = 1e-8;
+      if (x[0] >= 20.0 - EdgeTolerance) {
+        Q.rho = 2.225;
+        Q.cp  = 3.75;
+        Q.cs  = 2.165;
+      } else {
+        Q.rho = 2.67;
+        Q.cp  = 6.0;
+        Q.cs  = 3.464;
+      }
 """
 
     dynamicRuptureDictionary = {
@@ -71,9 +70,11 @@ class TPV6(DynamicRuptureScenario):
     """,
         "n_yz": """
       constexpr double EdgeTolerance = 1e-8;
-      if ((6.0 - EdgeTolerance <= x[1]) and (x[1] <= 9.0 + EdgeTolerance) and (18.5 - EdgeTolerance <= x[2])
-          and (x[2] <= 21.5 + EdgeTolerance)) {
-         return 11.6;
+      if (
+        6.0 - EdgeTolerance <= x[1] and x[1] <= 9.0 + EdgeTolerance and 18.5 - EdgeTolerance <= x[2]
+        and x[2] <= 21.5 + EdgeTolerance
+      ) {
+        return 11.6;
       }
       return 0.0;""",
         "cohesion": "return 0;",

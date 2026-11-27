@@ -257,6 +257,7 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
             lineUpdate,
             UnknownStride,
             fluxValues,
+            1,
             UnknownStride,
             derivativeWeights,
             -timeStepSize / cellSize(direction)
@@ -279,6 +280,7 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
             gradients,
             DataStride,
             stateLine,
+            1,
             DataStride,
             derivativeWeights,
             1.0 / cellSize(direction)

@@ -1,0 +1,176 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr tarch::la::SymmetricMatrix<Size, Scalar>::SymmetricMatrix(
+  const std::initializer_list<Scalar> values
+) {
+  ASSERTION(static_cast<int>(values.size()) == NumberOfEntries, values.size(), Size);
+  int entry = 0;
+  for (const Scalar value : values) {
+    _values[entry] = value;
+    entry++;
+  }
+}
+
+/**
+ * Returns the stored entry of the position in row rowIndex and column columnIndex. A matrix of up
+ * to four rows reads the entry from getPackedEntries() with a shift and a mask.
+ */
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr int
+tarch::la::SymmetricMatrix<Size, Scalar>::getEntryOf(const int rowIndex, const int columnIndex) {
+  ASSERTION(rowIndex >= 0 and rowIndex < Size, rowIndex, columnIndex, Size);
+  ASSERTION(columnIndex >= 0 and columnIndex < Size, rowIndex, columnIndex, Size);
+  if constexpr (Size <= 4) {
+    constexpr std::uint64_t PackedEntries = getPackedEntries();
+    return static_cast<int>((PackedEntries >> (4 * (rowIndex * Size + columnIndex))) & 0xF);
+  } else {
+    return computeEntryOf(rowIndex, columnIndex);
+  }
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr int
+tarch::la::SymmetricMatrix<Size, Scalar>::computeEntryOf(const int rowIndex, const int columnIndex) {
+  const int upperIndex = rowIndex < columnIndex ? columnIndex : rowIndex;
+  const int lowerIndex = rowIndex < columnIndex ? rowIndex : columnIndex;
+  if (lowerIndex == upperIndex) {
+    return lowerIndex;
+  }
+  return Size + lowerIndex * (2 * Size - lowerIndex - 1) / 2 + upperIndex - lowerIndex - 1;
+}
+
+/**
+ * Returns the entry of every position in four bits. The position in row r and column c starts at
+ * bit 4 (r Size + c).
+ */
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr std::uint64_t
+tarch::la::SymmetricMatrix<Size, Scalar>::getPackedEntries() {
+  static_assert(Size <= 4, "The packed entries of a symmetric matrix support up to four rows.");
+  std::uint64_t packedEntries = 0;
+  for (int rowIndex = 0; rowIndex < Size; rowIndex++) {
+    for (int columnIndex = 0; columnIndex < Size; columnIndex++) {
+      packedEntries |= static_cast<std::uint64_t>(computeEntryOf(rowIndex, columnIndex))
+        << (4 * (rowIndex * Size + columnIndex));
+    }
+  }
+  return packedEntries;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar&
+tarch::la::SymmetricMatrix<Size, Scalar>::operator()(const int rowIndex, const int columnIndex) {
+  ASSERTION(rowIndex >= 0 and rowIndex < Size, rowIndex, columnIndex, Size);
+  ASSERTION(columnIndex >= 0 and columnIndex < Size, rowIndex, columnIndex, Size);
+  return _values[getEntryOf(rowIndex, columnIndex)];
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar&
+tarch::la::SymmetricMatrix<Size, Scalar>::operator()(const int rowIndex, const int columnIndex) const {
+  ASSERTION(rowIndex >= 0 and rowIndex < Size, rowIndex, columnIndex, Size);
+  ASSERTION(columnIndex >= 0 and columnIndex < Size, rowIndex, columnIndex, Size);
+  return _values[getEntryOf(rowIndex, columnIndex)];
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar*
+tarch::la::SymmetricMatrix<Size, Scalar>::getData() {
+  return _values;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar*
+tarch::la::SymmetricMatrix<Size, Scalar>::getData() const {
+  return _values;
+}
+
+/**
+ * Returns every row of the full matrix in the format of tarch::la::Matrix::toString().
+ */
+template <int Size, typename Scalar>
+INLINE_METHOD std::string
+tarch::la::SymmetricMatrix<Size, Scalar>::toString() const {
+  std::ostringstream os;
+  os << "[";
+  for (int row = 0; row < Size; row++) {
+    os << "[";
+    for (int column = 0; column < Size; column++) {
+      os << _values[getEntryOf(row, column)];
+      if (column + 1 < Size) {
+        os << ",";
+      }
+    }
+    os << "]";
+    if (row + 1 < Size) {
+      os << ",";
+    }
+  }
+  os << "]";
+  return os.str();
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD std::ostream&
+tarch::la::operator<<(std::ostream& os, const SymmetricMatrix<Size, Scalar>& matrix) {
+  os << matrix.toString();
+  return os;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::SymmetricMatrix<Size, Scalar>
+tarch::la::operator+(const SymmetricMatrix<Size, Scalar>& left, const SymmetricMatrix<Size, Scalar>& right) {
+  SymmetricMatrix<Size, Scalar> result;
+  for (int entry = 0; entry < SymmetricMatrix<Size, Scalar>::NumberOfEntries; entry++) {
+    result.getData()[entry] = left.getData()[entry] + right.getData()[entry];
+  }
+  return result;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::SymmetricMatrix<Size, Scalar>
+tarch::la::operator-(const SymmetricMatrix<Size, Scalar>& left, const SymmetricMatrix<Size, Scalar>& right) {
+  SymmetricMatrix<Size, Scalar> result;
+  for (int entry = 0; entry < SymmetricMatrix<Size, Scalar>::NumberOfEntries; entry++) {
+    result.getData()[entry] = left.getData()[entry] - right.getData()[entry];
+  }
+  return result;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::SymmetricMatrix<Size, Scalar>
+tarch::la::operator*(const SymmetricMatrix<Size, Scalar>& matrix, const Scalar& scalar) {
+  SymmetricMatrix<Size, Scalar> result;
+  for (int entry = 0; entry < SymmetricMatrix<Size, Scalar>::NumberOfEntries; entry++) {
+    result.getData()[entry] = matrix.getData()[entry] * scalar;
+  }
+  return result;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::SymmetricMatrix<Size, Scalar>
+tarch::la::operator*(const Scalar& scalar, const SymmetricMatrix<Size, Scalar>& matrix) {
+  SymmetricMatrix<Size, Scalar> result;
+  for (int entry = 0; entry < SymmetricMatrix<Size, Scalar>::NumberOfEntries; entry++) {
+    result.getData()[entry] = scalar * matrix.getData()[entry];
+  }
+  return result;
+}
+
+template <int Size, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>
+tarch::la::operator*(const SymmetricMatrix<Size, Scalar>& matrix, const Vector<Size, Scalar>& vector) {
+  Vector<Size, Scalar> result;
+  for (int row = 0; row < Size; row++) {
+    Scalar sum = matrix(row, 0) * vector(0);
+    for (int column = 1; column < Size; column++) {
+      sum += matrix(row, column) * vector(column);
+    }
+    result(row) = sum;
+  }
+  return result;
+}
+TARGET_DECLARE_END

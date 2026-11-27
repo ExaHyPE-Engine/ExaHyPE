@@ -48,21 +48,18 @@ class EulerIsentropicVortex(Scenario):
             + str(self._velocity)
             + """;
 
-  Q[Shortcuts::rho] = rho_inf + drho;
-  Q[Shortcuts::v+0] = Q[Shortcuts::rho] * (u_inf + du);
-  Q[Shortcuts::v+1] = Q[Shortcuts::rho] * (v_inf + dv);
-  Q[Shortcuts::E] = (p_inf + dp) / (eos_gamma-1) + 0.5*Q[Shortcuts::rho] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
+  Q.rho  = rho_inf + drho;
+  Q.v(0) = Q.rho * (u_inf + du);
+  Q.v(1) = Q.rho * (v_inf + dv);
+  Q.E    = (p_inf + dp) / (eos_gamma-1) + 0.5*Q.rho * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
 """
         )
 
     def analytical_solution(self):
         return (
             """
-  /*
-    The initial condition travels through the periodic domain [-5, 5] without
-    deformation, so the solution at x is the initial value at x - v*t. That
-    position wraps by 10 when it leaves the domain.
-  */
+  // The initial condition moves unchanged through the periodic domain [-5, 5]. The solution at x
+  // is the initial value at x - v*t, wrapped by 10 into the domain.
   constexpr auto rho_inf = 1.;
   constexpr auto p_inf = 1.;
   constexpr auto u_inf = """
@@ -88,9 +85,9 @@ class EulerIsentropicVortex(Scenario):
   const auto drho = pow(1. + dTemp, 1. / (eos_gamma - 1.)) - 1.;
   const auto dp = pow(1. + dTemp, eos_gamma / (eos_gamma - 1.)) - 1.;
 
-  solution[Shortcuts::rho] = rho_inf + drho;
-  solution[Shortcuts::v+0] = solution[Shortcuts::rho] * (u_inf + du);
-  solution[Shortcuts::v+1] = solution[Shortcuts::rho] * (v_inf + dv);
-  solution[Shortcuts::E] = (p_inf + dp) / (eos_gamma-1) + 0.5*solution[Shortcuts::rho] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
+  solution.rho  = rho_inf + drho;
+  solution.v(0) = solution.rho * (u_inf + du);
+  solution.v(1) = solution.rho * (v_inf + dv);
+  solution.E    = (p_inf + dp) / (eos_gamma-1) + 0.5*solution.rho * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
 """
         )

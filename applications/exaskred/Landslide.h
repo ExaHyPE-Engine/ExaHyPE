@@ -6,183 +6,178 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::exaskred::landslide {
-  /**
-   * Material and coupling constants of the landslide layer, built from the generated constants of a
-   * scenario.
-   */
-  struct Physics {
-    double gravity;
-    double dryHeightThreshold;
-    double coulombFriction;
-    double inverseTurbulentFrictionLength;
-    double slideDensity;
-    double waterDensity;
-    double waterLevel;
-    double waterFrictionDragCoefficient;
-    double waterPressureDragCoefficient;
-  };
+  struct Physics;
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD void sanitiseDryState(
-    const T* const NOALIAS QIn,
-    T* const NOALIAS       QOut,
-    const Physics&         physics
-  );
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD void sanitiseDryState(const State& QIn, State& QOut, const Physics& physics);
 
   INLINE_METHOD GPU_CALLABLE_METHOD double getSubmergedGravity(const Physics& physics);
 
-  template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD bool isSubmergedByBathymetry(const T* const NOALIAS Q, const Physics& physics);
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isSubmergedByBathymetry(const State& Q, const Physics& physics);
 
-  template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double getEffectiveGravity(const T* const NOALIAS Q, const Physics& physics);
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD double getEffectiveGravity(const State& Q, const Physics& physics);
 
-  template <class Shortcuts, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD double getInterfaceEffectiveGravity(
-    const T* const NOALIAS QL,
-    const T* const NOALIAS QR,
-    const Physics&         physics
+    const State&   QL,
+    const State&   QR,
+    const Physics& physics
   );
 
-  template <class Shortcuts, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD double getWaterFrictionDragSourceSpeed(
-    const T* const NOALIAS Q,
-    const Physics&         physics,
-    const bool             submerged
+    const State&   Q,
+    const Physics& physics,
+    bool           submerged
   );
 
-  template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double getWaterFrictionDragSourceSpeed(
-    const T* const NOALIAS Q,
-    const Physics&         physics
-  );
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD double getWaterFrictionDragSourceSpeed(const State& Q, const Physics& physics);
 
-  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  template <typename State, typename Flux>
   INLINE_METHOD GPU_CALLABLE_METHOD void flux(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const Physics&                               physics,
-    const double                                 gravity,
-    T* const NOALIAS                             F
+    double                                       gravity,
+    Flux&                                        F
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  template <typename State, typename Flux>
   INLINE_METHOD GPU_CALLABLE_METHOD void flux(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const Physics&                               physics,
-    T* const NOALIAS                             F
+    Flux&                                        F
   );
 
-  template <class Shortcuts, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD double getFluxEigenvalue(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const Physics&                               physics,
-    const double                                 gravity
+    double                                       gravity
   );
 
-  template <class Shortcuts, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD double getFluxEigenvalue(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const Physics&                               physics
   );
 
-  template <class Shortcuts, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD double getEffectiveMaxEigenvalue(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const Physics&                               physics,
-    const double                                 gravity,
-    const bool                                   submerged,
-    const double                                 sourceEigenvalueScaling
+    double                                       gravity,
+    bool                                         submerged,
+    double                                       sourceEigenvalueScaling
   );
 
-  template <class Shortcuts, typename T>
+  template <typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD double getEffectiveMaxEigenvalue(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const Physics&                               physics,
-    const double                                 sourceEigenvalueScaling
+    double                                       sourceEigenvalueScaling
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  template <typename State, typename Difference, typename NonconservativeProduct>
   INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
-    const T* const NOALIAS                       Q,
-    const T* const NOALIAS                       deltaQ,
+    const State&                                 Q,
+    const Difference&                            deltaQ,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const Physics&                               physics,
-    const double                                 gravity,
-    T* const NOALIAS                             BTimesDeltaQ
+    double                                       gravity,
+    NonconservativeProduct&                      BTimesDeltaQ
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  template <typename State, typename Difference, typename NonconservativeProduct>
   INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
-    const T* const NOALIAS                       Q,
-    const T* const NOALIAS                       deltaQ,
+    const State&                                 Q,
+    const Difference&                            deltaQ,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
     const Physics&                               physics,
-    T* const NOALIAS                             BTimesDeltaQ
+    NonconservativeProduct&                      BTimesDeltaQ
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  template <typename State, typename Gradient, typename Source>
   INLINE_METHOD GPU_CALLABLE_METHOD void diffusiveSourceTerm(
-    const T* const NOALIAS                       Q,
-    const T* const NOALIAS                       deltaQ,
+    const State&                                 Q,
+    const Gradient&                              deltaQ,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
+    double                                       t,
+    double                                       dt,
     const Physics&                               physics,
-    const double                                 gravity,
-    const bool                                   submerged,
-    T* const NOALIAS                             S
+    double                                       gravity,
+    bool                                         submerged,
+    Source&                                      S
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  template <typename State, typename Gradient, typename Source>
   INLINE_METHOD GPU_CALLABLE_METHOD void diffusiveSourceTerm(
-    const T* const NOALIAS                       Q,
-    const T* const NOALIAS                       deltaQ,
+    const State&                                 Q,
+    const Gradient&                              deltaQ,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
+    double                                       t,
+    double                                       dt,
     const Physics&                               physics,
-    T* const NOALIAS                             S
+    Source&                                      S
   );
 } // namespace applications::exahype2::exaskred::landslide
+
+/**
+ * Physics stores the material and coupling constants of the landslide layer. A scenario copies them
+ * from its generated constants.
+ */
+struct applications::exahype2::exaskred::landslide::Physics final {
+  double gravity{};
+  double dryHeightThreshold{};
+  double coulombFriction{};
+  double inverseTurbulentFrictionLength{};
+  double slideDensity{};
+  double waterDensity{};
+  double waterLevel{};
+  double waterFrictionDragCoefficient{};
+  double waterPressureDragCoefficient{};
+};
 
 #include "Landslide.cpph"

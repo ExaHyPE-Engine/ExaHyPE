@@ -140,19 +140,22 @@ exahype2::getRefinementCommandFromDetail(const double detail, const double eps, 
 TARGET_DECLARE_END
 
 /**
- * Returns the refinement command for the largest detail of the indicators over the AoS patch Q,
- * or Keep for the null Q of the grid construction.
+ * Returns the refinement command for the largest detail of the indicators over the states Q of one
+ * cell. Returns Keep for the null Q of the grid construction. Every indicator reads one state.
  */
-template <std::size_t NumberOfNodesPerAxis, typename Value, typename... Indicators>
+template <std::size_t NumberOfNodesPerAxis, typename State, std::size_t NumberOfStates, typename... Indicators>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand
 exahype2::refineOnDetail(
-  const Value* const                              Q,
+  const State (*const Q)[NumberOfStates],
   const std::array<double, NumberOfNodesPerAxis>& nodesInUnitInterval,
-  const int                                       numberOfUnknownsPlusAuxiliaryVariables,
   const double                                    eps,
   const double                                    coarsenSafetyFactor,
   const Indicators&... indicators
 ) {
+  static_assert(
+    static_cast<int>(NumberOfStates) == peano4::power(static_cast<int>(NumberOfNodesPerAxis), DIMENSIONS),
+    "The refinement criterion on the detail of the solution reads one state per node of the cell."
+  );
   static_assert(
     sizeof...(Indicators) > 0,
     "The refinement criterion on the detail of the solution expects at least one indicator."
@@ -164,7 +167,12 @@ exahype2::refineOnDetail(
   double detail = 0.0;
   ((detail = std::max(
       detail,
-      exahype2::computeMultiresolutionDetail(Q, nodesInUnitInterval, numberOfUnknownsPlusAuxiliaryVariables, indicators)
+      exahype2::computeMultiresolutionDetail(
+        *Q,
+        nodesInUnitInterval,
+        1,
+        [&](const State* const state) { return indicators(*state); }
+      )
     )),
    ...);
   return exahype2::getRefinementCommandFromDetail(detail, eps, coarsenSafetyFactor);

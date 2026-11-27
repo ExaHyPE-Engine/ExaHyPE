@@ -14,9 +14,8 @@ namespace exahype2::terms {
     const tarch::la::Vector<DIMENSIONS, double>&  x,
     const tarch::la::Vector<DIMENSIONS, double>&  h,
     const int                                     normal,
-    const int                                     unknown,
-    Precision&                                    reconstructedMinus,
-    Precision&                                    reconstructedPlus,
+    Precision* const                              reconstructedMinus,
+    Precision* const                              reconstructedPlus,
     const typename SolverType::RuntimeParameters& parameters
   ) {
     {
@@ -28,7 +27,6 @@ namespace exahype2::terms {
         x,
         h,
         normal,
-        unknown,
         reconstructedMinus,
         reconstructedPlus,
         parameters

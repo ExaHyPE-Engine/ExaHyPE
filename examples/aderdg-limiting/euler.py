@@ -39,30 +39,29 @@ def flux(gamma):
     return f"""
   constexpr double Gamma = {gamma};
   constexpr double DensityFloor = 1.0e-12;
-  const double density = Q[Shortcuts::rho];
-  const double energy = Q[Shortcuts::rhoE];
+  const double density = Q.rho;
+  const double energy = Q.rhoE;
   // Transient predictor states at shocks may approach vacuum before limiter
   // rejection. The floor keeps the reciprocal finite without changing
   // admissible states.
   const double inverseDensity = 1.0 / std::max(density, DensityFloor);
-  const double momentumSquared =
-    tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(Q + Shortcuts::j));
+  const double momentumSquared = tarch::la::norm2Squared(Q.j);
   const double pressure =
     (Gamma - 1.0) * (energy - 0.5 * inverseDensity * momentumSquared);
-  const double normalMomentum = Q[Shortcuts::j + normal];
+  const double normalMomentum = Q.j(normal);
 
   // Every flux component rounds on its own. A sum of the fluxes of two states then adds the same
   // rounded values for mirrored faces with and without fused multiply-adds.
-  F[Shortcuts::rho] = normalMomentum;
+  F.rho = normalMomentum;
   for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    F[Shortcuts::j + dimension] = tarch::la::productRoundedOnce(
-      normalMomentum * Q[Shortcuts::j + dimension], inverseDensity
+    F.j(dimension) = tarch::la::productRoundedOnce(
+      normalMomentum * Q.j(dimension), inverseDensity
     );
   }}
-  F[Shortcuts::rhoE] = tarch::la::productRoundedOnce(
+  F.rhoE = tarch::la::productRoundedOnce(
     normalMomentum * (energy + pressure), inverseDensity
   );
-  F[Shortcuts::j + normal] += pressure;
+  F.j(normal) += pressure;
 """
 
 
@@ -70,19 +69,18 @@ def max_eigenvalue(gamma):
     return f"""
   constexpr double Gamma = {gamma};
   constexpr double DensityFloor = 1.0e-12;
-  const double density = Q[Shortcuts::rho];
-  const double energy = Q[Shortcuts::rhoE];
+  const double density = Q.rho;
+  const double energy = Q.rhoE;
   // Predictor and Riemann evaluations precede limiter rejection. Flooring the
   // density and taking the pressure magnitude keep finite inputs finite without
   // changing admissible states.
   const double inverseDensity = 1.0 / std::max(density, DensityFloor);
-  const double momentumSquared =
-    tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(Q + Shortcuts::j));
+  const double momentumSquared = tarch::la::norm2Squared(Q.j);
   const double pressure =
     (Gamma - 1.0) * (energy - 0.5 * inverseDensity * momentumSquared);
   const double soundSpeed =
     std::sqrt(std::abs(Gamma * pressure * inverseDensity));
-  const double normalVelocity = Q[Shortcuts::j + normal] * inverseDensity;
+  const double normalVelocity = Q.j(normal) * inverseDensity;
   return std::abs(normalVelocity) + soundSpeed;
 """
 
@@ -95,25 +93,20 @@ def physical_admissibility(gamma, additional_state_condition=None):
       return false;
     }}"""
     return f"""
-  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   constexpr double Gamma = {gamma};
-  const auto* values = Q;
-  for (int state = 0; state < numberOfStates; ++state, values += NumberOfData) {{
-    for (int unknown = 0; unknown < NumberOfData; ++unknown) {{
-      if (not std::isfinite(values[unknown])) {{
-        return false;
-      }}
+  for (const auto& state : Q) {{
+    if (not allOf(state, [](const auto value) {{ return std::isfinite(value); }})) {{
+      return false;
     }}
-    const double density = values[Shortcuts::rho];
-    const double energy = values[Shortcuts::rhoE];
+    const double density = state.rho;
+    const double energy = state.rhoE;
     // Densities near the vacuum threshold can cross it through last-bit
     // differences. Keeping them on the finite-volume scheme prevents a
     // one-sided status change from seeding asymmetry.
     if (density <= 1.0e-12 or energy <= 1.0e-12) {{
       return false;
     }}
-    const double momentumSquared =
-      tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::j));
+    const double momentumSquared = tarch::la::norm2Squared(state.j);
     const double pressure =
       (Gamma - 1.0) * (energy - 0.5 * momentumSquared / density);
     if (not std::isfinite(pressure) or pressure <= 1.0e-12) {{
@@ -130,28 +123,23 @@ def physical_admissibility_with_contact_sensor(
     heavy_density,
 ):
     return f"""
-  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   constexpr double Gamma = {gamma};
   constexpr double LightDensity = {light_density};
   constexpr double HeavyDensity = {heavy_density};
   double minimumDensity = std::numeric_limits<double>::infinity();
   double maximumDensity = -std::numeric_limits<double>::infinity();
-  const auto* values = Q;
-  for (int state = 0; state < numberOfStates; ++state, values += NumberOfData) {{
-    for (int unknown = 0; unknown < NumberOfData; ++unknown) {{
-      if (not std::isfinite(values[unknown])) {{
-        return false;
-      }}
+  for (const auto& state : Q) {{
+    if (not allOf(state, [](const auto value) {{ return std::isfinite(value); }})) {{
+      return false;
     }}
-    const double density = values[Shortcuts::rho];
-    const double energy = values[Shortcuts::rhoE];
+    const double density = state.rho;
+    const double energy = state.rhoE;
     if (density <= 1.0e-12 or energy <= 1.0e-12) {{
       return false;
     }}
     minimumDensity = std::min(minimumDensity, density);
     maximumDensity = std::max(maximumDensity, density);
-    const double momentumSquared =
-      tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::j));
+    const double momentumSquared = tarch::la::norm2Squared(state.j);
     const double pressure =
       (Gamma - 1.0) * (energy - 0.5 * momentumSquared / density);
     if (not std::isfinite(pressure) or pressure <= 1.0e-12) {{
@@ -172,21 +160,20 @@ def dmp_observables(gamma):
     return f"""
   constexpr double Gamma = {gamma};
   constexpr {{{{COMPUTE_PRECISION}}}} DensityFloor = 1.0e-12;
-  const {{{{COMPUTE_PRECISION}}}} density = Q[Shortcuts::rho];
+  const {{{{COMPUTE_PRECISION}}}} density = Q.rho;
   // The discrete maximum principle maps states before limiter rejection. The
   // floor keeps derived velocity and pressure finite without changing
   // admissible states.
   const {{{{COMPUTE_PRECISION}}}} inverseDensity =
     1.0 / std::max(density, DensityFloor);
-  const {{{{COMPUTE_PRECISION}}}} momentumSquared =
-    tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, {{{{COMPUTE_PRECISION}}}}>(Q + Shortcuts::j));
-  observables[0] = density;
+  const {{{{COMPUTE_PRECISION}}}} momentumSquared = tarch::la::norm2Squared(Q.j);
+  observables(0) = density;
   for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    observables[1 + dimension] = Q[Shortcuts::j + dimension] * inverseDensity;
+    observables(1 + dimension) = Q.j(dimension) * inverseDensity;
   }}
-  observables[1 + DIMENSIONS] =
+  observables(1 + DIMENSIONS) =
     (Gamma - 1.0)
-    * (Q[Shortcuts::rhoE] - 0.5 * inverseDensity * momentumSquared);
+    * (Q.rhoE - 0.5 * inverseDensity * momentumSquared);
 """
 
 

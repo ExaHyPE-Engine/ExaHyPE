@@ -248,7 +248,8 @@ template <
   int  NumberOfEntries,
   int  NumberOfTargetNodes,
   int  NumberOfSourceNodes,
-  int  ValueStride,
+  int  ValueEntryStride,
+  int  ValueNodeStride,
   int  OperatorStride,
   int  ResultStride,
   bool OverwriteResult,
@@ -265,49 +266,25 @@ exahype2::dg::applyOperatorAlongAxis(
 ) {
   using AccumulatePrecision = std::common_type_t<ResultPrecision, ComputePrecision>;
 
-  constexpr bool Scaled      = sizeof...(Scalings) > 0;
-  constexpr int  BlockStride = Scaled ? NumberOfEntries : ValueStride;
+  for (int entry = 0; entry < NumberOfEntries; entry++) {
+    for (int targetNode = 0; targetNode < NumberOfTargetNodes; targetNode++) {
+      ResultPrecision* NOALIAS const resultNode = result + targetNode * ResultStride;
 
-  [[maybe_unused]] ComputePrecision scaledValues[Scaled ? NumberOfSourceNodes * NumberOfEntries : 1];
-  const ComputePrecision* NOALIAS   block = values;
-  if constexpr (Scaled) {
-    for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
-      const ComputePrecision* NOALIAS const sourceValues = values + sourceNode * ValueStride;
-      SIMD()
-      for (int entry = 0; entry < NumberOfEntries; entry++) {
-        scaledValues[sourceNode * NumberOfEntries + entry] =
-          (sourceValues[entry] * ... * static_cast<ComputePrecision>(scalings));
-      }
-    }
-    block = scaledValues;
-  }
-
-  for (int targetNode = 0; targetNode < NumberOfTargetNodes; targetNode++) {
-    ResultPrecision* NOALIAS const resultNode = result + targetNode * ResultStride;
-
-    AccumulatePrecision accumulator[NumberOfEntries];
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      AccumulatePrecision accumulator;
       if constexpr (OverwriteResult) {
-        accumulator[entry] = static_cast<AccumulatePrecision>(0);
+        accumulator = static_cast<AccumulatePrecision>(0);
       } else {
-        accumulator[entry] = static_cast<AccumulatePrecision>(resultNode[entry]);
+        accumulator = static_cast<AccumulatePrecision>(resultNode[entry]);
       }
-    }
 
-    for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
-      const ComputePrecision* NOALIAS const sourceValues   = block + sourceNode * BlockStride;
-      const ComputePrecision                operatorWeight = operatorMatrix[targetNode * OperatorStride + sourceNode];
-      SIMD()
-      for (int entry = 0; entry < NumberOfEntries; entry++) {
-        accumulator[entry] =
-          accumulator[entry] + static_cast<AccumulatePrecision>(sourceValues[entry] * operatorWeight);
+      for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
+        const ComputePrecision sourceValue = values[entry * ValueEntryStride + sourceNode * ValueNodeStride];
+        const ComputePrecision operatorWeight =
+          (operatorMatrix[targetNode * OperatorStride + sourceNode] * ... * static_cast<ComputePrecision>(scalings));
+        accumulator = accumulator + static_cast<AccumulatePrecision>(sourceValue * operatorWeight);
       }
-    }
 
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
-      resultNode[entry] = static_cast<ResultPrecision>(accumulator[entry]);
+      resultNode[entry] = static_cast<ResultPrecision>(accumulator);
     }
   }
 }
@@ -382,22 +359,21 @@ exahype2::dg::differentiateAlongAxis(
   ResultPrecision* const                                                             result,
   const int                                                                          resultStride,
   const ComputePrecision* const                                                      values,
-  const int                                                                          valueStride,
+  const int                                                                          valueEntryStride,
+  const int                                                                          valueNodeStride,
   const exahype2::dg::DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>& derivativeWeights,
   const Scalings... scalings
 ) {
   using AccumulatePrecision = std::common_type_t<ResultPrecision, ComputePrecision>;
   using Weights             = exahype2::dg::DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>;
 
-  static_assert(
-    NumberOfEntries % PEANO_WITH_SIMDLEN == 0,
-    "A derivative along an axis runs over a number of entries that fills whole vectors."
-  );
-  ASSERTION(resultStride >= NumberOfEntries and valueStride >= NumberOfEntries, resultStride, valueStride);
   ASSERTION(
-    static_cast<const void*>(result) != static_cast<const void*>(values) or resultStride == valueStride,
+    static_cast<const void*>(result) != static_cast<const void*>(values)
+      or (resultStride == valueNodeStride and (valueEntryStride == 1 or NumberOfEntries == 1)),
     resultStride,
-    valueStride
+    valueNodeStride,
+    valueEntryStride,
+    NumberOfEntries
   );
 
   // The vector loop keeps every node of the line in registers. A compiler vectorises the innermost
@@ -408,9 +384,10 @@ exahype2::dg::differentiateAlongAxis(
   constexpr int CentreNode = NumberOfNodes / 2;
   SIMD()
   for (int entry = 0; entry < NumberOfEntries; entry++) {
-    ComputePrecision reference = values[CentreNode * valueStride + entry];
+    ComputePrecision reference = values[CentreNode * valueNodeStride + entry * valueEntryStride];
     if constexpr (NumberOfNodes % 2 == 0) {
-      reference = static_cast<ComputePrecision>(0.5) * (values[(CentreNode - 1) * valueStride + entry] + reference);
+      reference = static_cast<ComputePrecision>(0.5)
+        * (values[(CentreNode - 1) * valueNodeStride + entry * valueEntryStride] + reference);
     }
 
     ComputePrecision pairSums[Weights::PairSlots];
@@ -419,8 +396,9 @@ exahype2::dg::differentiateAlongAxis(
     for (int pair = 0; pair < Weights::Pairs; pair++) {
       // productRoundedOnce() rounds every scaled difference on its own. A device compiler then cannot
       // fuse the last scaling of one node of the pair into the sum.
-      ComputePrecision lower = values[pair * valueStride + entry] - reference;
-      ComputePrecision upper = values[(NumberOfNodes - 1 - pair) * valueStride + entry] - reference;
+      ComputePrecision lower = values[pair * valueNodeStride + entry * valueEntryStride] - reference;
+      ComputePrecision upper =
+        values[(NumberOfNodes - 1 - pair) * valueNodeStride + entry * valueEntryStride] - reference;
       ((lower = tarch::la::productRoundedOnce(lower, static_cast<ComputePrecision>(scalings)),
         upper = tarch::la::productRoundedOnce(upper, static_cast<ComputePrecision>(scalings))),
        ...);
@@ -493,6 +471,7 @@ exahype2::dg::computeNodalGradients(
         gradientLine,
         LineStride,
         stateLine,
+        1,
         LineStride,
         derivativeWeights,
         1.0 / cellSize(axis)
@@ -518,7 +497,9 @@ exahype2::dg::computeNodalGradients(
 template <
   int NodesPerAxis,
   int NumberOfEntries,
-  int NodeStride,
+  int FaceNodeStride,
+  int FieldNodeStride,
+  int FieldEntryStride,
   typename FieldPrecision,
   typename FacePrecision,
   typename CoefficientPrecision
@@ -533,8 +514,6 @@ exahype2::dg::extrapolateLineToFacePair(
   const int                                 direction,
   const int                                 faceNode
 ) {
-  static_assert(NodeStride >= NumberOfEntries);
-
   using AccumulatePrecision = std::common_type_t<FieldPrecision, FacePrecision, CoefficientPrecision>;
 
   ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
@@ -552,15 +531,18 @@ exahype2::dg::extrapolateLineToFacePair(
   if constexpr (NodesPerAxis % 2 == 1) {
     SIMD()
     for (int entry = 0; entry < NumberOfEntries; entry++) {
-      reference[entry] = static_cast<AccumulatePrecision>(field[entry + NodeStride * centreNode]);
+      reference[entry] =
+        static_cast<AccumulatePrecision>(field[entry * FieldEntryStride + FieldNodeStride * centreNode]);
     }
   } else {
     const int lowerCentreNode = centreNode - nodeStride;
     SIMD()
     for (int entry = 0; entry < NumberOfEntries; entry++) {
-      const auto lowerValue = static_cast<AccumulatePrecision>(field[entry + NodeStride * lowerCentreNode]);
-      const auto upperValue = static_cast<AccumulatePrecision>(field[entry + NodeStride * centreNode]);
-      reference[entry]      = static_cast<AccumulatePrecision>(0.5) * (lowerValue + upperValue);
+      const auto lowerValue =
+        static_cast<AccumulatePrecision>(field[entry * FieldEntryStride + FieldNodeStride * lowerCentreNode]);
+      const auto upperValue =
+        static_cast<AccumulatePrecision>(field[entry * FieldEntryStride + FieldNodeStride * centreNode]);
+      reference[entry] = static_cast<AccumulatePrecision>(0.5) * (lowerValue + upperValue);
     }
   }
 
@@ -588,8 +570,10 @@ exahype2::dg::extrapolateLineToFacePair(
     const AccumulatePrecision rightSumWeight        = Half * (rightLower + rightUpper);
     const AccumulatePrecision rightDifferenceWeight = Half * (rightLower - rightUpper);
     for (int entry = 0; entry < NumberOfEntries; entry++) {
-      const auto lower = static_cast<AccumulatePrecision>(field[entry + NodeStride * lowerNode]) - reference[entry];
-      const auto upper = static_cast<AccumulatePrecision>(field[entry + NodeStride * upperNode]) - reference[entry];
+      const auto lower = static_cast<AccumulatePrecision>(field[entry * FieldEntryStride + FieldNodeStride * lowerNode])
+        - reference[entry];
+      const auto upper = static_cast<AccumulatePrecision>(field[entry * FieldEntryStride + FieldNodeStride * upperNode])
+        - reference[entry];
       const AccumulatePrecision sum        = lower + upper;
       const AccumulatePrecision difference = lower - upper;
       lowerSums[entry]                     = std::fma(sum, leftSumWeight, lowerSums[entry]);
@@ -600,8 +584,8 @@ exahype2::dg::extrapolateLineToFacePair(
   }
 
   for (int entry = 0; entry < NumberOfEntries; entry++) {
-    lowerFace[entry + NumberOfEntries * faceNode] = static_cast<FacePrecision>(reference[entry] + lowerSums[entry]);
-    upperFace[entry + NumberOfEntries * faceNode] = static_cast<FacePrecision>(reference[entry] + upperSums[entry]);
+    lowerFace[entry + FaceNodeStride * faceNode] = static_cast<FacePrecision>(reference[entry] + lowerSums[entry]);
+    upperFace[entry + FaceNodeStride * faceNode] = static_cast<FacePrecision>(reference[entry] + upperSums[entry]);
   }
 }
 
@@ -630,7 +614,9 @@ exahype2::dg::extrapolateNodalFieldToFacePair(
     exahype2::dg::extrapolateLineToFacePair<
       NodesPerAxis,
       NumberOfEntries,
+      NumberOfEntries,
       NodeStride,
+      1,
       FieldPrecision,
       FacePrecision,
       CoefficientPrecision
@@ -648,7 +634,8 @@ exahype2::dg::extrapolateNodalFieldToFacePair(
 template <
   int NodesPerAxis,
   int NumberOfEntries,
-  int NodeStride,
+  int FaceNodeStride,
+  int FieldNodeStride,
   int DirectionStride,
   typename FieldPrecision,
   typename FacePrecision,
@@ -670,7 +657,9 @@ exahype2::dg::extrapolateNodalFieldToFaces(
     exahype2::dg::extrapolateLineToFacePair<
       NodesPerAxis,
       NumberOfEntries,
-      NodeStride,
+      FaceNodeStride,
+      FieldNodeStride,
+      1,
       FieldPrecision,
       FacePrecision,
       CoefficientPrecision
@@ -681,6 +670,58 @@ exahype2::dg::extrapolateNodalFieldToFaces(
       rightFaceCoefficients,
       direction,
       item - direction * NodesPerFace);
+  }
+}
+
+/**
+ * Extrapolates field to faces with extrapolateLineToFacePair(). Item i of the DIMENSIONS times
+ * NodesPerFace items extrapolates the line through face node i % NodesPerFace along direction
+ * i / NodesPerFace onto faces[direction] and faces[direction + DIMENSIONS]. The call runs the items
+ * firstItem, firstItem + itemStride and so on. The field of direction d starts d * DirectionStride
+ * values after field.
+ */
+template <
+  int NodesPerAxis,
+  int NumberOfEntries,
+  int FaceNodeStride,
+  int FieldEntryStride,
+  int DirectionStride,
+  typename FieldPrecision,
+  typename FacePrecision,
+  typename CoefficientPrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::extrapolateNodeMajorNodalFieldToFaces(
+  FacePrecision* const NOALIAS              faces[peano4::FacesPerCell],
+  const FieldPrecision* NOALIAS const       field,
+  const CoefficientPrecision* NOALIAS const leftFaceCoefficients,
+  const CoefficientPrecision* NOALIAS const rightFaceCoefficients,
+  const int                                 firstItem,
+  const int                                 itemStride
+) {
+  constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
+  ASSERTION(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
+
+  for (int item = firstItem; item < DIMENSIONS * NodesPerFace * NumberOfEntries; item += itemStride) {
+    const int direction = item / (NodesPerFace * NumberOfEntries);
+    const int entry     = (item / NodesPerFace) % NumberOfEntries;
+    const int line      = item % NodesPerFace;
+    exahype2::dg::extrapolateLineToFacePair<
+      NodesPerAxis,
+      1,
+      FaceNodeStride,
+      1,
+      FieldEntryStride,
+      FieldPrecision,
+      FacePrecision,
+      CoefficientPrecision
+    >(faces[direction] + entry,
+      faces[direction + DIMENSIONS] + entry,
+      field + direction * DirectionStride + entry * FieldEntryStride,
+      leftFaceCoefficients,
+      rightFaceCoefficients,
+      direction,
+      line);
   }
 }
 
@@ -1133,12 +1174,14 @@ exahype2::dg::projectTensorProduct(const Value* const input, Value* const output
 }
 
 /**
- * Overwrites the flux of every axis with its derivative along that axis. flux stores one block
- * per axis with PaddedNumberOfUnknowns values per node. Item i of the DIMENSIONS times NodesPerFace
- * items differentiates line i % NodesPerFace of axis i / NodesPerFace. The call runs the items
- * firstItem, firstItem + itemStride and so on. A host thread runs its items axis by axis with the
- * node stride of every axis fixed at compile time. On a device, consecutive threads take consecutive
- * items across the axes. The threads of a warp then follow one code path.
+ * Overwrites the flux of every axis with its derivative along that axis.
+ * flux stores one block, stored as struct-of-array with NumberOfUnknowns values per node.
+ * Item i of the NumberOfUnknowns times DIMENSIONS times NodesPerFace items differentiates
+ * line i % NodesPerFace of entry (i / NodesPerFace) % NumberOfUnknowns of axis i / (NodesPerFace * NumberOfUnknowns).
+ * The call runs the items firstItem, firstItem + itemStride and so on.
+ * A host thread runs its items axis by axis with the node stride of every axis fixed at compile time.
+ * On a device, consecutive threads take consecutive items across the axes. The threads of a warp then follow one code
+ * path.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -1152,8 +1195,8 @@ exahype2::dg::differentiateFluxInPlace(
   using CellLayout           = exahype2::dg::PaddedLayout<Derived>;
   constexpr int NodesPerAxis = CellLayout::NodesPerAxis;
   constexpr int NodesPerFace = CellLayout::NodesPerFace;
-  constexpr int FluxStride   = CellLayout::PaddedNumberOfUnknowns;
-  constexpr int AxisStride   = CellLayout::NodesPerCell * FluxStride;
+  constexpr int FluxStride   = CellLayout::NumberOfUnknowns;
+  constexpr int AxisStride   = CellLayout::PaddedNodesPerCell * FluxStride;
 
   ASSERTION(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -1161,14 +1204,16 @@ exahype2::dg::differentiateFluxInPlace(
   }
 
   const auto derivativeWeights = exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator);
-  const auto differentiateLine = [&](const int axis, const int line) {
-    const int                       nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis) * FluxStride;
+  const auto differentiateLine = [&](const int axis, const int entry, const int line) {
+    const int                       nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
     const int                       firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, line);
-    ComputePrecision* NOALIAS const fluxLine   = flux + axis * AxisStride + firstNode * FluxStride;
-    exahype2::dg::differentiateAlongAxis<FluxStride, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+    ComputePrecision* NOALIAS const fluxLine =
+      flux + axis * AxisStride + entry * CellLayout::PaddedNodesPerCell + firstNode;
+    exahype2::dg::differentiateAlongAxis<1, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
       fluxLine,
       nodeStride,
       fluxLine,
+      1,
       nodeStride,
       derivativeWeights,
       inverseCellSize.getData()[axis]
@@ -1178,12 +1223,14 @@ exahype2::dg::differentiateFluxInPlace(
   COMPILE_IF_ON_HOST(UNROLL(DIMENSIONS) for (int axis = 0; axis < DIMENSIONS; axis++) {
     const int distanceToAxis  = firstItem < axis * NodesPerFace ? axis * NodesPerFace - firstItem : 0;
     const int firstItemOnAxis = firstItem + (distanceToAxis + itemStride - 1) / itemStride * itemStride;
-    for (int item = firstItemOnAxis; item < (axis + 1) * NodesPerFace; item += itemStride) {
-      differentiateLine(axis, item - axis * NodesPerFace);
+    for (int entry = 0; entry < FluxStride; entry++) {
+      for (int item = firstItemOnAxis; item < (axis + 1) * NodesPerFace; item += itemStride) {
+        differentiateLine(axis, entry, item - axis * NodesPerFace);
+      }
     }
   })
-  COMPILE_IF_ON_DEVICE(for (int item = firstItem; item < DIMENSIONS * NodesPerFace; item += itemStride) {
-    differentiateLine(item / NodesPerFace, item % NodesPerFace);
+  COMPILE_IF_ON_DEVICE(for (int item = firstItem; item < DIMENSIONS * FluxStride * NodesPerFace; item += itemStride) {
+    differentiateLine(item / (NodesPerFace * FluxStride), (item / NodesPerFace) % FluxStride, item % NodesPerFace);
   })
 }
 TARGET_DECLARE_END

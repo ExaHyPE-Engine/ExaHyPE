@@ -116,7 +116,8 @@ namespace exahype2::dg {
     int  NumberOfEntries,
     int  NumberOfTargetNodes,
     int  NumberOfSourceNodes,
-    int  ValueStride,
+    int  ValueEntryStride,
+    int  ValueNodeStride,
     int  OperatorStride,
     int  ResultStride,
     bool OverwriteResult,
@@ -151,7 +152,8 @@ namespace exahype2::dg {
     ResultPrecision*                                                     result,
     int                                                                  resultStride,
     const ComputePrecision*                                              values,
-    int                                                                  valueStride,
+    int                                                                  valueEntryStride,
+    int                                                                  valueNodeStride,
     const DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>& derivativeWeights,
     const Scalings... scalings
   );
@@ -167,7 +169,9 @@ namespace exahype2::dg {
   template <
     int NodesPerAxis,
     int NumberOfEntries,
-    int NodeStride,
+    int FaceNodeStride,
+    int FieldNodeStride,
+    int FieldEntryStride,
     typename FieldPrecision,
     typename FacePrecision,
     typename CoefficientPrecision
@@ -202,13 +206,33 @@ namespace exahype2::dg {
   template <
     int NodesPerAxis,
     int NumberOfEntries,
-    int NodeStride,
+    int FaceNodeStride,
+    int FieldNodeStride,
     int DirectionStride,
     typename FieldPrecision,
     typename FacePrecision,
     typename CoefficientPrecision
   >
   INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateNodalFieldToFaces(
+    FacePrecision* const NOALIAS        faces[peano4::FacesPerCell],
+    const FieldPrecision* NOALIAS       field,
+    const CoefficientPrecision* NOALIAS leftFaceCoefficients,
+    const CoefficientPrecision* NOALIAS rightFaceCoefficients,
+    int                                 firstItem,
+    int                                 itemStride
+  );
+
+  template <
+    int NodesPerAxis,
+    int NumberOfEntries,
+    int FaceNodeStride,
+    int FieldEntryStride,
+    int DirectionStride,
+    typename FieldPrecision,
+    typename FacePrecision,
+    typename CoefficientPrecision
+  >
+  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateNodeMajorNodalFieldToFaces(
     FacePrecision* const NOALIAS        faces[peano4::FacesPerCell],
     const FieldPrecision* NOALIAS       field,
     const CoefficientPrecision* NOALIAS leftFaceCoefficients,
@@ -298,6 +322,7 @@ namespace exahype2::dg {
 template <typename Derived>
 struct exahype2::dg::PaddedLayout final {
   static constexpr int NodesPerAxis           = Derived::DGOrder + 1;
+  static constexpr int PaddedNodesPerAxis     = exahype2::dg::getPaddedCountOf(NodesPerAxis);
   static constexpr int NumberOfUnknowns       = Derived::NumberOfUnknowns;
   static constexpr int NumberOfData           = NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
   static constexpr int PaddedNumberOfUnknowns = exahype2::dg::getPaddedCountOf(NumberOfUnknowns);
@@ -305,6 +330,7 @@ struct exahype2::dg::PaddedLayout final {
   static constexpr int NodesPerAxisIn3D       = (DIMENSIONS == 3) ? NodesPerAxis : 1;
   static constexpr int NodesPerFace           = NodesPerAxis * NodesPerAxisIn3D;
   static constexpr int NodesPerCell           = NodesPerFace * NodesPerAxis;
+  static constexpr int PaddedNodesPerCell     = exahype2::dg::getPaddedCountOf(NodesPerCell);
   static constexpr int SpaceTimeNodes         = NodesPerCell * NodesPerAxis;
 };
 

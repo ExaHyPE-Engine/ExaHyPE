@@ -71,49 +71,52 @@ class TPV26(DynamicRuptureScenario):
   faultPosition = _curvi->split(
     faultNormal,
     20.0,
-    [](tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
+    []([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
   );
 """
 
     def initial_conditions(self):
         return """
-      Q[Shortcuts::rho] = 2.67;
-      Q[Shortcuts::cp ] = 6.0;
-      Q[Shortcuts::cs ] = 3.464;
+      Q.rho = 2.67;
+      Q.cp  = 6.0;
+      Q.cs  = 3.464;
 """
 
     dynamicRuptureDictionary = {
         "initialStresses": """
-  double Omega = 0.;
-  if(x[1]<=15.){
-    Omega=1.;
+  double depthTaper = 0.;
+  if (x[1] <= 15.) {
+    depthTaper = 1.;
+  } else if (x[1] <= 20.) {
+    depthTaper = (20. - x[1]) / 5.;
   }
-  else if(x[1]<=20.){
-    Omega = (20.-x[1])/5.;
-  }
 
-  const double Pf     =  1.000 * 9.8 * x[1];
-  const double s_zz0  = -2.670 * 9.8 * x[1];
+  const double porePressure   = 1.000 * 9.8 * x[1];
+  const double verticalStress = -2.670 * 9.8 * x[1];
 
-  constexpr double b_11 = 0.926793;
-  constexpr double b_13 = -0.169029;
-  constexpr double b_33 = 1.073206;
+  constexpr double B11 = 0.926793;
+  constexpr double B13 = -0.169029;
+  constexpr double B33 = 1.073206;
 
-  sxx = Omega*(b_33*(s_zz0+Pf)-Pf)+(1.0-Omega)*s_zz0 + Pf;
-  syy = s_zz0 + Pf;
-  szz = Omega*(b_11*(s_zz0+Pf)-Pf)+(1.0-Omega)*s_zz0 + Pf;
+  sxx = depthTaper * (B33 * (verticalStress + porePressure) - porePressure)
+      + (1.0 - depthTaper) * verticalStress + porePressure;
+  syy = verticalStress + porePressure;
+  szz = depthTaper * (B11 * (verticalStress + porePressure) - porePressure)
+      + (1.0 - depthTaper) * verticalStress + porePressure;
   sxy = 0;
-  sxz = Omega*(b_13*(s_zz0+Pf));
+  sxz = depthTaper * (B13 * (verticalStress + porePressure));
   syz = 0;
     """,
         "n_yz": "return 0;",
-        "cohesion": "return 0.40 + 0.72 * fmax(5.0 - x[1],0);",
+        "cohesion": "return 0.40 + 0.72 * std::fmax(5.0 - x[1], 0);",
         "forced_rupture_time": """
-  double r = sqrt(pow(x[2]-15.0, 2.0) + pow(x[1]-10.0, 2.0));
-  constexpr double r_crit = 4.0;
-  constexpr double Vs = 3.4640;
-  if (r <= r_crit) {
-    return r/(0.7*Vs)+(0.081*r_crit/(0.7*Vs))*(1.0/(1.0 - pow(r/r_crit, 2.0))-1.0);
+  const double     distance         = std::sqrt(std::pow(x[2] - 15.0, 2.0) + std::pow(x[1] - 10.0, 2.0));
+  constexpr double CriticalDistance = 4.0;
+  constexpr double ShearWaveSpeed   = 3.4640;
+  if (distance <= CriticalDistance) {
+    return distance / (0.7 * ShearWaveSpeed)
+         + (0.081 * CriticalDistance / (0.7 * ShearWaveSpeed))
+             * (1.0 / (1.0 - std::pow(distance / CriticalDistance, 2.0)) - 1.0);
   }
   return 1000000000.0;""",
         "d_c": "return 0.3;",

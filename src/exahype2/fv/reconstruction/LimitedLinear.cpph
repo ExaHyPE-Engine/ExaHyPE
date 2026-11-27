@@ -88,22 +88,20 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::evolveFaceStates(
                     volumeCentre,
                     volumeSize,
                     normal,
-                    0,
+                    limitedDifferences,
                     parameters
                   );
                 }) {
-    for (int unknown = 0; unknown < NumberOfData; unknown++) {
-      limitedDifferences[unknown] = SolverType::limitedDifference(
-        leftStateForCompute,
-        centreStateForCompute,
-        rightStateForCompute,
-        volumeCentre,
-        volumeSize,
-        normal,
-        unknown,
-        parameters
-      );
-    }
+    SolverType::limitedDifference(
+      leftStateForCompute,
+      centreStateForCompute,
+      rightStateForCompute,
+      volumeCentre,
+      volumeSize,
+      normal,
+      limitedDifferences,
+      parameters
+    );
   } else {
     SIMD()
     for (int unknown = 0; unknown < NumberOfData; unknown++) {
@@ -122,27 +120,23 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::evolveFaceStates(
                     volumeCentre,
                     volumeSize,
                     normal,
-                    0,
-                    evolvedMinusState[0],
-                    evolvedPlusState[0],
+                    evolvedMinusState,
+                    evolvedPlusState,
                     parameters
                   );
                 }) {
-    for (int unknown = 0; unknown < NumberOfData; unknown++) {
-      SolverType::reconstruct(
-        leftStateForCompute,
-        centreStateForCompute,
-        rightStateForCompute,
-        limitedDifferences,
-        volumeCentre,
-        volumeSize,
-        normal,
-        unknown,
-        evolvedMinusState[unknown],
-        evolvedPlusState[unknown],
-        parameters
-      );
-    }
+    SolverType::reconstruct(
+      leftStateForCompute,
+      centreStateForCompute,
+      rightStateForCompute,
+      limitedDifferences,
+      volumeCentre,
+      volumeSize,
+      normal,
+      evolvedMinusState,
+      evolvedPlusState,
+      parameters
+    );
   } else {
     SIMD()
     for (int unknown = 0; unknown < NumberOfData; unknown++) {
@@ -345,6 +339,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::StateTerms<
   ) {
   constexpr int NumberOfData      = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   int           strideAlongNormal = NumberOfData;
+  UNROLL(DIMENSIONS)
   for (int normal = 0; normal < DIMENSIONS; normal++) {
     const StoragePrecision* NOALIAS const lowerState = getNeighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData>(
       patch,
@@ -530,6 +525,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   StateUpdatePrecision axisUpdates[DIMENSIONS][NumberOfUnknowns];
 
   int strideInVolumes = 1;
+  UNROLL(DIMENSIONS)
   for (int normal = 0; normal < DIMENSIONS; normal++) {
     const int strideAlongNormal = strideInVolumes * NumberOfData;
 

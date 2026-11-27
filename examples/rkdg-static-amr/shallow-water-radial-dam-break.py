@@ -52,7 +52,7 @@ solver = exahype2.dg.rk.Solver(
     name="RKDGSolver",
     rk_order=2,
     dg_order=order,
-    unknowns=4,
+    unknowns={"h": 1, "hv": 2, "b": 1},
     auxiliary_variables=0,
     time_stepping=exahype2.TimeStepping.Adaptive(0.8),
     basis=exahype2.dg.GaussLegendre,
@@ -63,19 +63,17 @@ solver.set_pde_terms(
   const double firstSquare  = (x[0] - 0.5) * (x[0] - 0.5);
   const double secondSquare = (x[1] - 0.5) * (x[1] - 0.5);
   const double r            = std::sqrt(firstSquare + secondSquare);
-  Q[0] = 1.;
-  Q[1] = 0.;
-  Q[2] = 0.;
-  Q[3] = r < 0.1 ? 0.0 : 0.05;
+  Q.h  = 1.;
+  Q.hv = 0.;
+  Q.b  = r < 0.1 ? 0.0 : 0.05;
 """,
     boundary_conditions="""
   const double firstSquare  = (x[0] - 0.5) * (x[0] - 0.5);
   const double secondSquare = (x[1] - 0.5) * (x[1] - 0.5);
   const double r            = std::sqrt(firstSquare + secondSquare);
-  Qoutside[0] = 1.;
-  Qoutside[1] = 0.;
-  Qoutside[2] = 0.;
-  Qoutside[3] = r < 0.1 ? 0.0 : 0.05;
+  Qoutside.h  = 1.;
+  Qoutside.hv = 0.;
+  Qoutside.b  = r < 0.1 ? 0.0 : 0.05;
 """,
     refinement_criterion="""
   auto result = ::exahype2::RefinementCommand::Keep;
@@ -89,23 +87,22 @@ solver.set_pde_terms(
 """,
     max_eigenvalue="""
   constexpr double Gravity = 9.81;
-  const double u = Q[1 + normal] / Q[0];
-  const double c = std::sqrt(Gravity * Q[0]);
+  const double u = Q.hv(normal) / Q.h;
+  const double c = std::sqrt(Gravity * Q.h);
   return std::max(std::abs(u + c), std::abs(u - c));
 """,
     flux="""
-  const double inverseHeight = 1.0 / Q[0];
-  F[0] = Q[1 + normal];
-  F[1] = Q[1 + normal] * Q[1] * inverseHeight;
-  F[2] = Q[1 + normal] * Q[2] * inverseHeight;
-  F[3] = 0.0;
+  const double inverseHeight = 1.0 / Q.h;
+  F.h = Q.hv(normal);
+  for (int axis = 0; axis < 2; axis++) {
+    F.hv(axis) = Q.hv(normal) * Q.hv(axis) * inverseHeight;
+  }
+  F.b = 0.0;
 """,
     ncp="""
   constexpr double Gravity = 9.81;
-  BTimesDeltaQ[0]          = 0.0;
-  BTimesDeltaQ[1 + normal] = Gravity * Q[0] * (deltaQ[0] + deltaQ[3]);
-  BTimesDeltaQ[2 - normal] = 0.0;
-  BTimesDeltaQ[3]          = 0.0;
+  BTimesDeltaQ            = {};
+  BTimesDeltaQ.hv(normal) = Gravity * Q.h * (deltaQ.h + deltaQ.b);
 """,
 )
 

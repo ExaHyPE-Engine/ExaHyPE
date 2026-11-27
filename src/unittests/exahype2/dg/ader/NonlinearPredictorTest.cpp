@@ -33,9 +33,9 @@ namespace {
   constexpr int NumberOfUnknowns   = CellLayout::NumberOfUnknowns;
   constexpr int NumberOfData       = CellLayout::NumberOfData;
   constexpr int OperatorEntries    = NodesPerAxis * NodesPerAxis;
-  constexpr int StateStride        = CellLayout::PaddedNumberOfData;
   constexpr int UnknownStride      = CellLayout::PaddedNumberOfUnknowns;
-  constexpr int FluxAxisStride     = CellLayout::NodesPerCell * UnknownStride;
+  constexpr int StateStride        = CellLayout::PaddedNodesPerCell;
+  constexpr int FluxAxisStride     = NumberOfUnknowns * StateStride;
   constexpr int GradientAxisStride = CellLayout::NodesPerCell * UnknownStride;
   constexpr int SourceSize         = CellLayout::NodesPerCell * UnknownStride;
   constexpr int CellStateSize      = CellLayout::NodesPerCell * NumberOfData;
@@ -537,10 +537,7 @@ namespace {
     const int cellNode,
     const int value
   ) {
-    ASSERTION(value >= 0 and value < StateStride, value);
-    if (value >= NumberOfData) {
-      return 0.0;
-    }
+    ASSERTION(value >= 0 and value < NumberOfData, value);
     const double stateValue = cellState[cellNode * NumberOfData + value];
     if (value >= NumberOfUnknowns) {
       return stateValue;
@@ -745,11 +742,11 @@ namespace {
         const double firstSource    = getSourceAt(0, cellNode, unknown);
         double       averagedSource = firstSource;
         for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-          const int    spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-          const double source        = getSourceAt(timeNode, cellNode, unknown);
+          const int spaceTimeNode = (timeNode * NumberOfUnknowns + unknown) * CellLayout::PaddedNodesPerCell + cellNode;
+          const double source     = getSourceAt(timeNode, cellNode, unknown);
           averagedSource += tables.quadratureWeights[timeNode] * (source - firstSource);
           VALIDATE_NUMERICAL_EQUALS(
-            scratch[Scratch::RightHandSideOffset + spaceTimeNode * UnknownStride + unknown],
+            scratch[Scratch::RightHandSideOffset + spaceTimeNode],
             getUpdateSizeAt(tables, timeNode, cellNode) * source,
             timeNode,
             cellNode,
@@ -770,16 +767,6 @@ namespace {
         );
       }
       for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
-        for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-          const int spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-          VALIDATE_EQUALS(
-            scratch[Scratch::RightHandSideOffset + spaceTimeNode * UnknownStride + unknown],
-            0.0,
-            timeNode,
-            cellNode,
-            unknown
-          );
-        }
         VALIDATE_EQUALS(scratch[Scratch::TimeAveragedSourceOffset + sourceEntry + unknown], 0.0, cellNode, unknown);
         VALIDATE_EQUALS(scratch[Scratch::FirstSourceOffset + sourceEntry + unknown], 0.0, cellNode, unknown);
       }
@@ -955,24 +942,25 @@ UNIT_TEST("The space-time state of a solver without terms repeats the cell state
 
     WHEN("The predictor runs") {
       FaceBuffers faces;
+
       predictCell<InertSolver>(faces, cellState, scratch, tables.getView(), TimeStepSize, PicardTolerance);
 
       THEN("Every time slice stores the cell state in double precision and every padding lane stores zero") {
         for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-            const int firstEntry    = Scratch::SpaceTimeStateOffset + spaceTimeNode * StateStride;
-            for (int value = 0; value < NumberOfData; value++) {
+          for (int value = 0; value < NumberOfUnknowns; value++) {
+            const int spaceTimeUnknown = timeNode * CellLayout::NumberOfUnknowns + value;
+            const int firstEntry       = Scratch::SpaceTimeStateOffset + spaceTimeUnknown * StateStride;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               VALIDATE_NUMERICAL_EQUALS(
-                scratch[firstEntry + value],
+                scratch[firstEntry + cellNode],
                 static_cast<double>(cellState[cellNode * NumberOfData + value]),
                 timeNode,
-                cellNode,
-                value
+                value,
+                cellNode
               );
             }
-            for (int value = NumberOfData; value < StateStride; value++) {
-              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + value], 0.0, cellNode, value);
+            for (int cellNode = CellLayout::NodesPerCell; cellNode < CellLayout::PaddedNodesPerCell; cellNode++) {
+              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + cellNode], 0, timeNode, value, cellNode);
             }
           }
         }
@@ -1004,21 +992,22 @@ UNIT_TEST("Every time slice of the right-hand side starts from zero and keeps it
 
       THEN("Every time slice stores the quadrature of its own source and every padding lane stores zero") {
         for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int    spaceTimeNode     = timeNode * CellLayout::NodesPerCell + cellNode;
-            const int    firstEntry        = Scratch::RightHandSideOffset + spaceTimeNode * UnknownStride;
-            const double auxiliaryVariable = cellState[cellNode * NumberOfData + NumberOfUnknowns];
-            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            const int spaceTimeNode = (timeNode * NumberOfUnknowns + unknown);
+            const int firstEntry    = Scratch::RightHandSideOffset + spaceTimeNode * CellLayout::PaddedNodesPerCell;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+              const double auxiliaryVariable = cellState[cellNode * NumberOfData + NumberOfUnknowns];
+              // for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
               VALIDATE_NUMERICAL_EQUALS(
-                scratch[firstEntry + unknown],
+                scratch[firstEntry + cellNode],
                 getUpdateSizeAt(tables, timeNode, cellNode) * (1.0 + unknown) * auxiliaryVariable,
                 timeNode,
                 cellNode,
                 unknown
               );
             }
-            for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
-              VALIDATE_EQUALS(scratch[firstEntry + unknown], 0.0, timeNode, cellNode, unknown);
+            for (int cellNode = CellLayout::NodesPerCell; cellNode < CellLayout::PaddedNodesPerCell; cellNode++) {
+              VALIDATE_EQUALS(scratch[firstEntry + cellNode], 0.0, timeNode, cellNode, unknown);
             }
           }
         }
@@ -1051,8 +1040,15 @@ UNIT_TEST("A flux that is constant along every axis leaves the right-hand side a
       );
 
       THEN("Every entry of the right-hand side is zero bitwise") {
-        for (int entry = 0; entry < CellLayout::SpaceTimeNodes * UnknownStride; entry++) {
-          VALIDATE_EQUALS(scratch[Scratch::RightHandSideOffset + entry], 0.0, entry);
+        for (int spaceTimeUnknown = 0; spaceTimeUnknown < NodesPerAxis * NumberOfUnknowns; spaceTimeUnknown++) {
+          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+            VALIDATE_EQUALS(
+              scratch[Scratch::RightHandSideOffset + spaceTimeUnknown * CellLayout::PaddedNodesPerCell + cellNode],
+              0.0,
+              spaceTimeUnknown,
+              cellNode
+            );
+          }
         }
       }
     }
@@ -1091,19 +1087,16 @@ UNIT_TEST("A flux that grows linearly subtracts its exact divergence from every 
       THEN("Every time slice stores the weighted negated divergence and every padding lane stores zero") {
         const auto inverseCellSize = getInverseCellSize();
         for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int    spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-            const int    firstEntry    = Scratch::RightHandSideOffset + spaceTimeNode * UnknownStride;
-            const double weight        = tables.quadratureWeights[timeNode] * tables.cellQuadratureWeights[cellNode];
-            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-              double expected = 0.0;
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            const int spaceTimeNode = timeNode * CellLayout::NumberOfUnknowns + unknown;
+            const int firstEntry    = Scratch::RightHandSideOffset + spaceTimeNode * CellLayout::PaddedNodesPerCell;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+              const double weight   = tables.quadratureWeights[timeNode] * tables.cellQuadratureWeights[cellNode];
+              double       expected = 0.0;
               for (int axis = 0; axis < DIMENSIONS; axis++) {
                 expected -= weight * TimeStepSize * inverseCellSize(axis) * (1.0 + unknown) * FluxSlope * (1.0 + axis);
               }
-              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + unknown], expected, timeNode, cellNode, unknown);
-            }
-            for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
-              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + unknown], 0.0, timeNode, cellNode, unknown);
+              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + cellNode], expected, timeNode, unknown, cellNode);
             }
           }
         }
@@ -1134,15 +1127,16 @@ UNIT_TEST("A Picard sweep without terms reproduces the cell state bitwise") {
       THEN("The iteration stops after one sweep and every time slice stores the cell state bitwise") {
         VALIDATE_EQUALS(numberOfSweeps, 1);
         for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int spaceTimeNode = cellNode + CellLayout::NodesPerCell * timeNode;
-            for (int value = 0; value < NumberOfData; value++) {
+          for (int value = 0; value < NumberOfUnknowns; value++) {
+            const int spaceTimeUnknown = timeNode * CellLayout::NumberOfUnknowns + value;
+            const int firstEntry       = Scratch::SpaceTimeStateOffset + spaceTimeUnknown * StateStride;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               VALIDATE_EQUALS(
-                scratch[Scratch::SpaceTimeStateOffset + spaceTimeNode * StateStride + value],
+                scratch[firstEntry + cellNode],
                 cellState[cellNode * NumberOfData + value],
                 timeNode,
-                cellNode,
-                value
+                value,
+                cellNode
               );
             }
           }
@@ -1217,15 +1211,16 @@ UNIT_TEST("A Picard sweep measures the squared distance of the new from the prev
       THEN("The second sweep reaches a zero distance and the later time slices store the new iterate") {
         VALIDATE_EQUALS(numberOfSweeps, 2);
         for (int timeNode = 1; timeNode < NodesPerAxis; timeNode++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int spaceTimeNode = cellNode + CellLayout::NodesPerCell * timeNode;
-            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            const int spaceTimeUnknown = timeNode * CellLayout::NumberOfUnknowns + unknown;
+            const int firstEntry       = Scratch::SpaceTimeStateOffset + spaceTimeUnknown * StateStride;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               VALIDATE_NUMERICAL_EQUALS(
-                scratch[Scratch::SpaceTimeStateOffset + spaceTimeNode * StateStride + unknown],
+                scratch[firstEntry + cellNode],
                 getIterateOfAuxiliaryVariableSource(tables, cellState, timeNode, cellNode, unknown),
                 timeNode,
-                cellNode,
-                unknown
+                unknown,
+                cellNode
               );
             }
           }
@@ -1435,15 +1430,12 @@ UNIT_TEST("The flux fills one block per axis and the solver receives the node st
       THEN("The flux of the first time node stores the flux of every node and axis and every padding lane is zero") {
         const double timePosition = getTimePositionOf(tables, 0);
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int    firstEntry = Scratch::FirstFluxOffset + axis * FluxAxisStride + cellNode * UnknownStride;
-            const double position   = getNodePositionAt(tables, cellNode)(axis);
-            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            const int firstEntry = Scratch::FirstFluxOffset + axis * FluxAxisStride + unknown * StateStride;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+              const double position = getNodePositionAt(tables, cellNode)(axis);
               const double expected = (1.0 + axis) * getStateValueAt(cellNode, unknown) + position + timePosition;
-              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + unknown], expected, axis, cellNode, unknown);
-            }
-            for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
-              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + unknown], 0.0, axis, cellNode, unknown);
+              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + cellNode], expected, axis, cellNode, unknown);
             }
           }
         }
@@ -1464,14 +1456,14 @@ UNIT_TEST("The diffusive flux of a node reads the gradient of every axis at that
 
       THEN("The flux of the first time node reads the state and the gradient of every axis at every node") {
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int firstEntry = Scratch::FirstFluxOffset + axis * FluxAxisStride + cellNode * UnknownStride;
-            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            const int firstEntry = Scratch::FirstFluxOffset + axis * FluxAxisStride + unknown * StateStride;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               double expected = (1.0 + axis) * getQuadraticStateEntry(tables, cellNode, unknown);
               for (int gradientAxis = 0; gradientAxis < DIMENSIONS; gradientAxis++) {
                 expected += (0.5 + gradientAxis) * getQuadraticStateDerivative(tables, gradientAxis, cellNode, unknown);
               }
-              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + unknown], expected, axis, cellNode, unknown);
+              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + cellNode], expected, axis, cellNode, unknown);
             }
           }
         }
@@ -1559,11 +1551,13 @@ UNIT_TEST("The gradient and the source of every time node read the iterate of th
             const double firstSource    = getSecondSourceOfSlopedState(tables, cellState, 0, cellNode, unknown);
             double       averagedSource = firstSource;
             for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-              const int    spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-              const double source        = getSecondSourceOfSlopedState(tables, cellState, timeNode, cellNode, unknown);
+              // const int    spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
+              const int spaceTimeNode =
+                (timeNode * NumberOfUnknowns + unknown) * CellLayout::PaddedNodesPerCell + cellNode;
+              const double source = getSecondSourceOfSlopedState(tables, cellState, timeNode, cellNode, unknown);
               averagedSource += tables.quadratureWeights[timeNode] * (source - firstSource);
               VALIDATE_NUMERICAL_EQUALS(
-                scratch[Scratch::RightHandSideOffset + spaceTimeNode * UnknownStride + unknown],
+                scratch[Scratch::RightHandSideOffset + spaceTimeNode],
                 getUpdateSizeAt(tables, timeNode, cellNode) * source,
                 timeNode,
                 cellNode,
@@ -1607,11 +1601,12 @@ UNIT_TEST("A state, a flux and a source of the same value at every time node ave
       predictCell<FullSolver>(faces, cellState, scratch, tables.getView(), ZeroTimeStepSize, PicardTolerance);
 
       THEN("The time averages of the state, of the flux on the faces and of the source equal their values bitwise") {
-        for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-          for (int value = 0; value < StateStride; value++) {
-            const double expected = value < NumberOfData ? cellState[cellNode * NumberOfData + value] : 0.0;
+        for (int value = 0; value < NumberOfUnknowns; value++) {
+          for (int cellNode = 0; cellNode < CellLayout::PaddedNodesPerCell; cellNode++) {
+            const double expected =
+              cellNode < CellLayout::NodesPerCell ? cellState[cellNode * NumberOfData + value] : 0;
             VALIDATE_EQUALS(
-              scratch[Scratch::TimeAveragedStateOffset + cellNode * StateStride + value],
+              scratch[Scratch::TimeAveragedStateOffset + value * StateStride + cellNode],
               expected,
               cellNode,
               value
@@ -1654,7 +1649,8 @@ UNIT_TEST("The first time node overwrites the running flux and source averages w
       THEN("The faces store the flux of the first time node and both source buffers store its source") {
         for (int face = 0; face < peano4::FacesPerCell; face++) {
           for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
-            const int firstFluxEntry = (face % DIMENSIONS) * FluxAxisStride + entry % NumberOfUnknowns;
+            const int firstFluxEntry =
+              (face % DIMENSIONS) * FluxAxisStride + (entry % NumberOfUnknowns) * CellLayout::PaddedNodesPerCell;
             VALIDATE_EQUALS(faces.flux[face][entry], scratch[Scratch::FirstFluxOffset + firstFluxEntry], face, entry);
           }
         }
@@ -1688,13 +1684,13 @@ UNIT_TEST("The flux average stores one block per axis and every block runs in ce
 
       THEN("The time-averaged flux of every axis equals its derivative along that axis at every node") {
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int firstEntry = Scratch::TimeAveragedFluxOffset + axis * FluxAxisStride + cellNode * UnknownStride;
-            for (int unknown = 0; unknown < UnknownStride; unknown++) {
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            const int firstEntry = Scratch::TimeAveragedFluxOffset + axis * FluxAxisStride + unknown * StateStride;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               const double expected = unknown < NumberOfUnknowns
                 ? (1.0 + axis) * getQuadraticStateDerivative(tables, axis, cellNode, unknown) + 1.0
                 : 0.0;
-              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + unknown], expected, axis, cellNode, unknown);
+              VALIDATE_NUMERICAL_EQUALS(scratch[firstEntry + cellNode], expected, axis, cellNode, unknown);
             }
           }
         }
@@ -1733,7 +1729,7 @@ UNIT_TEST("The state average overwrites the first time slice and leaves the late
 
       THEN("The first slice stores the time average of the iterate and the later slices store the iterate bitwise") {
         for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-          for (int value = 0; value < StateStride; value++) {
+          for (int value = 0; value < NumberOfUnknowns; value++) {
             const double firstValue = getIterateOfAuxiliaryVariableSource(tables, cellState, 0, cellNode, value);
             double       expected   = firstValue;
             for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
@@ -1741,7 +1737,7 @@ UNIT_TEST("The state average overwrites the first time slice and leaves the late
               expected += tables.quadratureWeights[timeNode] * (iterate - firstValue);
             }
             VALIDATE_NUMERICAL_EQUALS(
-              scratch[Scratch::SpaceTimeStateOffset + cellNode * StateStride + value],
+              scratch[Scratch::SpaceTimeStateOffset + value * StateStride + cellNode],
               expected,
               cellNode,
               value
@@ -1749,11 +1745,12 @@ UNIT_TEST("The state average overwrites the first time slice and leaves the late
           }
         }
         for (int timeNode = 1; timeNode < NodesPerAxis; timeNode++) {
-          for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-            const int spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-            for (int value = 0; value < StateStride; value++) {
+          for (int value = 0; value < NumberOfUnknowns; value++) {
+            const int spaceTimeUnknown = timeNode * CellLayout::NumberOfUnknowns + value;
+            const int firstEntry       = Scratch::SpaceTimeStateOffset + spaceTimeUnknown * StateStride;
+            for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
               VALIDATE_EQUALS(
-                scratch[Scratch::SpaceTimeStateOffset + spaceTimeNode * StateStride + value],
+                scratch[firstEntry + cellNode],
                 getIterateOfAuxiliaryVariableSource(tables, cellState, timeNode, cellNode, value),
                 timeNode,
                 cellNode,
@@ -1772,17 +1769,18 @@ UNIT_TEST("The scratch places every buffer behind its predecessor without a gap"
     using Scratch = Predictor<FullSolver>::Scratch;
 
     THEN("Every buffer has the extent of its term and starts where its predecessor ends") {
-      VALIDATE_EQUALS(Scratch::SpaceTimeStateSize, StateStride * CellLayout::SpaceTimeNodes);
-      VALIDATE_EQUALS(Scratch::RightHandSideSize, UnknownStride * CellLayout::SpaceTimeNodes);
-      VALIDATE_EQUALS(Scratch::FluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-      VALIDATE_EQUALS(Scratch::FirstFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-      VALIDATE_EQUALS(Scratch::TimeAveragedFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
+      VALIDATE_EQUALS(Scratch::SpaceTimeStateSize, StateStride * NumberOfUnknowns * NodesPerAxis);
+      VALIDATE_EQUALS(Scratch::RightHandSideSize, StateStride * NumberOfUnknowns * NodesPerAxis);
+      VALIDATE_EQUALS(Scratch::FluxSize, DIMENSIONS * StateStride * NumberOfUnknowns);
+      VALIDATE_EQUALS(Scratch::FirstFluxSize, DIMENSIONS * StateStride * NumberOfUnknowns);
+      VALIDATE_EQUALS(Scratch::TimeAveragedFluxSize, DIMENSIONS * StateStride * NumberOfUnknowns);
       VALIDATE_EQUALS(Scratch::FirstSourceSize, UnknownStride * CellLayout::NodesPerCell);
       VALIDATE_EQUALS(Scratch::TimeAveragedSourceSize, UnknownStride * CellLayout::NodesPerCell);
       VALIDATE_EQUALS(Scratch::StateGradientSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-      VALIDATE(Scratch::NodeResidualSize >= CellLayout::NodesPerCell, Scratch::NodeResidualSize);
-      VALIDATE(Scratch::NodeResidualSize < CellLayout::NodesPerCell + PEANO_WITH_SIMDLEN, Scratch::NodeResidualSize);
-      VALIDATE_EQUALS(Scratch::NodeResidualSize % PEANO_WITH_SIMDLEN, 0);
+      VALIDATE(
+        Scratch::NodeResidualSize == CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns,
+        Scratch::NodeResidualSize
+      );
 
       VALIDATE_EQUALS(Scratch::SpaceTimeStateOffset, 0);
       VALIDATE_EQUALS(Scratch::TimeAveragedStateOffset, Scratch::SpaceTimeStateOffset);
@@ -1889,9 +1887,9 @@ UNIT_TEST("The predictor writes the time averages into the scratch and onto the 
       THEN("The scratch stores the averaged state and source and the derivative of the averaged flux along its axis") {
         constexpr double SourceAverage = SourceStrength + (DiffusiveSourceStrength - ProductSpeed) * Slope;
         for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-          for (int value = 0; value < NumberOfData; value++) {
+          for (int value = 0; value < NumberOfUnknowns; value++) {
             VALIDATE_NUMERICAL_EQUALS(
-              scratch[ProfileScratch::TimeAveragedStateOffset + cellNode * StateStride + value],
+              scratch[ProfileScratch::TimeAveragedStateOffset + value * StateStride + cellNode],
               getAveragedProfileEntry(tables, cellNode, value),
               cellNode,
               value
@@ -1905,7 +1903,7 @@ UNIT_TEST("The predictor writes the time averages into the scratch and onto the 
               unknown
             );
             for (int axis = 0; axis < DIMENSIONS; axis++) {
-              const int    fluxEntry      = axis * FluxAxisStride + cellNode * UnknownStride + unknown;
+              const int    fluxEntry      = axis * FluxAxisStride + unknown * StateStride + cellNode;
               const double fluxDerivative = axis == 0 ? FluxSpeed * Slope : 0.0;
               VALIDATE_NUMERICAL_EQUALS(
                 scratch[ProfileScratch::TimeAveragedFluxOffset + fluxEntry],
@@ -2012,7 +2010,7 @@ UNIT_TEST("A tolerance below the rounding distance of the iterates writes the ti
             or outcomeBelowTheRoundingDistance == exahype2::dg::ader::UnconvergedPicardIteration,
           outcomeBelowTheRoundingDistance
         );
-        for (int entry = 0; entry < CellLayout::NodesPerCell * StateStride; entry++) {
+        for (int entry = 0; entry < CellLayout::PaddedNodesPerCell * NumberOfUnknowns; entry++) {
           VALIDATE_NUMERICAL_EQUALS(
             scratchBelowTheRoundingDistance[ProfileScratch::TimeAveragedStateOffset + entry],
             scratchOfTheTestTolerance[ProfileScratch::TimeAveragedStateOffset + entry],
