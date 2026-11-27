@@ -181,6 +181,9 @@ exahype2::dg::ader::Predictor<Derived, StoragePrecision, ComputePrecision>::pred
           for (int value = 0; value < CellLayout::NumberOfUnknowns; value++) {
             nodeState[value] = timeAveragedState[value * CellLayout::PaddedNodesPerCell + cellNode];
           }
+          for (int value = CellLayout::NumberOfUnknowns; value < CellLayout::NumberOfData; value++) {
+            nodeState[value] = cellState[cellNode * CellLayout::NumberOfData + value];
+          }
           for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
             values[unknown] = static_cast<ComputePrecision>(0);
           }
