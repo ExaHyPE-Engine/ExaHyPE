@@ -68,8 +68,6 @@ examples::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(
   constexpr double CriticalRadius          = 8.0;
   constexpr double PolytropicIndex         = 1.0 / (AdiabaticIndex - 1.0);
 
-  ASSERTION(V != nullptr);
-
   double    lapse           = 0.0;
   double    rootDeterminant = 0.0;
   Vector3   shift;
@@ -162,8 +160,6 @@ examples::exahype2::aderdg::grmhd::setMichelAccretionState(
   [[maybe_unused]] const double                t,
   Unknowns&                                    Q
 ) {
-  ASSERTION(Q != nullptr);
-
   Unknowns V;
   examples::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(x, V);
   Q = examples::exahype2::aderdg::grmhd::convertPrimitiveToConserved(V);
